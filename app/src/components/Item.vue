@@ -1,0 +1,471 @@
+<!-- eslint-disable vue/no-mutating-props -->
+<template>
+  <g :id="`item-${item.id}`" ref="itemRef">
+    <g v-if="item.elementType === 'player'">
+      <g
+        @pointerdown="handlePointerDown"
+        @contextmenu.prevent
+        style="filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35))"
+      >
+        <!-- 名称（教练栏开关控制） -->
+        <text v-if="showNames" :x="namePosition.x" :y="namePosition.y" text-anchor="middle" class="player-name">
+          {{ item.text }}
+        </text>
+        <!-- 位置（教练栏开关控制） -->
+        <text
+          v-if="
+            showPositions &&
+            (!animationStore.isAnimationMode ||
+              (animationStore.canEdit && item.team !== 'away' && !globalStore.presenting))
+          "
+          :x="itemPosition.x"
+          :y="itemPosition.y + item.r + 23"
+          text-anchor="middle"
+          class="player-position"
+        >
+          {{ displayedPosition }}
+        </text>
+
+        <defs>
+          <clipPath :id="`avatar-clip-${item.id}`">
+            <circle :cx="itemPosition.x" :cy="itemPosition.y" :r="item.r - 2" />
+          </clipPath>
+        </defs>
+
+        <!-- 底色圆（无照片时的 fallback，也是职责色） -->
+        <circle
+          ref="circleRef"
+          :cx="itemPosition.x"
+          :cy="itemPosition.y"
+          :r="item.r"
+          :fill="item.color"
+          :stroke="itemStore.numberColor(item)"
+          stroke-width="4"
+        ></circle>
+
+        <!-- 有照片：圆形裁切铺满 -->
+        <image
+          v-if="rosterAvatar && avatarOk"
+          :href="rosterAvatar"
+          :x="itemPosition.x - item.r"
+          :y="itemPosition.y - item.r"
+          :width="item.r * 2"
+          :height="item.r * 2"
+          :clip-path="`url(#avatar-clip-${item.id})`"
+          preserveAspectRatio="xMidYMid slice"
+          pointer-events="none"
+          @error="avatarOk = false"
+        />
+        <!-- 职责色描边环（照片模式也保留） -->
+        <circle
+          v-if="rosterAvatar && avatarOk"
+          :cx="itemPosition.x"
+          :cy="itemPosition.y"
+          :r="item.r"
+          fill="none"
+          :stroke="item.color"
+          stroke-width="4"
+          pointer-events="none"
+        />
+
+        <!-- 无照片：号码居中 -->
+        <text
+          v-if="!(rosterAvatar && avatarOk)"
+          :x="itemPosition.x"
+          :y="itemPosition.y"
+          text-anchor="middle"
+          dominant-baseline="central"
+          class="player-number"
+          :style="{ fill: itemStore.numberColor(item) }"
+          pointer-events="none"
+        >
+          {{ item.number }}
+        </text>
+        <!-- 有照片：号码角标 -->
+        <g v-else pointer-events="none">
+          <circle
+            :cx="itemPosition.x + item.r * 0.7"
+            :cy="itemPosition.y + item.r * 0.7"
+            r="11"
+            fill="#101828"
+            stroke="#fff"
+            stroke-width="2"
+          />
+          <text
+            :x="itemPosition.x + item.r * 0.7"
+            :y="itemPosition.y + item.r * 0.7"
+            text-anchor="middle"
+            dominant-baseline="central"
+            class="number-badge"
+          >
+            {{ item.number }}
+          </text>
+        </g>
+      </g>
+
+      <!-- 弹窗 -->
+      <foreignObject class="popup" ref="popupRef" :x="popupX" :y="popupY" width="220" height="400" v-if="showPopup">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="popup-content">
+          <div class="popup-body">
+            <div class="avatar-preview" v-if="rosterAvatar">
+              <img :src="rosterAvatar" alt="" @error="hidePopupAvatar" />
+            </div>
+            <div class="input-group">
+              <input type="text" placeholder="号码" v-model="item.number" maxlength="2" />
+            </div>
+            <div class="input-group">
+              <input type="text" placeholder="名称" v-model="item.text" />
+            </div>
+            <div class="input-group">
+              <select v-model="item.playerPosition" @change="onRoleChange" class="role-select">
+                <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+            <div class="input-group color">
+              <input type="color" v-model="item.color" @pointerdown.stop />
+            </div>
+            <button class="delete-btn" v-if="item.id" @pointerdown="handleDelete(item.id)">删除</button>
+          </div>
+        </div>
+      </foreignObject>
+    </g>
+    <g v-else>
+      <!-- 足球 -->
+      <!-- 扩大操作热区 -->
+      <circle
+        ref="circleRef"
+        :cx="item.x"
+        :cy="item.y"
+        :r="ELEMENT_RADIUS_OBJECT.player"
+        fill="transparent"
+        stroke="transparent"
+        @pointerdown="handlePointerDown"
+        @contextmenu.prevent
+      />
+      <!-- 保持视觉尺寸 -->
+      <image
+        :x="item.x - ELEMENT_RADIUS_OBJECT.ball"
+        :y="item.y - ELEMENT_RADIUS_OBJECT.ball"
+        :width="ELEMENT_RADIUS_OBJECT.ball * 2"
+        :height="ELEMENT_RADIUS_OBJECT.ball * 2"
+        :href="ballSvg"
+        pointer-events="none"
+      />
+      <foreignObject class="popup" ref="popupRef" :x="popupX" :y="popupY" width="200" height="65" v-if="showPopup">
+        <div xmlns="http://www.w3.org/1999/xhtml" class="popup-content">
+          <div class="popup-body">
+            <button class="delete-btn" v-if="item.id" @pointerdown="handleDelete(item.id)">删除</button>
+          </div>
+        </div>
+      </foreignObject>
+    </g>
+  </g>
+</template>
+
+<script setup lang="ts">
+import { ref, watch, computed, nextTick } from "vue";
+import { storeToRefs } from "pinia";
+import { FieldElement } from "../types/fieldElement";
+import { useBoardStore } from "../stores/boardStore";
+import { useAnimationStore } from "../stores/animationStore";
+import { useClickOutside } from "../composables/useClickOutside";
+import { useItemStore } from "../stores/itemStore";
+import { useDraggable } from "../composables/useDraggable";
+import ballSvg from "@/assets/icons/ball.svg";
+import { ELEMENT_RADIUS_OBJECT } from "../constants";
+import { useHistory } from "../composables/useHistory";
+import { useGlobalStore } from "../stores/globalStore";
+import { useRosterStore } from "../stores/rosterStore";
+import { ROLE_OPTIONS, posColor, posLabel, resolveAvatar, resolveRosterPlayer } from "../data/berlinGarden";
+
+const props = defineProps({
+  item: {
+    type: Object as () => FieldElement,
+    required: true,
+  },
+});
+const boardStore = useBoardStore();
+const { boardAreaBBox } = storeToRefs(boardStore);
+const animationStore = useAnimationStore();
+const itemStore = useItemStore();
+const rosterStore = useRosterStore();
+const { startDrag } = useDraggable();
+const { pushHistory } = useHistory();
+const globalStore = useGlobalStore();
+const { currentTool, showNames, showPositions } = storeToRefs(globalStore);
+const roleOptions = ROLE_OPTIONS;
+
+const rosterPlayer = computed(() =>
+  resolveRosterPlayer(rosterStore.players, {
+    rosterId: props.item.rosterId,
+    text: props.item.text,
+    number: props.item.number,
+    team: props.item.team,
+  })
+);
+const displayedPosition = computed(
+  () => rosterPlayer.value?.positions?.join("、") || posLabel(props.item.playerPosition)
+);
+
+// 换位置时自动跟随职责色
+const onRoleChange = () => {
+  props.item.color = posColor(props.item.playerPosition || "待定");
+};
+
+// 名单头像：rosterId → 姓名 → 号码三级匹配，改名改号不丢照片
+const rosterAvatar = computed(() => {
+  try {
+    return (
+      resolveAvatar(rosterStore.players, {
+        rosterId: props.item.rosterId,
+        text: props.item.text,
+        number: props.item.number,
+        team: props.item.team,
+      }) ?? null
+    );
+  } catch {
+    return null;
+  }
+});
+
+// 照片加载失败则回退到号码棋子；头像地址变化时重置
+const avatarOk = ref(true);
+watch(rosterAvatar, () => {
+  avatarOk.value = true;
+});
+
+const hidePopupAvatar = (e: Event) => {
+  (e.target as HTMLImageElement).style.display = "none";
+};
+
+const popupRef = ref(null);
+const circleRef = ref(null);
+const itemRef = ref(null);
+const popupX = ref(200);
+const popupY = ref(200);
+const showPopup = ref(false);
+
+const emit = defineEmits(["start-drag"]);
+
+const itemPosition = computed(() => ({ x: props.item.x, y: props.item.y }));
+const namePosition = computed(() => {
+  const { x, y, r, text } = props.item;
+  const top = { x, y: y - r - 10 };
+  if (!animationStore.isAnimationMode) return top;
+  const width = Math.max(18, String(text || "").length * 18);
+  const roleVisible =
+    showPositions.value && animationStore.canEdit && props.item.team !== "away" && !globalStore.presenting;
+  const candidates = [
+    top,
+    ...(!roleVisible ? [{ x, y: y + r + 28 }] : []),
+    { x: x + r + width / 2 + 12, y: y + 6 },
+    { x: x - r - width / 2 - 12, y: y + 6 },
+  ];
+  return (
+    candidates.find((label) =>
+      animationStore.displayElements.every((other) => {
+        if (other.id === props.item.id) return true;
+        const radius = other.elementType === "ball" ? 16 : other.r + 9;
+        return (
+          label.x + width / 2 < other.x - radius ||
+          label.x - width / 2 > other.x + radius ||
+          label.y < other.y - radius ||
+          label.y - 22 > other.y + radius
+        );
+      })
+    ) ?? top
+  );
+});
+
+// 计算弹窗位置
+const calculatePopupPosition = () => {
+  if (!boardAreaBBox.value) return;
+  const svgRect = boardAreaBBox.value;
+  const buttonBBox = (circleRef.value as unknown as SVGCircleElement).getBBox();
+  const popupBBox = (popupRef.value as unknown as SVGForeignObjectElement).getBBox();
+  // 默认右方
+  popupX.value = buttonBBox.x + buttonBBox.width + 10;
+  popupY.value = buttonBBox.y;
+
+  // 检查是否超出右边
+  if (popupX.value + popupBBox.width > svgRect.right) {
+    // 尝试左方
+    popupX.value = buttonBBox.x - popupBBox.width - 10;
+    popupY.value = buttonBBox.y;
+  }
+
+  // 检查是否超出下方
+  if (popupY.value + popupBBox.height > svgRect.bottom) {
+    // 尝试上方
+    popupY.value = buttonBBox.y - popupBBox.height - 10;
+  }
+
+  // 检查是否超出上方
+  if (popupY.value < svgRect.top) {
+    // 尝试下方
+    popupY.value = buttonBBox.y + buttonBBox.height + 10;
+  }
+};
+
+const handleDragMove = (x: number, y: number) => {
+  closePopup();
+};
+
+const handlePointerDown = (event: PointerEvent) => {
+  if (animationStore.isAnimationMode && !animationStore.canEdit) return;
+  if (currentTool.value === "shape" || currentTool.value === "text") {
+    // 绘画/文字模式下元素不支持拖动、点击等操作
+    return;
+  }
+  event.preventDefault();
+  itemStore.moveItemToLast(props.item);
+  startDrag(props.item, event, { onDragMove: handleDragMove, onClick: handleClickItem, onDragStart: pushHistory });
+};
+
+const handleClickItem = () => {
+  if (animationStore.isAnimationMode) return;
+  showPopup.value = !showPopup.value;
+  nextTick(() => {
+    if (showPopup.value) {
+      calculatePopupPosition();
+    }
+  });
+};
+
+const closePopup = () => {
+  showPopup.value = false;
+};
+
+const handleDelete = (id: string | number) => {
+  pushHistory();
+  itemStore.deleteElement(id);
+};
+
+useClickOutside({
+  targetRef: itemRef,
+  onClickOutside: closePopup,
+});
+</script>
+
+<style lang="scss" scoped>
+.popup {
+  pointer-events: all;
+  background: var(--paper, #f8faf5);
+  border: 1px solid rgba(20, 83, 45, 0.2);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(11, 42, 29, 0.28));
+  overflow: hidden;
+
+  .popup-content {
+    height: 100%;
+    background: var(--paper, #f8faf5);
+    border-radius: 14px;
+  }
+
+  .popup-body {
+    padding: 16px;
+
+    .avatar-preview {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 12px;
+
+      img {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--pitch-500, #15803d);
+      }
+    }
+
+    .input-group {
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+
+      label {
+        width: 55px;
+        color: #4b5563;
+        font-size: 14px;
+      }
+
+      input {
+        padding: 6px 12px;
+        border: 1px solid var(--pitch-500, #15803d);
+        border-radius: 6px;
+        transition: all 0.2s;
+        font-size: 20px;
+        width: 100%;
+        text-align: center;
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+      }
+
+      .role-select {
+        padding: 6px 12px;
+        border: 1px solid var(--pitch-500, #15803d);
+        border-radius: 6px;
+        font-size: 20px;
+        width: 100%;
+        text-align: center;
+        background: #fff;
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+      }
+
+      &.color {
+        input {
+          padding: 0;
+        }
+      }
+    }
+
+    .delete-btn {
+      width: 100%;
+      font-size: 20px;
+      padding: 4px 12px;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      background: var(--error-color);
+
+      &:hover {
+        background: var(--error-hover-color);
+      }
+    }
+  }
+}
+.player-position,
+.player-name {
+  fill: var(--text-dark-color);
+  font-size: 18px;
+  user-select: none;
+  font-weight: 600;
+}
+
+.player-number {
+  font-size: 20px;
+  font-weight: bold;
+  user-select: none;
+  cursor: pointer;
+}
+
+.number-badge {
+  font-size: 13px;
+  font-weight: 800;
+  fill: #fff;
+  user-select: none;
+}
+</style>

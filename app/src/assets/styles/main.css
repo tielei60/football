@@ -1,0 +1,141 @@
+:root {
+  --primary-color: #64a7a5;
+  --primary-hover-color: #c2f4f2;
+  --primary-white-color: #ffffff;
+  --warning-color: #facc15;
+  --error-color: #fe5971;
+  --error-hover-color: #c64c5e;
+  --text-dark-color: #1a2b2b;
+  --default-border-color: #f1f0ff;
+  /* 柏林花园 FC · 8人制设计 Token（投屏深绿主题） */
+  --pitch-900: #0b2a1d;
+  --pitch-700: #14532d;
+  --pitch-500: #15803d;
+  --accent: #b4ff39;
+  --paper: #f8faf5;
+  --ink: #101828;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --shadow-sm: 0 1px 2px rgba(11, 42, 29, 0.08);
+  --shadow-md: 0 4px 16px rgba(11, 42, 29, 0.14);
+  --shadow-lg: 0 12px 40px rgba(11, 42, 29, 0.28);
+  --font-stack:
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC",
+    Arial, Helvetica, sans-serif;
+  --font-num: "Barlow Condensed", "Arial Narrow", "PingFang SC", sans-serif;
+  /* element-plus 组件主色跟随品牌深绿 */
+  --el-color-primary: #15803d;
+}
+
+/* 全站汉字工具按钮（右侧工具条、绘制弹窗触发器共用） */
+.tbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--paper, #f8faf5);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tbtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tbtn.active {
+  background: rgba(180, 255, 57, 0.18);
+  border-color: var(--accent, #b4ff39);
+  color: var(--accent, #b4ff39);
+}
+
+.tbtn.accent {
+  background: var(--accent, #b4ff39);
+  border-color: var(--accent, #b4ff39);
+  color: var(--pitch-900, #0b2a1d);
+}
+
+.tbtn.accent:hover {
+  background: #c9ff6b;
+}
+
+.tbtn.danger:hover {
+  border-color: #fe5971;
+  color: #fe5971;
+}
+
+.tbtn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tbtn.disabled:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--pitch-900);
+}
+
+/* 细滚动条（面板列表） */
+.roster-list::-webkit-scrollbar,
+.tactic-list::-webkit-scrollbar,
+.tactics-drawer::-webkit-scrollbar {
+  width: 6px;
+}
+.roster-list::-webkit-scrollbar-thumb,
+.tactic-list::-webkit-scrollbar-thumb,
+.tactics-drawer::-webkit-scrollbar-thumb {
+  background: rgba(20, 83, 45, 0.25);
+  border-radius: 3px;
+}
+.roster-list::-webkit-scrollbar-track,
+.tactic-list::-webkit-scrollbar-track,
+.tactics-drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  font-family:
+    "PingFang SC", "Arial", "Helvetica", "Hiragino Sans GB", "WenQuanYi Micro Hei", "Microsoft YaHei", sans-serif,
+    "Noto Sans CJK SC", Code2001, Code2002;
+  height: 100%;
+  min-height: 100vh;
+  color: var(--text-dark-color);
+  background: #071c13;
+  -webkit-tap-highlight-color: transparent;
+
+  @media (max-width: 1200px) {
+    font-size: 16px !important;
+  }
+
+  @media (max-width: 992px) {
+    font-size: 14px !important;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 13px !important;
+  }
+
+  @media (max-width: 576px) {
+    font-size: 12px !important;
+  }
+}
+
+#app {
+  height: 100%;
+}

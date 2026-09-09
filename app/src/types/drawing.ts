@@ -1,0 +1,103 @@
+/* eslint-disable lines-between-class-members */
+import type { IBaseElementProps } from "./base";
+import { BaseElement } from "./base";
+import { DEFAULT_TOOL_CONFIG } from "@/constants";
+
+// 绘制图案
+interface IDrawingProps extends IBaseElementProps {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  strokeColor?: string; // 描边颜色
+  backgroundColor?: string; // 背景颜色
+  size: number;
+  pathPoints?: [number, number][]; // 绘画路径数据
+  drawingType: string; // 绘画图案类型：pen / line / arrow / rectangle / ellipse / text
+  dashed?: boolean; // 虚线（跑位线），默认实线
+  text?: string; // 文字标注内容（仅 text 类型）
+}
+
+export class Drawing extends BaseElement implements IDrawingProps {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  strokeColor?: string; // 描边颜色
+  backgroundColor?: string; // 背景颜色
+  size: number;
+  pathPoints?: [number, number][]; // 绘画路径数据
+  drawingType: string; // 绘画图案类型
+  dashed?: boolean;
+  text?: string;
+
+  constructor(props: Partial<IDrawingProps> = {}) {
+    super(props);
+    this.startX = props.startX || 0;
+    this.startY = props.startY || 0;
+    this.endX = props.endX || 0;
+    this.endY = props.endY || 0;
+    this.strokeColor = props.strokeColor;
+    this.backgroundColor = props.backgroundColor;
+    this.size = props.size || DEFAULT_TOOL_CONFIG.SHAPES.size;
+    this.pathPoints = props.pathPoints;
+    this.drawingType = props.drawingType || DEFAULT_TOOL_CONFIG.SHAPES.shape;
+    this.dashed = props.dashed ?? DEFAULT_TOOL_CONFIG.SHAPES.dashed;
+    this.text = props.text || "";
+  }
+
+  clone(): Drawing {
+    return new Drawing({
+      x: this.x,
+      y: this.y,
+      color: this.color,
+      isDragging: this.isDragging,
+      creationMode: this.creationMode,
+      type: this.type,
+      state: this.state,
+      startX: this.startX,
+      startY: this.startY,
+      endX: this.endX,
+      endY: this.endY,
+      strokeColor: this.strokeColor,
+      backgroundColor: this.backgroundColor,
+      size: this.size,
+      pathPoints: this.pathPoints ? [...this.pathPoints] : [],
+      drawingType: this.drawingType,
+      dashed: this.dashed,
+      text: this.text,
+    });
+  }
+}
+
+export class DrawingCollection {
+  private drawings: Drawing[] = [];
+
+  add(drawing: Drawing) {
+    this.drawings.push(drawing);
+  }
+
+  clear() {
+    this.drawings = [];
+  }
+
+  getDrawings(): Drawing[] {
+    return this.drawings;
+  }
+}
+
+export interface renderRoughDrawingvaVriable {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  pathPoints?: [number, number][];
+}
+
+export interface renderRoughDrawingConfig {
+  strokeColor: string;
+  backgroundColor: string;
+  size: number;
+  dashed?: boolean;
+  text?: string;
+}

@@ -1,0 +1,427 @@
+body.coach {
+  --surface: #ffffff;
+  --canvas: #f2f4f6;
+  --line: #e2e6e9;
+  --muted: #65716e;
+  --ink: #202b29;
+  --green-soft: #eaf3ef;
+  --pitch-900: #183b31;
+  --pitch-700: #26715a;
+  --pitch-500: #35876b;
+  --paper: #ffffff;
+  --radius-lg: 8px;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+}
+body.coach .wrapper {
+  align-items: stretch;
+  height: auto;
+  min-height: 100%;
+}
+body.coach .wrapper .board {
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  background: var(--canvas);
+  font-family: var(--font-stack);
+  overflow: hidden;
+}
+.board button,
+.board select {
+  cursor: pointer;
+  font-family: inherit;
+}
+.board button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.board :is(button, input, select):focus-visible {
+  outline: 2px solid #287fbc;
+  outline-offset: 3px;
+}
+.tactics-shell :is(button, input, select):focus-visible {
+  outline: 2px solid #287fbc;
+  outline-offset: 2px;
+}
+.board button {
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.board-main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  width: 100%;
+}
+.pitch-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.pitch-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 16px;
+  padding: 24px 28px 12px;
+}
+.section-eyebrow {
+  font-family: var(--font-num);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.pitch-heading h2 {
+  margin: 6px 0 0;
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.board-mode {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.board-mode > span {
+  width: 6px;
+  height: 6px;
+  background: var(--pitch-500);
+  border-radius: 50%;
+}
+.pitch-stage {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 24px 16px;
+  overflow: hidden;
+}
+.pitch-stage svg.field {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+.pitch-footer {
+  padding: 10px 24px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.pitch-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pitch-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pitch-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.home-dot {
+  background: #35876b;
+}
+.away-dot {
+  background: #434b57;
+}
+.view-controls {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.view-controls button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+}
+.view-controls button:hover,
+.view-controls button.active {
+  color: var(--pitch-700);
+  background: var(--green-soft);
+}
+.view-controls output {
+  width: 48px;
+  text-align: center;
+  color: var(--muted);
+  font: 12px var(--font-num);
+}
+.board-tools .tbtn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #64736e;
+  background: transparent;
+}
+.board-tools .tbtn.active {
+  background: var(--green-soft);
+  color: var(--pitch-700);
+  border-color: #c7dfd4;
+}
+.board-tools .tbtn:hover:not(:disabled) {
+  background: var(--green-soft);
+  color: var(--pitch-700);
+}
+.board-tools .tbtn.danger:hover {
+  color: #b43d43;
+  background: #fdf0f0;
+}
+.board-tools .tbtn:disabled {
+  background: transparent;
+}
+.anim-overlay {
+  position: absolute;
+  bottom: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  max-width: 90%;
+}
+.anim-label {
+  font-size: 13px;
+  color: var(--ink);
+}
+.anim-state {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.anim-dots {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.anim-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #b3c7bd;
+  background: white;
+  border-radius: 50%;
+  padding: 0;
+  flex-shrink: 0;
+}
+.anim-dot.active {
+  background: var(--pitch-700);
+  border-color: var(--pitch-700);
+}
+.anim-dot.played {
+  background: #bbdacc;
+}
+body.coach .board.presenting {
+  background: #183b31;
+}
+.presenting .pitch-stage {
+  padding: 0 20px;
+}
+.present-overlay {
+  position: static;
+  flex-shrink: 0;
+  padding: 10px 20px;
+  width: 100%;
+  text-align: center;
+  color: white;
+}
+.present-title {
+  font-size: 22px;
+  font-weight: 650;
+}
+.present-sub {
+  font-size: 13px;
+  margin: 4px 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.present-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.present-actions button {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ffffff40;
+  border-radius: 5px;
+  background: #ffffff15;
+  color: white;
+  padding: 0 12px;
+}
+@media (max-width: 1100px) {
+  .pitch-legend .pitch-size {
+    display: none;
+  }
+  .pitch-heading {
+    padding: 18px 20px 10px;
+  }
+  .pitch-stage {
+    padding: 8px 16px;
+  }
+  .pitch-footer {
+    padding: 10px 16px 16px;
+  }
+}
+@media (max-width: 700px) {
+  body.coach .wrapper .board {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .board-main {
+    flex-direction: column;
+  }
+  .pitch-workspace {
+    order: 1;
+    flex: none;
+  }
+  .board-tools {
+    order: 0;
+  }
+  .roster-panel {
+    order: 2;
+  }
+  .pitch-heading {
+    padding: 18px 16px 10px;
+  }
+  .pitch-heading h2 {
+    font-size: 18px;
+  }
+  .board-mode {
+    font-size: 11px;
+  }
+  .pitch-stage {
+    flex: none;
+    padding: 0 8px;
+    aspect-ratio: 1250 / 826;
+  }
+  .pitch-stage svg.field {
+    height: 100%;
+  }
+  .pitch-footer {
+    padding: 10px 12px 16px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .pitch-legend {
+    gap: 10px;
+    font-size: 11px;
+  }
+  .view-controls button {
+    width: 44px;
+    height: 44px;
+  }
+  .view-controls output {
+    width: 40px;
+  }
+  .anim-overlay {
+    position: static;
+    transform: none;
+    margin: 12px auto;
+    order: 3;
+    flex-wrap: wrap;
+  }
+  .presenting .pitch-stage {
+    padding: 0 8px;
+  }
+  .present-overlay {
+    position: static;
+    padding: 20px 12px;
+  }
+}
+@media (min-width: 701px) and (max-height: 650px) {
+  body.coach .wrapper .board {
+    min-height: 650px;
+    height: 100dvh;
+    overflow: visible;
+  }
+}
+body.coach .wrapper .board.workspace-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace-fullscreen > .workspace-header,
+.workspace-fullscreen .roster-panel,
+.workspace-fullscreen .pitch-heading {
+  display: none;
+}
+.workspace-fullscreen .pitch-workspace {
+  flex: 1;
+  min-height: 0;
+}
+.workspace-fullscreen .pitch-stage {
+  flex: 1;
+  aspect-ratio: auto;
+  padding: 8px;
+}
+.workspace-fullscreen .pitch-footer {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.workspace-fullscreen .board-tools {
+  flex-shrink: 0;
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+@media (prefers-reduced-motion: reduce) {
+  .board *,
+  .board *::before,
+  .board *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+@media print {
+  .workspace-header,
+  .board-main,
+  .pitch-footer,
+  .anim-overlay {
+    display: none !important;
+  }
+}
