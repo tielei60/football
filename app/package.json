@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:bundle": "node scripts/check-bundle.mjs",
+    "profile:performance": "node scripts/profile-performance.mjs",
     "test:e2e": "playwright test",
     "dev": "node scripts/develop.mjs",
     "dev:client": "vite",

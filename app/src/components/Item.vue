@@ -1,11 +1,11 @@
 <!-- eslint-disable vue/no-mutating-props -->
 <template>
-  <g :id="`item-${item.id}`" ref="itemRef">
+  <g :id="`item-${item.id}`" ref="itemRef" :transform="itemTransform">
     <g v-if="item.elementType === 'player'">
       <g
         @pointerdown="handlePointerDown"
         @contextmenu.prevent
-        style="filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35))"
+        :style="{ filter: animationStore.isPlaying ? 'none' : 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35))' }"
       >
         <!-- 名称（教练栏开关控制） -->
         <text v-if="showNames" :x="namePosition.x" :y="namePosition.y" text-anchor="middle" class="player-name">
@@ -181,6 +181,8 @@ import { useRosterStore } from "../stores/rosterStore";
 import { ROLE_OPTIONS, posColor, posLabel, resolveAvatar, resolveRosterPlayer } from "../data/berlinGarden";
 
 const props = defineProps({
+  portrait: Boolean,
+  compact: Boolean,
   item: {
     type: Object as () => FieldElement,
     required: true,
@@ -197,12 +199,23 @@ const globalStore = useGlobalStore();
 const { currentTool, showNames, showPositions } = storeToRefs(globalStore);
 const roleOptions = ROLE_OPTIONS;
 
+// Position-only animation updates must not repeat roster and avatar lookups.
+const playerRosterId = computed(() => props.item.rosterId);
+const playerName = computed(() => props.item.text);
+const playerNumber = computed(() => props.item.number);
+const playerTeam = computed(() => props.item.team);
+const translateMarker = computed(() => animationStore.isPlaying && props.item.elementType === "player");
+const itemTransform = computed(() => {
+  if (translateMarker.value) return `translate(${props.item.x} ${props.item.y})${props.portrait ? " rotate(90)" : ""}`;
+  return props.portrait ? `rotate(90 ${props.item.x} ${props.item.y})` : undefined;
+});
+
 const rosterPlayer = computed(() =>
   resolveRosterPlayer(rosterStore.players, {
-    rosterId: props.item.rosterId,
-    text: props.item.text,
-    number: props.item.number,
-    team: props.item.team,
+    rosterId: playerRosterId.value,
+    text: playerName.value,
+    number: playerNumber.value,
+    team: playerTeam.value,
   })
 );
 const displayedPosition = computed(
@@ -219,10 +232,10 @@ const rosterAvatar = computed(() => {
   try {
     return (
       resolveAvatar(rosterStore.players, {
-        rosterId: props.item.rosterId,
-        text: props.item.text,
-        number: props.item.number,
-        team: props.item.team,
+        rosterId: playerRosterId.value,
+        text: playerName.value,
+        number: playerNumber.value,
+        team: playerTeam.value,
       }) ?? null
     );
   } catch {
@@ -247,10 +260,10 @@ const popupX = ref(200);
 const popupY = ref(200);
 const showPopup = ref(false);
 
-const emit = defineEmits(["start-drag"]);
+const emit = defineEmits(["start-drag", "select-player"]);
 
-const itemPosition = computed(() => ({ x: props.item.x, y: props.item.y }));
-const namePosition = computed(() => {
+const itemPosition = computed(() => (translateMarker.value ? { x: 0, y: 0 } : { x: props.item.x, y: props.item.y }));
+const logicalNamePosition = computed(() => {
   const { x, y, r, text } = props.item;
   const top = { x, y: y - r - 10 };
   if (!animationStore.isAnimationMode) return top;
@@ -277,6 +290,14 @@ const namePosition = computed(() => {
       })
     ) ?? top
   );
+});
+const namePosition = computed(() => {
+  const label = logicalNamePosition.value;
+  if (!translateMarker.value) return label;
+  return {
+    x: Math.round((label.x - props.item.x) * 1000) / 1000,
+    y: Math.round((label.y - props.item.y) * 1000) / 1000,
+  };
 });
 
 // 计算弹窗位置
@@ -326,6 +347,11 @@ const handlePointerDown = (event: PointerEvent) => {
 
 const handleClickItem = () => {
   if (animationStore.isAnimationMode) return;
+  if (props.compact && rosterPlayer.value) {
+    closePopup();
+    emit("select-player", rosterPlayer.value.id);
+    return;
+  }
   showPopup.value = !showPopup.value;
   nextTick(() => {
     if (showPopup.value) {

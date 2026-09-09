@@ -1,6 +1,11 @@
 <template>
   <g ref="container" v-if="drawing.drawingType !== 'text'"></g>
-  <g v-else @dblclick="startEdit" class="text-drawing">
+  <g
+    v-else
+    @dblclick="startEdit"
+    class="text-drawing"
+    :transform="portrait ? `rotate(90 ${drawing.startX} ${drawing.startY})` : undefined"
+  >
     <text
       v-if="!editing"
       :x="drawing.startX"
@@ -11,13 +16,7 @@
     >
       {{ drawing.text }}
     </text>
-    <foreignObject
-      v-else
-      :x="drawing.startX"
-      :y="drawing.startY - fontSize"
-      width="220"
-      :height="fontSize + 16"
-    >
+    <foreignObject v-else :x="drawing.startX" :y="drawing.startY - fontSize" width="220" :height="fontSize + 16">
       <input
         ref="inputRef"
         v-model="draft"
@@ -39,6 +38,7 @@ import { renderShape, textFontSize } from "@/utils/drawing";
 import { useHistory } from "@/composables/useHistory";
 
 const props = defineProps<{
+  portrait?: boolean;
   drawing: Drawing;
 }>();
 
@@ -80,9 +80,7 @@ const drawShape = () => {
 const editing = ref(false);
 const draft = ref("");
 const inputRef = ref<HTMLInputElement | null>(null);
-const fontSize = computed(() =>
-  textFontSize({ strokeColor: "", backgroundColor: "", size: props.drawing.size })
-);
+const fontSize = computed(() => textFontSize({ strokeColor: "", backgroundColor: "", size: props.drawing.size }));
 
 const startEdit = () => {
   draft.value = props.drawing.text || "";

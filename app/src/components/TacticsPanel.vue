@@ -174,7 +174,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { X, Plus, Save, Star, History, Printer, Trash2, CopyPlus, Play } from "lucide-vue-next";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElDrawer } from "element-plus";
+import "element-plus/es/components/drawer/style/css";
 import { storeToRefs } from "pinia";
 import { useTacticsStore } from "@/stores/tacticsStore";
 import { useAnimationStore } from "@/stores/animationStore";
@@ -264,6 +265,9 @@ const onRollback = async (version: VersionRecord) => {
 const onSave = async (asNew = false) => {
   if (saving.value) return;
   saving.value = true;
+  const formContent = () =>
+    JSON.stringify([title.value, tags.value, note.value, opponent.value, matchDate.value, score.value]);
+  const submittedForm = formContent();
   try {
     const current = store.tactics.find((t) => t.id === store.currentId);
     let name = title.value.trim() || current?.title || `战术 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
@@ -281,7 +285,7 @@ const onSave = async (asNew = false) => {
       asNew
     );
     await useCoachingDeskStore().flush();
-    syncForm();
+    if (formContent() === submittedForm) syncForm();
     ElMessage.success(asNew ? "已另存为新战术" : "战术已保存");
   } catch (error) {
     reportError(error);
@@ -291,7 +295,12 @@ const onSave = async (asNew = false) => {
 };
 
 // 打开战术时把它的比赛信息带入输入框，方便接着改
-watch(() => store.currentId, syncForm);
+watch(
+  () => store.currentId,
+  () => {
+    if (!saving.value) syncForm();
+  }
+);
 
 const matchText = (t: { match?: { opponent?: string; date?: string; score?: string } }) => {
   const parts = [t.match?.opponent, t.match?.date, t.match?.score].filter(Boolean);

@@ -1,7 +1,6 @@
 import "./assets/styles/main.css";
 import "virtual:svg-icons-register";
-import ElementPlus from "element-plus";
-import "element-plus/dist/index.css";
+import "element-plus/es/components/message/style/css";
 import { createApp } from "vue";
 import { debug } from "./utils/debugBus";
 import router from "./router";
@@ -14,6 +13,5 @@ if (import.meta.env.DEV) {
 }
 
 app.use(pinia);
-app.use(ElementPlus);
 app.use(router);
 app.mount("#app");

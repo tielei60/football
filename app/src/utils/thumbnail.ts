@@ -1,18 +1,18 @@
 // 战术缩略图：320px JPEG dataURL，失败返回 null（不阻塞保存）
 import { inlineImages } from "./inlineImages";
+import { prepareBoardExport } from "./boardExport";
 
 export async function captureThumb(maxWidth = 320): Promise<string | null> {
   try {
     const area = document.getElementById("board-area") as unknown as SVGGraphicsElement | null;
     if (!area) return null;
-    const bbox = area.getBBox();
+    const { bounds: bbox, content: cloned } = prepareBoardExport(area);
     if (!bbox.width || !bbox.height) return null;
 
     const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     newSvg.setAttribute("width", bbox.width.toString());
     newSvg.setAttribute("height", bbox.height.toString());
     newSvg.setAttribute("viewBox", `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
-    const cloned = area.cloneNode(true) as SVGElement;
     await inlineImages(cloned);
     newSvg.appendChild(cloned);
 

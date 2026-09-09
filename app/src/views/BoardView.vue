@@ -1,7 +1,11 @@
 <template>
-  <div class="board" :class="{ presenting, 'workspace-fullscreen': isFullscreen && !presenting }">
+  <div
+    class="board"
+    :class="{ presenting, 'compact-workspace': stacked, 'workspace-fullscreen': isFullscreen && !presenting }"
+  >
     <WorkspaceHeader
       v-if="!presenting"
+      :compact="compactLayout"
       :roster-open="rosterOpen"
       :tactics-open="tacticsOpen"
       :coaching-open="coachingOpen"
@@ -10,7 +14,7 @@
       :away-formation="awayCount ? awayFormation || 'custom' : null"
       :player-count="matchStore.playerCount"
       @player-count="onPlayerCountChange"
-      @roster="rosterOpen = !rosterOpen"
+      @roster="compactLayout ? selectMobileTab('roster') : (rosterOpen = !rosterOpen)"
       @tactics="
         tacticsOpen = !tacticsOpen;
         coachingOpen = false;
@@ -26,8 +30,20 @@
       @formation="onApplyFormation"
       @opponent="onOpponentChange"
     />
-    <div class="board-main">
-      <RosterPanel :open="rosterOpen && !presenting" />
+    <div class="board-main" :data-panel="mobileTab">
+      <MobileWorkspaceTabs
+        v-if="stacked"
+        :active="mobileTab"
+        :open="mobilePanelOpen"
+        @change="toggleMobileTab"
+        @close="closeMobilePanel"
+      />
+      <RosterPanel
+        id="mobile-roster-panel"
+        ref="rosterPanelRef"
+        v-show="!stacked || (mobilePanelOpen && mobileTab === 'roster')"
+        :open="rosterOpen && !presenting"
+      />
       <section class="pitch-workspace" aria-label="战术画布">
         <div v-if="!presenting" class="pitch-heading">
           <div>
@@ -45,7 +61,7 @@
             id="field"
             width="1250"
             height="826"
-            :viewBox="`${view.x} ${view.y} ${view.w} ${view.h}`"
+            :viewBox="pitchViewBox"
             xmlns="http://www.w3.org/2000/svg"
             preserveAspectRatio="xMidYMid meet"
             @pointerdown="handlePointerdown"
@@ -53,7 +69,11 @@
             @dblclick.stop
             class="field"
           >
-            <g>
+            <g
+              id="pitch-coordinate-space"
+              :data-portrait="portraitPitch"
+              :transform="portraitPitch ? 'translate(0 1250) rotate(-90)' : undefined"
+            >
               <!-- 球场区域 -->
               <!-- 动态引入球场组件 -->
 
@@ -65,13 +85,25 @@
                 <!-- 非动画模式 -->
                 <template v-if="!isAnimationMode">
                   <g id="drawings" v-if="drawings">
-                    <Drawing v-for="drawing in drawings.getDrawings()" :key="drawing.id" :drawing="drawing" />
+                    <Drawing
+                      v-for="drawing in drawings.getDrawings()"
+                      :key="drawing.id"
+                      :drawing="drawing"
+                      :portrait="portraitPitch"
+                    />
                   </g>
                   <!-- 正在创建的新元素层 -->
                   <g id="drawingLayer"></g>
                   <!-- 球员 -->
                   <g id="players" v-if="normalItems">
-                    <ItemComponent v-for="item in normalItems" :key="item.id" :item="item" />
+                    <ItemComponent
+                      v-for="item in normalItems"
+                      :key="item.id"
+                      :item="item"
+                      :compact="stacked"
+                      :portrait="portraitPitch"
+                      @select-player="onSelectPlayer"
+                    />
                   </g>
                 </template>
                 <!-- 动画模式 -->
@@ -116,22 +148,36 @@
                     <!-- 上一帧球员 -->
                   </template>
                   <g id="players">
-                    <ItemComponent v-for="item in animationStore.displayElements" :key="item.id" :item="item" />
+                    <ItemComponent
+                      v-for="item in animationStore.displayElements"
+                      :key="item.id"
+                      :item="item"
+                      :portrait="portraitPitch"
+                    />
                   </g>
                 </template>
                 <!-- 水印 -->
                 <template v-if="showWatermark" #watermark>
-                  <Watermark :text="`柏林花园FC · ${matchStore.playerCount}人制战术板`" />
+                  <Watermark
+                    :text="`柏林花园FC · ${matchStore.playerCount}人制战术板`"
+                    :x="portraitPitch ? 110 : 950"
+                    :y="portraitPitch ? 413 : 730"
+                    :transform="portraitPitch ? 'rotate(90 110 413)' : undefined"
+                  />
                 </template>
               </component>
-            </g>
 
-            <!-- 正在移动的新元素 -->
-            <g v-if="!presenting && (!isAnimationMode || animationStore.canEdit)" id="toolbar-drag" @touchmove.prevent>
-              <DragToolsPanel />
-            </g>
-            <g id="tools-panel">
-              <ItemComponent v-if="newDraggingItem" :item="newDraggingItem" />
+              <!-- 正在移动的新元素 -->
+              <g
+                v-if="!presenting && (!isAnimationMode || animationStore.canEdit)"
+                id="toolbar-drag"
+                @touchmove.prevent
+              >
+                <DragToolsPanel :portrait="portraitPitch" />
+              </g>
+              <g id="tools-panel">
+                <ItemComponent v-if="newDraggingItem" :item="newDraggingItem" :portrait="portraitPitch" />
+              </g>
             </g>
             <!--
       <circle
@@ -189,7 +235,7 @@
           </div>
         </div>
         <AnimationTimeline
-          v-if="isAnimationMode"
+          v-if="isAnimationMode && !stacked"
           :presenting="presenting"
           :saving="saving"
           @save="quickSaveFlow"
@@ -197,10 +243,22 @@
         />
       </section>
       <BoardTools
+        id="mobile-drawing-panel"
         v-if="!presenting"
+        :compact="stacked"
+        v-show="!stacked || (mobilePanelOpen && mobileTab === 'drawing')"
         :fullscreen="isFullscreen"
         :fullscreen-busy="fullscreenBusy"
         @fullscreen="toggleFullscreen"
+      />
+      <AnimationTimeline
+        id="mobile-animation-panel"
+        v-if="stacked && isAnimationMode"
+        v-show="mobilePanelOpen && mobileTab === 'animation'"
+        :presenting="false"
+        :saving="saving"
+        @save="quickSaveFlow"
+        @scenario="onDemoAnimation"
       />
     </div>
     <!-- 演示模式大标题 -->
@@ -225,7 +283,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import type { Component } from "vue";
 import { storeToRefs } from "pinia";
 import { GAME_CONSTANTS } from "../constants";
@@ -268,6 +326,8 @@ import { TACTICAL_SCENARIOS } from "@/data/tacticalScenarios";
 import { useCoachingStore } from "@/stores/coachingStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useWorkspaceFullscreen } from "@/composables/useWorkspaceFullscreen";
+import { useMediaQuery } from "@vueuse/core";
+import MobileWorkspaceTabs, { type WorkspaceTab } from "@/components/MobileWorkspaceTabs.vue";
 import { MATCH_FORMATIONS, type MatchPlayerCount } from "@/data/matchFormats";
 
 // 组合式函数初始化
@@ -287,6 +347,50 @@ const tacticsStore = useTacticsStore();
 const rosterStore = useRosterStore();
 const matchStore = useMatchStore();
 const { isFullscreen, fullscreenBusy, toggleFullscreen, exitFullscreen } = useWorkspaceFullscreen();
+const compactLayout = useMediaQuery("(max-width: 700px), (max-width: 1100px) and (orientation: portrait)");
+const portraitPitch = useMediaQuery("(max-width: 1100px) and (orientation: portrait)");
+const pitchViewBox = computed(() => {
+  const v = boardStore.view;
+  return portraitPitch.value ? `${v.y} ${1250 - v.x - v.w} ${v.h} ${v.w}` : `${v.x} ${v.y} ${v.w} ${v.h}`;
+});
+const stacked = computed(() => compactLayout.value && !isFullscreen.value && !presenting.value);
+const mobileTab = ref<WorkspaceTab>("roster");
+const mobilePanelOpen = shallowRef(false);
+const closeMobilePanel = () => {
+  mobilePanelOpen.value = false;
+};
+const toggleMobileTab = (tab: WorkspaceTab) => {
+  if (mobilePanelOpen.value && mobileTab.value === tab) closeMobilePanel();
+  else selectMobileTab(tab);
+};
+const rosterPanelRef = ref<InstanceType<typeof RosterPanel> | null>(null);
+const onSelectPlayer = async (id: string) => {
+  selectMobileTab("roster");
+  await nextTick();
+  rosterPanelRef.value?.focusPlayer(id);
+};
+const selectMobileTab = (tab: WorkspaceTab) => {
+  mobilePanelOpen.value = true;
+  mobileTab.value = tab;
+  if (tab === "animation") {
+    animationStore.openAnimationFromBoard(
+      itemStore.items
+        .findByCreationMode("normal")
+        .filter((el) => el.elementType === "player" || el.elementType === "ball")
+    );
+  } else {
+    if (animationStore.isAnimationMode) animationStore.exitAnimation();
+    if (tab === "roster") rosterOpen.value = true;
+    globalStore.setCurrentTool("select");
+  }
+};
+watch(
+  () => animationStore.isAnimationMode,
+  (active) => {
+    if (active) mobileTab.value = "animation";
+    else if (mobileTab.value === "animation") mobileTab.value = "drawing";
+  }
+);
 
 // Store 状态和方法解构
 const { items, newDraggingItem } = storeToRefs(itemStore);
@@ -495,6 +599,7 @@ const handleShortcut = (e: KeyboardEvent) => {
     return;
   }
   if (e.key === "Escape") {
+    closeMobilePanel();
     if (isFullscreen.value) void exitFullscreen();
     tacticsOpen.value = false;
     coachingOpen.value = false;
@@ -563,10 +668,7 @@ const handlePointermove = (e: PointerEvent) => {
   if (currentTool.value === "eraser") {
     const svg = svgRef.value;
     if (svg) {
-      const point = svg.createSVGPoint();
-      point.x = e.clientX;
-      point.y = e.clientY;
-      const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse());
+      const svgPoint = boardStore.getSvgPosition(e);
       eraserCursorPos.value = { x: svgPoint.x, y: svgPoint.y };
     }
   } else {

@@ -37,6 +37,9 @@
 </template>
 
 <script setup lang="ts">
+import { ElPopover, ElSwitch } from "element-plus";
+import "element-plus/es/components/popover/style/css";
+import "element-plus/es/components/switch/style/css";
 import { storeToRefs } from "pinia";
 import { Spline } from "lucide-vue-next";
 import { ref, watch, computed } from "vue";

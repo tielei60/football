@@ -8,6 +8,11 @@ import { migrateBoardIfNeeded } from "@/utils/migrateBoard";
 import { apiRequest, TacticsApiError } from "@/services/tacticsApi";
 import { toBoard, fromBoard, type Board } from "@/services/tacticLanguage";
 import { normalizePlayerPositions, type PlayerPosition } from "@/data/berlinGarden";
+import { useItemStore } from "./itemStore";
+import { useDrawStore } from "./drawStore";
+import { useAnimationStore } from "./animationStore";
+import { useCoachingStore } from "./coachingStore";
+import { useMatchStore } from "./matchStore";
 
 interface TeamPlayer {
   playerId: string;
@@ -147,14 +152,27 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
   function startWatching() {
     if (watching) return;
     watching = true;
-    watch(content, () => {
-      if (applying || !ready.value || status.value === "conflict") return;
-      clearTimeout(timer);
-      status.value = "pending";
-      timer = setTimeout(() => {
-        void flush().catch(() => {});
-      }, 700);
-    });
+    // Observe editable data without cloning/serializing the complete board on each movement.
+    watch(
+      () => [
+        useItemStore().items.getAll(),
+        useDrawStore().drawings.getDrawings(),
+        useAnimationStore().currentAnimation,
+        useCoachingStore().plan,
+        useMatchStore().playerCount,
+        roster.players,
+        tactics.currentId,
+      ],
+      () => {
+        if (applying || !ready.value || status.value === "conflict") return;
+        clearTimeout(timer);
+        status.value = "pending";
+        timer = setTimeout(() => {
+          void flush().catch(() => {});
+        }, 700);
+      },
+      { deep: true }
+    );
     window.addEventListener("beforeunload", (event) => {
       if (!hasUnsavedChanges.value) return;
       event.preventDefault();

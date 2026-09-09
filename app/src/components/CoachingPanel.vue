@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ElDrawer } from "element-plus";
+import "element-plus/es/components/drawer/style/css";
 import { storeToRefs } from "pinia";
 import { ClipboardList, X, Save } from "lucide-vue-next";
 import { useCoachingStore } from "@/stores/coachingStore";

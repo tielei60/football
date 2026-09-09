@@ -1,5 +1,7 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FootballError, openFootballStore } from './football-store.mjs';
@@ -43,11 +45,45 @@ async function serveSite(request, response, pathname, staticDirectory) {
     if (extname(pathname) || pathname.startsWith('/assets/')) throw new FootballError(404, '未找到此足球页面。');
     file = resolve(root, 'index.html');
   }
-  let content;
-  try { content = await readFile(file); }
+  const extension = extname(file);
+  let metadata;
+  try { metadata = await stat(file); }
   catch { throw new FootballError(404, '足球应用尚未完成构建。'); }
-  response.writeHead(200, { 'Content-Type': contentTypes[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Length': content.length });
-  response.end(request.method === 'HEAD' ? undefined : content);
+  const encodings = (request.headers['accept-encoding'] ?? '').split(',').map((entry) => {
+    const [name, ...parameters] = entry.trim().toLowerCase().split(';');
+    const quality = parameters.find((parameter) => parameter.trim().startsWith('q='));
+    return { name, quality: quality ? Number(quality.trim().slice(2)) : 1 };
+  });
+  const gzip = encodings.find((entry) => entry.name === 'gzip') ?? encodings.find((entry) => entry.name === '*');
+  let compressed = false;
+  if (gzip?.quality > 0 && ['.js', '.css', '.html', '.svg', '.json'].includes(extension)) {
+    try {
+      const candidate = await stat(file + '.gz');
+      if (candidate.isFile() && candidate.mtimeMs >= metadata.mtimeMs) {
+        file += '.gz';
+        metadata = candidate;
+        compressed = true;
+      }
+    } catch { /* Uncompressed assets remain available when no prebuilt gzip exists. */ }
+  }
+  const immutable = /^\/(?:js|css|assets)\/[^/]+-[\w-]{8,}\.(?:js|css|woff2?|png|svg|webp)$/.test(pathname);
+  const etag = `W/"${metadata.size.toString(16)}-${metadata.mtimeMs.toString(16)}-${compressed ? 'gzip' : 'identity'}"`;
+  const headers = {
+    'Content-Type': contentTypes[extension] ?? 'application/octet-stream',
+    'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+    'Vary': 'Accept-Encoding',
+    'ETag': etag,
+    ...(compressed ? { 'Content-Encoding': 'gzip' } : {}),
+  };
+  if ((request.headers['if-none-match'] ?? '').split(',').map((tag) => tag.trim()).some((tag) => tag === '*' || tag === etag)) {
+    response.writeHead(304, headers);
+    response.end();
+    return;
+  }
+  response.writeHead(200, { ...headers, 'Content-Length': metadata.size });
+  if (request.method === 'HEAD') response.end();
+  else await pipeline(createReadStream(file), response);
 }
 
 export function createFootballServer({ databasePath = process.env.FOOTBALL_DB_PATH || resolve(appDirectory, 'data/football.sqlite'), staticDirectory = resolve(appDirectory, 'dist'), maximumRequestBytes = 25 * 1024 * 1024 } = {}) {

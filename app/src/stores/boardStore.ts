@@ -73,7 +73,8 @@ export const useBoardStore = defineStore("board", () => {
     const point = svgElement.value.createSVGPoint();
     point.x = e.clientX;
     point.y = e.clientY;
-    return point.matrixTransform(svgElement.value.getScreenCTM()?.inverse());
+    const coordinateSpace = svgElement.value.querySelector<SVGGElement>("#pitch-coordinate-space") ?? svgElement.value;
+    return point.matrixTransform(coordinateSpace.getScreenCTM()?.inverse());
   };
 
   // 计算有效边界区域，返回元素中心点可移动的范围

@@ -1,5 +1,6 @@
 /* eslint-disable no-param-reassign */
 import { storeToRefs } from "pinia";
+import { onScopeDispose } from "vue";
 import { useItemStore } from "../stores/itemStore";
 import { useAnimationStore } from "../stores/animationStore";
 import { useGlobalStore } from "../stores/globalStore";
@@ -14,6 +15,8 @@ export function useDraggable() {
   const boardStore = useBoardStore();
   const globalStore = useGlobalStore();
   let hasDragged = false; // 内部状态，用于判断是否发生了真实拖动
+  let cancelDrag: (() => void) | undefined;
+  onScopeDispose(() => cancelDrag?.());
 
   const { isAnimationMode, currentAnimation } = storeToRefs(animationStore);
   const { moveElement } = itemStore;
@@ -31,13 +34,16 @@ export function useDraggable() {
   ) => {
     const svg = svgElement.value;
     if (!svg) return;
+    cancelDrag?.();
 
     hasDragged = false;
     const startX = event.clientX;
     const startY = event.clientY;
     const dragThreshold = 4; // 拖动阈值
 
-    const handleMoveItem = (moveEvent: PointerEvent) => {
+    let frame: number | undefined;
+    let pending: PointerEvent | undefined;
+    const applyMove = (moveEvent: PointerEvent) => {
       if (!item.id) return;
       if (!hasDragged) {
         const dx = moveEvent.clientX - startX;
@@ -84,7 +90,33 @@ export function useDraggable() {
       }
     };
 
-    const stopDrag = () => {
+    const flushMove = () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      frame = undefined;
+      const event = pending;
+      pending = undefined;
+      if (event) applyMove(event);
+    };
+    const handleMoveItem = (event: PointerEvent) => {
+      if (event.pointerId !== eventPointerId) return;
+      pending = event;
+      if (frame === undefined) frame = requestAnimationFrame(flushMove);
+    };
+    const eventPointerId = event.pointerId;
+    const cleanup = () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      frame = undefined;
+      pending = undefined;
+      document.removeEventListener("pointermove", handleMoveItem);
+      document.removeEventListener("pointerup", stopDrag);
+      document.removeEventListener("pointercancel", stopDrag);
+      cancelDrag = undefined;
+    };
+    const stopDrag = (event: PointerEvent) => {
+      if (event.pointerId !== eventPointerId) return;
+      // Commit the queued sample before ending the gesture, even between frames.
+      flushMove();
+      cleanup();
       if (!item.id) return;
       if (isAnimationMode.value) {
         // 动画模式下更新共享元素池中的 isDragging
@@ -106,19 +138,16 @@ export function useDraggable() {
       }
 
       // 触发点击回调
-      if (!hasDragged && callbacks.onClick) {
+      if (!hasDragged && event.type !== "pointercancel" && callbacks.onClick) {
         callbacks.onClick();
       }
-
-      document.removeEventListener("pointermove", handleMoveItem);
-      document.removeEventListener("pointerup", stopDrag);
-      document.removeEventListener("pointercancel", stopDrag);
     };
 
     // 监听整个window的事件
     document.addEventListener("pointermove", handleMoveItem);
     document.addEventListener("pointerup", stopDrag);
     document.addEventListener("pointercancel", stopDrag);
+    cancelDrag = cleanup;
   };
   return {
     startDrag,

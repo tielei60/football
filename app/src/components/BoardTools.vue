@@ -13,6 +13,9 @@ import {
   Undo2,
   Redo2,
   ArrowLeft,
+  ArrowUpRight,
+  Send,
+  Square,
 } from "lucide-vue-next";
 import { ElMessage } from "element-plus";
 import { captureScreenshot } from "@/utils/index";
@@ -23,6 +26,7 @@ import { useDrawStore } from "@/stores/drawStore";
 import { useAnimationStore } from "@/stores/animationStore";
 import { useHistory } from "@/composables/useHistory";
 import Shape from "./drawings/Shape.vue";
+import { RUN_LINE_CONFIG, PASS_LINE_CONFIG } from "@/constants";
 
 const globalStore = useGlobalStore();
 const itemStore = useItemStore();
@@ -33,8 +37,15 @@ const { handleUndo, handleRedo, canUndo, canRedo, pushHistory } = useHistory();
 const { currentTool } = storeToRefs(globalStore);
 const { isAnimationMode } = storeToRefs(animationStore);
 const exporting = ref(false);
-defineProps<{ fullscreen: boolean; fullscreenBusy: boolean }>();
+defineProps<{ fullscreen: boolean; fullscreenBusy: boolean; compact?: boolean }>();
 const emit = defineEmits<{ fullscreen: [] }>();
+const chooseDrawing = (kind: "run" | "pass" | "zone") => {
+  const config = kind === "run" ? RUN_LINE_CONFIG : PASS_LINE_CONFIG;
+  drawStore.drawingConfig.type = kind === "zone" ? "rectangle" : config.shape;
+  drawStore.drawingConfig.dashed = kind === "run";
+  drawStore.drawingConfig.strokeColor = config.strokeColor;
+  globalStore.setCurrentTool("shape");
+};
 
 const openAnimation = () => {
   const elements = itemStore.items
@@ -75,6 +86,17 @@ const exportImage = async () => {
         <MousePointer2 :size="19" />
       </button>
       <Shape v-if="!isAnimationMode" />
+      <template v-if="compact && !isAnimationMode">
+        <button class="tbtn" title="跑位线" aria-label="跑位线" @click="chooseDrawing('run')">
+          <ArrowUpRight :size="19" />
+        </button>
+        <button class="tbtn" title="传球线" aria-label="传球线" @click="chooseDrawing('pass')">
+          <Send :size="19" />
+        </button>
+        <button class="tbtn" title="区域" aria-label="区域" @click="chooseDrawing('zone')">
+          <Square :size="19" />
+        </button>
+      </template>
       <button
         v-if="!isAnimationMode"
         class="tbtn"

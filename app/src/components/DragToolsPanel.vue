@@ -1,7 +1,11 @@
 <template>
   <!-- 取色板：场地底部边线下方空地，不遮挡名单面板 -->
   <g class="palette">
-    <g v-for="(item, index) in toolItems" :key="`tool-item-${item.id}`">
+    <g
+      v-for="(item, index) in toolItems"
+      :key="`tool-item-${item.id}`"
+      :transform="portrait ? `rotate(90 ${item.x} ${item.y})` : undefined"
+    >
       <g v-if="item.elementType === 'player'">
         <circle
           :cx="item.x"
@@ -54,6 +58,7 @@ import ballSvg from "@/assets/icons/ball.svg";
 const itemStore = useItemStore();
 const animationStore = useAnimationStore();
 const boardStore = useBoardStore();
+const props = defineProps<{ portrait?: boolean }>();
 const { pushHistory } = useHistory();
 
 // 方法可以直接解构
@@ -65,14 +70,22 @@ const { isAnimationMode } = storeToRefs(animationStore);
 
 const toolItemNumbers = ref([0, 0, 0, 0, 0, 0]);
 // 横竖屏统一：底部边线下方空地（y=795），不遮挡左侧名单
-const toolItems = computed(() => [
-  new FieldElement({ color: "#eb281e", x: 350, y: 795, number: toolItemNumbers.value[0], elementType: "player" }),
-  new FieldElement({ color: "#2495ff", x: 420, y: 795, number: toolItemNumbers.value[1], elementType: "player" }),
-  new FieldElement({ color: "#fffd55", x: 490, y: 795, number: toolItemNumbers.value[2], elementType: "player" }),
-  new FieldElement({ color: "#ffffff", x: 560, y: 795, number: toolItemNumbers.value[3], elementType: "player" }),
-  new FieldElement({ color: "#000000", x: 630, y: 795, number: toolItemNumbers.value[4], elementType: "player" }),
-  new FieldElement({ x: 705, y: 795, elementType: "ball" }),
-]);
+const toolItems = computed(() =>
+  [
+    new FieldElement({ color: "#eb281e", x: 350, y: 795, number: toolItemNumbers.value[0], elementType: "player" }),
+    new FieldElement({ color: "#2495ff", x: 420, y: 795, number: toolItemNumbers.value[1], elementType: "player" }),
+    new FieldElement({ color: "#fffd55", x: 490, y: 795, number: toolItemNumbers.value[2], elementType: "player" }),
+    new FieldElement({ color: "#ffffff", x: 560, y: 795, number: toolItemNumbers.value[3], elementType: "player" }),
+    new FieldElement({ color: "#000000", x: 630, y: 795, number: toolItemNumbers.value[4], elementType: "player" }),
+    new FieldElement({ x: 705, y: 795, elementType: "ball" }),
+  ].map((item, index) => {
+    if (props.portrait) {
+      item.x = 30;
+      item.y = 230 + index * 70;
+    }
+    return item;
+  })
+);
 
 const startDragNewItem = (item: FieldElement, event: PointerEvent, index: number) => {
   event.stopPropagation();

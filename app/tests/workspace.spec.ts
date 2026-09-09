@@ -89,6 +89,7 @@ test("saves a tactic and can close the library using its own close control", asy
 test("mobile workspace fits the viewport and keeps tools reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/board");
+  await page.getByRole("button", { name: "绘图", exact: true }).click();
   await expect(page.getByRole("button", { name: "选择 (V)", exact: true })).toBeVisible();
   const heading = await page.getByRole("heading", { level: 1 }).boundingBox();
   expect(heading?.y).toBeGreaterThanOrEqual(0);

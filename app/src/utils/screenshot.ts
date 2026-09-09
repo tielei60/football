@@ -1,10 +1,11 @@
 // 指定区域截图
 import { inlineImages } from "./inlineImages";
+import { prepareBoardExport } from "./boardExport";
+import { useMatchStore } from "@/stores/matchStore";
 
 export const captureScreenshot = async (area: SVGElement) => {
   // 获取 area 的边界框
-  // @ts-ignore
-  const bbox = area.getBBox();
+  const { bounds: bbox, content: clonedContent } = prepareBoardExport(area as SVGGraphicsElement);
 
   // 创建一个新的 SVG 元素
   const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -13,7 +14,6 @@ export const captureScreenshot = async (area: SVGElement) => {
   newSvg.setAttribute("viewBox", `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
 
   // 克隆 area 内容并添加到新的 SVG 中
-  const clonedContent = area.cloneNode(true) as SVGElement;
 
   // 内联图片（头像、球图标），否则导出的 PNG 里会丢失
   await inlineImages(clonedContent);
@@ -62,11 +62,12 @@ export const captureScreenshot = async (area: SVGElement) => {
     ctx.fillStyle = "rgba(11, 42, 29, 0.65)";
     ctx.font = `${20 * SCALE}px sans-serif`;
     ctx.textAlign = "right";
-    ctx.fillText(`柏林花园FC · 8人制 · ${date}`, canvas.width - 16 * SCALE, canvas.height - 12 * SCALE);
+    const playerCount = useMatchStore().playerCount;
+    ctx.fillText(`柏林花园FC · ${playerCount}人制 · ${date}`, canvas.width - 16 * SCALE, canvas.height - 12 * SCALE);
     const pngUrl = canvas.toDataURL("image/png");
 
     const link = document.createElement("a");
-    link.download = `柏林花园FC_8人制_${date}.png`;
+    link.download = `柏林花园FC_${playerCount}人制_${date}.png`;
     link.href = pngUrl;
     link.click();
   }

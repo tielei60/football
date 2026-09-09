@@ -35,16 +35,19 @@ test("desktop roster scrolls independently and expanded mode exposes more player
   await expect(page.getByRole("button", { name: "名单末尾测试 队员详情", exact: true })).toBeInViewport();
 });
 
-test("mobile roster uses page scrolling and the final player remains actionable", async ({ page }) => {
+test("mobile roster scrolls below a stationary pitch and the final player remains actionable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/board");
+  await page.getByRole("button", { name: "阵容", exact: true }).click();
   await expect(page.locator(".roster-item")).toHaveCount(20);
   const list = page.getByRole("list", { name: "队员列表", exact: true });
-  expect(await list.evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(true);
+  expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  const pitchBefore = await page.locator("#field").boundingBox();
   const last = page.locator(".roster-item").last();
   await last.scrollIntoViewIfNeeded();
   await last.getByRole("button", { name: "上场", exact: true }).click();
   await expect(last.getByRole("button", { name: "下场", exact: true })).toBeVisible();
+  expect(await page.locator("#field").boundingBox()).toEqual(pitchBefore);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "test-results/roster-mobile-bottom.png" });
 });

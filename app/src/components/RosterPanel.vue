@@ -241,6 +241,13 @@ const toggleDetail = (id: string) => {
   detailId.value = detailId.value === id ? null : id;
   if (detailId.value) void revealPlayer(id);
 };
+const focusPlayer = (id: string) => {
+  keyword.value = "";
+  availability.value = "all";
+  detailId.value = id;
+  void revealPlayer(id);
+};
+defineExpose({ focusPlayer });
 
 const onNumber = (id: string, e: Event) => {
   const value = Number((e.target as HTMLInputElement).value);

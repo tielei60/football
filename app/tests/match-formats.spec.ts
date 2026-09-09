@@ -19,12 +19,13 @@ test("each match size offers working home and opponent formation choices on mobi
   test.setTimeout(120000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/board");
+  await page.getByRole("button", { name: "更多设置", exact: true }).click();
   for (const size of MATCH_PLAYER_COUNTS) {
     await page.getByRole("combobox", { name: "比赛人数", exact: true }).selectOption(String(size));
     for (const formation of MATCH_FORMATIONS[size].filter((f) => f.category === "常规")) {
-      const choice = page.getByRole("button", { name: formation.name, exact: true });
-      await choice.click();
-      await expect(choice).toHaveAttribute("aria-pressed", "true");
+      const choice = page.getByRole("combobox", { name: "主队阵型", exact: true });
+      await choice.selectOption(formation.id);
+      await expect(choice).toHaveValue(formation.id);
       await page.getByRole("combobox", { name: "对手阵型" }).selectOption(formation.id);
       await expect(page.locator(".roster-item.on")).toHaveCount(size);
       await expect(page.locator("#players > g")).toHaveCount(size * 2);

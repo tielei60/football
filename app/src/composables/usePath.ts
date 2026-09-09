@@ -3,8 +3,10 @@ import { useAnimationStore } from "../stores/animationStore";
 import { FieldElement } from "../types/fieldElement";
 import { getCatmullRomPath } from "../utils/path";
 import { getDefaultControlPoint } from "../utils";
+import { useBoardStore } from "../stores/boardStore";
 
 export function usePath() {
+  const boardStore = useBoardStore();
   const animationStore = useAnimationStore();
   const { currentAnimation, currentFrameIndex } = storeToRefs(animationStore);
 
@@ -51,10 +53,7 @@ export function usePath() {
     if (!action) return;
 
     const moveControlPoint = (moveEvent: PointerEvent) => {
-      const point = svg.createSVGPoint();
-      point.x = moveEvent.clientX;
-      point.y = moveEvent.clientY;
-      const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse());
+      const svgPoint = boardStore.getSvgPosition(moveEvent);
       action.controlPoint = {
         x: svgPoint.x,
         y: svgPoint.y,
