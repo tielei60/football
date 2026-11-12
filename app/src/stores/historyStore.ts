@@ -11,6 +11,12 @@ import type { MatchPlayerCount } from "@/data/matchFormats";
 type OperationType = "add" | "delete" | "update" | "clear" | "";
 
 // 定义历史记录项的接口
+export interface BoardMetaSnapshot {
+  formationId: string | null;
+  awayFormationId: string | null;
+  formationCustomized: boolean;
+}
+
 interface HistoryItem {
   playerCount: MatchPlayerCount;
   type: OperationType;
@@ -18,6 +24,7 @@ interface HistoryItem {
   drawings?: Drawing[];
   roster?: RosterEntry[];
   coaching?: TrainingPlan;
+  meta?: BoardMetaSnapshot;
   timestamp: number;
 }
 
@@ -31,7 +38,8 @@ export const useHistoryStore = defineStore("history", () => {
     elements?: FieldElement[],
     drawings?: Drawing[],
     roster?: RosterEntry[],
-    coaching?: TrainingPlan
+    coaching?: TrainingPlan,
+    meta?: BoardMetaSnapshot
   ) => {
     const historyItem: HistoryItem = {
       playerCount: useMatchStore().playerCount,
@@ -40,6 +48,7 @@ export const useHistoryStore = defineStore("history", () => {
       drawings: drawings?.map((d) => d.clone()),
       roster: roster?.map((p) => ({ ...p, positions: [...p.positions] })),
       coaching: coaching ? { ...coaching } : undefined,
+      meta: meta ? { ...meta } : undefined,
       timestamp: Date.now(),
     };
     undoStack.value.push(historyItem);
@@ -51,7 +60,8 @@ export const useHistoryStore = defineStore("history", () => {
     elements?: FieldElement[],
     drawings?: Drawing[],
     roster?: RosterEntry[],
-    coaching?: TrainingPlan
+    coaching?: TrainingPlan,
+    meta?: BoardMetaSnapshot
   ) => {
     const historyItem: HistoryItem = {
       playerCount: useMatchStore().playerCount,
@@ -60,6 +70,7 @@ export const useHistoryStore = defineStore("history", () => {
       drawings: drawings?.map((d) => d.clone()),
       roster: roster?.map((p) => ({ ...p, positions: [...p.positions] })),
       coaching: coaching ? { ...coaching } : undefined,
+      meta: meta ? { ...meta } : undefined,
       timestamp: Date.now(),
     };
     redoStack.value.push(historyItem);

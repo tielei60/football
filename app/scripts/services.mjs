@@ -19,7 +19,10 @@ const logPath = (name) => resolve(directory, `${name}.log`);
 function identity(pid) {
   if (!Number.isSafeInteger(pid) || pid <= 1) return "";
   try {
-    return execFileSync("ps", ["-p", String(pid), "-o", "lstart=", "-o", "command="], { encoding: "utf8" }).trim();
+    return execFileSync("ps", ["-p", String(pid), "-o", "lstart=", "-o", "command="], {
+      encoding: "utf8",
+      env: { ...process.env, LC_ALL: "C", LANG: "C" },
+    }).trim();
   } catch {
     return "";
   }

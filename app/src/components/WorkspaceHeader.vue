@@ -10,6 +10,7 @@ import {
   Shield,
   ClipboardList,
   Settings2,
+  Star,
   X,
 } from "lucide-vue-next";
 import { useGlobalStore } from "@/stores/globalStore";
@@ -27,6 +28,9 @@ const props = defineProps<{
   saving: boolean;
   activeFormation: string | null;
   awayFormation: string | null;
+  defaultFormation: string;
+  formationCustomized: boolean;
+  boardDirty: boolean;
 }>();
 const emit = defineEmits<{
   roster: [];
@@ -39,6 +43,7 @@ const emit = defineEmits<{
   formation: [id: string];
   opponent: [id: string];
   playerCount: [count: MatchPlayerCount];
+  setDefault: [id: string];
 }>();
 const global = useGlobalStore();
 const settingsOpen = ref(false);
@@ -75,11 +80,12 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         </select>
         <select
           aria-label="主队阵型"
+          title="阵型模板 · 一键落位（只决定起点，拖动微调后记得保存）"
           :value="activeFormation || ''"
           :disabled="animation.isAnimationMode"
           @change="emit('formation', ($event.target as HTMLSelectElement).value)"
         >
-          <option value="" disabled>主队阵型</option>
+          <option value="" disabled>阵型模板</option>
           <option v-for="f in regular" :key="f.id" :value="f.id">{{ f.name }}</option>
         </select>
       </div>
@@ -136,11 +142,11 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
           class="workspace-command save-command"
           :disabled="saving"
           aria-label="保存战术"
-          :title="saving ? '保存中' : '保存战术'"
+          :title="saving ? '保存中' : boardDirty ? '有未保存修改，点击保存到战术库' : '已保存'"
           @click="emit('save')"
         >
           <Save :size="17" aria-hidden="true" />
-          <span>{{ saving ? "保存中" : "保存战术" }}</span>
+          <span>{{ saving ? "保存中" : boardDirty ? "保存战术 ●" : "保存战术" }}</span>
         </button>
       </div>
     </div>
@@ -158,25 +164,38 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
             <option v-for="count in MATCH_PLAYER_COUNTS" :key="count" :value="count">{{ count }} 人制</option>
           </select>
         </label>
-        <span v-if="!compact" class="config-label">
+        <span v-if="!compact" class="config-label" title="阵型模板只决定一键落位起点，拖动微调后记得保存到战术库">
           <Shield :size="15" aria-hidden="true" />
-          主队阵型
+          阵型模板 · 一键落位
         </span>
         <div v-if="!compact" class="formation-segment" aria-label="主队阵型">
           <button
             v-for="f in regular"
             :key="f.id"
-            :class="{ selected: activeFormation === f.id }"
+            :class="{ selected: activeFormation === f.id, adjusted: activeFormation === f.id && formationCustomized }"
             :aria-pressed="activeFormation === f.id"
             :disabled="animation.isAnimationMode"
+            :title="f.id === defaultFormation ? `${f.name}（${playerCount} 人制默认）` : f.name"
             @click="emit('formation', f.id)"
           >
-            {{ f.name }}
+            {{ f.name }}{{ activeFormation === f.id && formationCustomized ? "·已调" : ""
+            }}{{ f.id === defaultFormation ? " ★" : "" }}
           </button>
         </div>
+        <button
+          v-if="!compact"
+          class="default-btn"
+          :disabled="!activeFormation || activeFormation === defaultFormation || animation.isAnimationMode"
+          :title="`将 ${activeFormation || ''} 设为 ${playerCount} 人制默认阵型`"
+          @click="activeFormation && emit('setDefault', activeFormation)"
+        >
+          <Star :size="13" aria-hidden="true" />
+          设为默认
+        </button>
         <select
           v-if="setpieces.length && (!compact || settingsOpen)"
           aria-label="定位球阵型"
+          title="定位球模板 · 一键落位"
           :value="setpieces.some((f) => f.id === activeFormation) ? activeFormation : ''"
           :disabled="animation.isAnimationMode"
           @change="emit('formation', ($event.target as HTMLSelectElement).value)"
@@ -184,8 +203,8 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
           <option value="" disabled>定位球</option>
           <option v-for="f in setpieces" :key="f.id" :value="f.id">{{ f.name }}</option>
         </select>
-        <label v-if="!compact || settingsOpen" class="opponent-select">
-          <span class="config-label">对手</span>
+        <label v-if="!compact || settingsOpen" class="opponent-select" title="对手摆阵与主队模板相互独立">
+          <span class="config-label">对手摆阵</span>
           <select
             aria-label="对手阵型"
             :value="awayFormation || ''"
@@ -379,6 +398,25 @@ p {
   border-color: var(--line);
   color: var(--pitch-700);
   box-shadow: 0 1px 2px #1827230a;
+}
+.formation-segment button.adjusted {
+  border-style: dashed;
+}
+.default-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.default-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 select {
   max-width: 140px;

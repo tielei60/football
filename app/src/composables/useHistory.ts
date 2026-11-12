@@ -6,6 +6,8 @@ import { useItemStore } from "../stores/itemStore";
 import { useRosterStore } from "../stores/rosterStore";
 import { useCoachingStore } from "../stores/coachingStore";
 import { useMatchStore } from "../stores/matchStore";
+import { useTacticsStore } from "../stores/tacticsStore";
+import type { BoardMetaSnapshot } from "../stores/historyStore";
 
 export function useHistory() {
   const itemStore = useItemStore();
@@ -15,6 +17,16 @@ export function useHistory() {
   const { items } = storeToRefs(itemStore);
   const { drawings } = storeToRefs(drawStore);
   const { undoStack, redoStack } = storeToRefs(historyStore);
+
+  // 压栈时顺带记录阵型血缘，撤销/重做可精确恢复徽标与高亮。
+  const captureMeta = (): BoardMetaSnapshot => {
+    const tactics = useTacticsStore();
+    return {
+      formationId: tactics.currentFormationId,
+      awayFormationId: tactics.awayFormationId,
+      formationCustomized: tactics.formationCustomized,
+    };
+  };
 
   // 检查是否可以撤销/重做
   const canUndo = computed(() => undoStack.value.length > 0);
@@ -30,7 +42,8 @@ export function useHistory() {
       items.value.getAll(),
       drawings.value.getDrawings(),
       useRosterStore().players,
-      useCoachingStore().plan
+      useCoachingStore().plan,
+      captureMeta()
     );
 
     const lastOperation = historyStore.popUndo();
@@ -50,6 +63,7 @@ export function useHistory() {
     if (lastOperation.roster)
       useRosterStore().players = lastOperation.roster.map((p) => ({ ...p, positions: [...p.positions] }));
     if (lastOperation.coaching) useCoachingStore().plan = { ...lastOperation.coaching };
+    useTacticsStore().restoreBoardMeta(lastOperation.meta);
   };
 
   // 处理重做操作
@@ -62,7 +76,8 @@ export function useHistory() {
       items.value.getAll(),
       drawings.value.getDrawings(),
       useRosterStore().players,
-      useCoachingStore().plan
+      useCoachingStore().plan,
+      captureMeta()
     );
 
     const nextOperation = historyStore.popRedo();
@@ -83,13 +98,21 @@ export function useHistory() {
     if (nextOperation.roster)
       useRosterStore().players = nextOperation.roster.map((p) => ({ ...p, positions: [...p.positions] }));
     if (nextOperation.coaching) useCoachingStore().plan = { ...nextOperation.coaching };
+    useTacticsStore().restoreBoardMeta(nextOperation.meta);
   };
 
   // 保存当前状态到撤销栈
   const pushHistory = () => {
     const itemData = items && items.value ? items.value.getAll() : [];
     const drawingData = drawings?.value ? drawings.value.getDrawings() : [];
-    historyStore.pushHistory("", itemData, drawingData, useRosterStore().players, useCoachingStore().plan);
+    historyStore.pushHistory(
+      "",
+      itemData,
+      drawingData,
+      useRosterStore().players,
+      useCoachingStore().plan,
+      captureMeta()
+    );
     // 清空重做栈
     redoStack.value = [];
   };

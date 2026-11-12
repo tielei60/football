@@ -23,6 +23,18 @@
         </button>
       </div>
 
+      <section class="current-card" aria-label="当前战术草稿">
+        <div class="current-title-row">
+          <span class="current-label">当前画布 · 草稿</span>
+          <span v-if="currentId === null" class="current-dirty">未存档</span>
+          <span v-else-if="boardDirty" class="current-dirty">● 未保存</span>
+          <span v-else class="current-clean">✓ 已保存</span>
+        </div>
+        <div class="current-name">{{ currentTitle || "未命名草稿" }}</div>
+        <div class="current-meta">{{ currentFormationLabel }}</div>
+        <p class="current-hint">阵型模板只决定落位起点，拖动微调后记得保存；打开存档会整体替换当前画布。</p>
+      </section>
+
       <div class="save-box">
         <label class="field-label">
           战术名称
@@ -95,7 +107,7 @@
       </div>
 
       <label class="field-label library-heading">
-        已保存战术
+        已保存战术 · 存档
         <input class="drawer-search" type="search" aria-label="搜索战术" v-model="keyword" placeholder="搜索战术名称" />
       </label>
       <div class="tag-row filter">
@@ -122,6 +134,7 @@
           <div class="tactic-info">
             <div class="tactic-title">{{ t.title }}</div>
             <div class="tactic-meta">{{ fmtTime(t.updatedAt) }} · {{ t.tags.join("/") || "无标签" }}</div>
+            <div v-if="formationName(t.formationId)" class="tactic-formation">阵型：{{ formationName(t.formationId) }}</div>
             <div v-if="matchText(t)" class="tactic-match">{{ matchText(t) }}</div>
             <p v-if="t.snapshot.coaching?.objective" class="tactic-objective">{{ t.snapshot.coaching.objective }}</p>
             <span v-if="t.snapshot.animation" class="animation-count">
@@ -179,6 +192,8 @@ import "element-plus/es/components/drawer/style/css";
 import { storeToRefs } from "pinia";
 import { useTacticsStore } from "@/stores/tacticsStore";
 import { useAnimationStore } from "@/stores/animationStore";
+import { useMatchStore } from "@/stores/matchStore";
+import { findFormation } from "@/data/matchFormats";
 import { TACTIC_TAGS, type VersionRecord } from "@/db";
 import { inlineImages } from "@/utils/inlineImages";
 import { fromBoard, toBoard } from "@/services/tacticLanguage";
@@ -190,7 +205,8 @@ const saving = ref(false);
 const importingSeeds = ref(false);
 
 const store = useTacticsStore();
-const { tactics, versions, currentId } = storeToRefs(store);
+const { tactics, versions, currentId, currentFormationId, formationCustomized, boardDirty } = storeToRefs(store);
+const matchStore = useMatchStore();
 const allTags = [...TACTIC_TAGS];
 
 const title = ref("");
@@ -275,7 +291,8 @@ const onSave = async (asNew = false) => {
     await store.saveTactic(
       name,
       tags.value,
-      current?.formationId ?? null,
+      // 阵型取当前画布模板血缘（含已微调），不再沿用存档旧值。
+      store.currentFormationId ?? current?.formationId ?? null,
       note.value.trim(),
       {
         opponent: opponent.value,
@@ -306,6 +323,17 @@ const matchText = (t: { match?: { opponent?: string; date?: string; score?: stri
   const parts = [t.match?.opponent, t.match?.date, t.match?.score].filter(Boolean);
   return parts.length ? parts.join(" · ") : "";
 };
+
+// 草稿卡与存档列表共用：模板血缘 → 展示名，无血缘显示自定义站位。
+const formationName = (id: string | null) => (id ? (findFormation(id)?.name ?? id) : "");
+const currentTitle = computed(() => store.tactics.find((t) => t.id === store.currentId)?.title || "");
+const currentFormationLabel = computed(() => {
+  const id = currentFormationId.value;
+  const name = id ? (findFormation(id)?.name ?? id) : "自定义站位";
+  const suffix = id && formationCustomized.value ? "·已微调" : "";
+  const isDefault = !!id && id === matchStore.getDefaultFormation(matchStore.playerCount);
+  return `模板：${name}${suffix}${isDefault ? "（默认）" : ""}`;
+});
 
 const onNew = () => {
   if (confirm("清空当前画布新建？（已保存的战术不受影响）")) store.newBoard();
@@ -495,6 +523,67 @@ const onExportSVG = async () => {
   background: #fff;
   padding: 4px 0 20px;
   border-bottom: 1px solid #e2e6e9;
+}
+
+.current-card {
+  background: #f2f6f2;
+  border: 1px solid #dce6dc;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.current-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: #202b29;
+}
+
+.current-dirty {
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.current-clean {
+  color: #26715a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.current-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #202b29;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-meta {
+  font-size: 12px;
+  color: #26715a;
+  font-weight: 700;
+}
+
+.current-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #65716e;
+  line-height: 1.6;
+}
+
+.tactic-formation {
+  font-size: 12px;
+  color: var(--pitch-700, #14532d);
 }
 
 .save-title,

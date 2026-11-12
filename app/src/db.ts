@@ -4,6 +4,9 @@ import type { AnimationSnapshot } from "@/types/animation";
 
 // 战术快照，keyframes 保留兼容旧文件，完整动画存于 animation。
 export interface BoardSnapshot {
+  formationId?: string | null;
+  awayFormationId?: string | null;
+  formationCustomized?: boolean;
   playerCount?: number;
   items: Record<string, unknown>[];
   drawings: Record<string, unknown>[];

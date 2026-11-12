@@ -328,9 +328,21 @@ function validateBoard(board) {
     !board.markings.every(isObject)
   )
     reject("战术板的球员或标记内容不正确。");
-  if (board.playerCount !== undefined && ![5, 6, 7, 8, 9, 11].includes(board.playerCount))
+  if (
+    board.playerCount !== undefined &&
+    ![5, 6, 7, 8, 9, 11].includes(board.playerCount)
+  )
     reject("比赛人数须为 5、6、7、8、9 或 11 人。");
   validateFootballNames(board);
+  for (const name of ["formationId", "awayFormationId"]) {
+    if (board[name] !== undefined && board[name] !== null)
+      string(board[name], "阵型名称", 300);
+  }
+  if (
+    board.formationCustomized !== undefined &&
+    typeof board.formationCustomized !== "boolean"
+  )
+    reject("阵型微调状态须为布尔值。");
   board.pieces.forEach(validatePiece);
   for (const marking of board.markings) {
     if (!validPieceId(marking.markingId)) reject("战术标记编号不正确。");

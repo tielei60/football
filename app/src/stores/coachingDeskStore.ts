@@ -91,8 +91,20 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
         tactics.currentId = tactics.tactics.some((t) => t.id === saved.desk!.selectedTacticId)
           ? saved.desk.selectedTacticId
           : null;
+        // 工作台自带阵型血缘：重载后徽标与高亮与离开时一致，老数据缺字段则视为自定义站位。
+        const boardMeta = saved.desk.board as {
+          formationId?: unknown;
+          awayFormationId?: unknown;
+          formationCustomized?: unknown;
+        };
+        tactics.markBoardClean(
+          typeof boardMeta.formationId === "string" ? boardMeta.formationId : null,
+          typeof boardMeta.awayFormationId === "string" ? boardMeta.awayFormationId : null,
+          boardMeta.formationCustomized === true
+        );
       }
       await nextTick();
+      tactics.syncBoardDirty();
       useHistoryStore().clearHistory();
       savedContent.value = content();
     } finally {
@@ -162,6 +174,9 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
         useMatchStore().playerCount,
         roster.players,
         tactics.currentId,
+        tactics.currentFormationId,
+        tactics.awayFormationId,
+        tactics.formationCustomized,
       ],
       () => {
         if (applying || !ready.value || status.value === "conflict") return;

@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { nextTick, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { type BoardSnapshot, type MatchInfo, type TacticRecord, type VersionRecord } from "@/db";
 import { apiRequest } from "@/services/tacticsApi";
@@ -35,6 +35,65 @@ export const useTacticsStore = defineStore("tactics", () => {
   // 打印源：设置后由 BoardView 渲染 PrintSheet 并调起 window.print
   const printSource = ref<TacticRecord | null>(null);
   const printNote = ref("");
+  // 三层模型的状态贯通：阵型模板（起点）→ 当前画布（草稿）→ 战术库（存档）。
+  // currentFormationId 记录“当前画布由哪个模板落位”，手动拖动后 formationCustomized 置 true；
+  // boardDirty 表示草稿有未保存修改（落模板 / 手动编辑均置脏，保存 / 打开后清零）。
+  const currentFormationId = ref<string | null>(null);
+  const awayFormationId = ref<string | null>(null);
+  const formationCustomized = ref(false);
+  const boardDirty = ref(false);
+  // 程序化落位/打开/保存期间挂起 BoardView 的手动编辑 watcher，避免误标“已微调”。
+  // 挂起在 nextTick 自动解除：落位变更与 watcher 回调同 tick，watcher 先跑（仍挂起中被跳过）。
+  const dirtySuspended = ref(false);
+  const suspendDirty = () => {
+    dirtySuspended.value = true;
+    void nextTick(() => {
+      dirtySuspended.value = false;
+    });
+  };
+
+  // awayId 缺省 undefined 表示“保持对手状态”，传 null 则清空对手。
+  const applyFormationState = (id: string | null, awayId?: string | null, resetCustomized = true) => {
+    currentFormationId.value = id;
+    if (awayId !== undefined) awayFormationId.value = awayId;
+    if (resetCustomized) formationCustomized.value = false;
+    boardDirty.value = true;
+    suspendDirty();
+  };
+
+  const markBoardEdited = () => {
+    boardDirty.value = true;
+    if (currentFormationId.value) formationCustomized.value = true;
+  };
+
+  const markBoardClean = (
+    formationId: string | null = currentFormationId.value,
+    awayId?: string | null,
+    customized = false
+  ) => {
+    currentFormationId.value = formationId;
+    if (awayId !== undefined) awayFormationId.value = awayId;
+    formationCustomized.value = customized;
+    boardDirty.value = false;
+    suspendDirty();
+  };
+
+  // 人数和阵型来自同一份历史快照，撤销/重做时一起恢复。
+  const restoreBoardMeta = (
+    meta: { formationId: string | null; awayFormationId: string | null; formationCustomized: boolean } | undefined
+  ) => {
+    suspendDirty();
+    if (!meta) {
+      currentFormationId.value = null;
+      awayFormationId.value = null;
+      formationCustomized.value = false;
+    } else {
+      currentFormationId.value = meta.formationId;
+      awayFormationId.value = meta.awayFormationId;
+      formationCustomized.value = meta.formationCustomized;
+    }
+    boardDirty.value = true;
+  };
 
   const snapshotBoard = (): BoardSnapshot => {
     const itemStore = useItemStore();
@@ -42,6 +101,9 @@ export const useTacticsStore = defineStore("tactics", () => {
     return JSON.parse(
       JSON.stringify({
         playerCount: useMatchStore().playerCount,
+        formationId: currentFormationId.value,
+        awayFormationId: awayFormationId.value,
+        formationCustomized: formationCustomized.value,
         items: itemStore.items.getAll().map((e) => ({ ...e })),
         drawings: drawStore.drawings.getDrawings().map((d) => ({ ...d })),
         keyframes: [],
@@ -49,6 +111,48 @@ export const useTacticsStore = defineStore("tactics", () => {
         animation: useAnimationStore().getSnapshot(),
       })
     ) as BoardSnapshot;
+  };
+
+  // 训练计划和演示也是战术内容，编辑它们不代表主队站位已微调。
+  watch(
+    () => [useCoachingStore().plan, useAnimationStore().currentAnimation],
+    () => {
+      if (!dirtySuspended.value) boardDirty.value = true;
+    },
+    { deep: true }
+  );
+
+  const syncBoardDirty = () => {
+    const record = tactics.value.find((tactic) => tactic.id === currentId.value);
+    if (!record) {
+      boardDirty.value = true;
+      return;
+    }
+    const saved = record.snapshot;
+    const normalized = {
+      ...saved,
+      formationId: saved.formationId === undefined ? record.formationId : saved.formationId,
+      awayFormationId:
+        saved.awayFormationId === undefined
+          ? saved.items.some((raw) => raw.team === "away")
+            ? "custom"
+            : null
+          : saved.awayFormationId,
+      formationCustomized: saved.formationCustomized === true,
+    };
+    boardDirty.value = JSON.stringify(toBoard(snapshotBoard())) !== JSON.stringify(toBoard(normalized));
+  };
+
+  const restoreFormationMeta = (snap: BoardSnapshot, fallback: string | null = null) => {
+    markBoardClean(
+      snap.formationId === undefined ? fallback : snap.formationId,
+      snap.awayFormationId === undefined
+        ? snap.items.some((raw) => raw.team === "away")
+          ? "custom"
+          : null
+        : snap.awayFormationId,
+      snap.formationCustomized === true
+    );
   };
 
   const restoreSnapshot = (snap: BoardSnapshot) => {
@@ -98,17 +202,21 @@ export const useTacticsStore = defineStore("tactics", () => {
     );
   };
 
-  // 显式保存：更新战术快照 + 新增一条历史版本
+  // 显式保存：更新战术快照 + 新增一条历史版本。
+  // formationId 缺省取当前画布的模板（含“已微调”也保留模板血缘），调用方可显式覆盖。
   const saveTactic = async (
     title: string,
     tags: string[],
-    formationId: string | null,
+    formationId: string | null = currentFormationId.value,
     note = "",
     match: MatchInfo = {},
     asNew = false
   ) => {
     const now = Date.now();
     const snapshot = snapshotBoard();
+    const capturedContent = JSON.stringify(toBoard(snapshot));
+    snapshot.formationId = formationId;
+    const sourceId = currentId.value;
     const targetId = asNew ? null : currentId.value;
     const cleanTags = [...tags];
     const thumb = await captureThumb();
@@ -137,7 +245,13 @@ export const useTacticsStore = defineStore("tactics", () => {
       },
     });
     const savedId = result.tacticId!;
-    currentId.value = savedId;
+    // 保存的是请求发出时的快照；响应不能清除后续编辑或切换的新画布。
+    if (currentId.value === sourceId) {
+      currentId.value = savedId;
+      if (JSON.stringify(toBoard(snapshotBoard())) === capturedContent) {
+        markBoardClean(formationId, snapshot.awayFormationId, snapshot.formationCustomized);
+      }
+    }
     await refresh();
     await loadVersions(savedId);
   };
@@ -157,6 +271,8 @@ export const useTacticsStore = defineStore("tactics", () => {
       p.fieldId = null;
     });
     currentId.value = null;
+    // 空白画布尚未应用模板，允许下一次点击默认阵型进行落位。
+    markBoardClean(null, null);
   };
 
   const loadTactic = async (id: number) => {
@@ -164,6 +280,7 @@ export const useTacticsStore = defineStore("tactics", () => {
     await loadVersions(id);
     restoreSnapshot(record.snapshot);
     currentId.value = id;
+    restoreFormationMeta(record.snapshot, record.formationId);
     // 打开时现拍缩略图回填（预置导入时无图）
     try {
       const thumb = await captureThumb();
@@ -193,6 +310,9 @@ export const useTacticsStore = defineStore("tactics", () => {
     restoreSnapshot(version.snapshot);
     currentId.value = version.tacticId;
     await loadVersions(version.tacticId);
+    restoreFormationMeta(version.snapshot);
+    // 回滚只替换工作台草稿，尚未写回战术库。
+    boardDirty.value = true;
   };
 
   // 从 JSON 文件导入：落到画布并存为一条新战术（含初始版本）
@@ -200,6 +320,9 @@ export const useTacticsStore = defineStore("tactics", () => {
     const now = Date.now();
     const safe: BoardSnapshot = {
       playerCount: normalizePlayerCount(snapshot.playerCount),
+      formationId: snapshot.formationId,
+      awayFormationId: snapshot.awayFormationId,
+      formationCustomized: snapshot.formationCustomized,
       items: Array.isArray(snapshot.items) ? snapshot.items : [],
       drawings: Array.isArray(snapshot.drawings) ? snapshot.drawings : [],
       keyframes: [],
@@ -213,7 +336,7 @@ export const useTacticsStore = defineStore("tactics", () => {
           title,
           tags,
           fav: false,
-          formationId: null,
+          formationId: safe.formationId ?? null,
           match: match && (match.opponent || match.date || match.score) ? match : undefined,
           snapshot: safe,
           thumb: null,
@@ -225,6 +348,7 @@ export const useTacticsStore = defineStore("tactics", () => {
     });
     restoreSnapshot(safe);
     currentId.value = record.tacticId!;
+    restoreFormationMeta(safe);
     await loadVersions(currentId.value);
     await refresh();
   };
@@ -290,11 +414,11 @@ export const useTacticsStore = defineStore("tactics", () => {
     return count;
   };
 
-  // 快速保存：沿用原标题/标签/阵型/比赛信息，无战术时自动起名新建
+  // 快速保存：沿用原标题/标签/比赛信息，阵型取当前画布模板；无战术时自动起名新建
   const quickSave = async (): Promise<string> => {
     if (currentId.value === null) {
       const name = `战术 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
-      await saveTactic(name, [], null, "快速保存");
+      await saveTactic(name, [], currentFormationId.value, "快速保存");
       return `已新建并保存「${name}」`;
     }
     const t =
@@ -302,10 +426,10 @@ export const useTacticsStore = defineStore("tactics", () => {
       fromTactic(await apiRequest<Tactic>(`/api/tactics/${currentId.value}`));
     if (!t) {
       const name = `战术 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
-      await saveTactic(name, [], null, "快速保存");
+      await saveTactic(name, [], currentFormationId.value, "快速保存");
       return `已新建并保存「${name}」`;
     }
-    await saveTactic(t.title, t.tags, t.formationId, "快速保存", t.match ?? {});
+    await saveTactic(t.title, t.tags, currentFormationId.value ?? t.formationId, "快速保存", t.match ?? {});
     return `已保存「${t.title}」`;
   };
   // 整库备份：战术 + 历史版本（版本用数组下标关联，恢复时重建 id 映射）
@@ -336,6 +460,16 @@ export const useTacticsStore = defineStore("tactics", () => {
     ready,
     printSource,
     printNote,
+    currentFormationId,
+    awayFormationId,
+    formationCustomized,
+    boardDirty,
+    dirtySuspended,
+    applyFormationState,
+    markBoardEdited,
+    markBoardClean,
+    restoreBoardMeta,
+    syncBoardDirty,
     snapshotBoard,
     restoreSnapshot,
     refresh,

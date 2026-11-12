@@ -59,12 +59,13 @@ test("match formats resize both teams and survive undo, save and reload", async 
   await expect(count).toHaveValue("11");
   await expect(page.locator("#players > g")).toHaveCount(22);
   await expect(page.locator(".watermark")).toContainText("11人制");
-  await expect(page.getByRole("combobox", { name: "对手阵型" })).toHaveValue("custom");
+  await expect(page.getByRole("combobox", { name: "对手阵型" })).toHaveValue("4-4-2");
   await page.getByRole("button", { name: "保存战术", exact: true }).click();
   await expect.poll(async () => (await (await request.get("/api/tactics")).json())[0]?.board.playerCount).toBe(11);
   await expect(page.getByLabel("保存状态")).toContainText("已保存");
   await page.reload();
   await expect(count).toHaveValue("11");
+  await expect(page.getByRole("combobox", { name: "对手阵型" })).toHaveValue("4-4-2");
   await expect(page.locator("#players > g")).toHaveCount(22);
   await page.screenshot({ path: "test-results/match-format-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });

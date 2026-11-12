@@ -10,8 +10,11 @@
       :tactics-open="tacticsOpen"
       :coaching-open="coachingOpen"
       :saving="saving"
-      :active-formation="activeFormation"
-      :away-formation="awayCount ? awayFormation || 'custom' : null"
+      :active-formation="currentFormationId"
+      :away-formation="awayCount ? awayFormationId || 'custom' : null"
+      :default-formation="matchStore.getDefaultFormation(matchStore.playerCount)"
+      :formation-customized="formationCustomized"
+      :board-dirty="boardDirty"
       :player-count="matchStore.playerCount"
       @player-count="onPlayerCountChange"
       @roster="compactLayout ? selectMobileTab('roster') : (rosterOpen = !rosterOpen)"
@@ -29,6 +32,7 @@
       @flip="flipBoard"
       @formation="onApplyFormation"
       @opponent="onOpponentChange"
+      @set-default="onSetDefaultFormation"
     />
     <div class="board-main" :data-panel="mobileTab">
       <MobileWorkspaceTabs
@@ -47,8 +51,14 @@
       <section class="pitch-workspace" aria-label="战术画布">
         <div v-if="!presenting" class="pitch-heading">
           <div>
-            <span class="section-eyebrow">TACTICS BOARD</span>
+            <span class="section-eyebrow">TACTICS BOARD · 模板 → 草稿 → 存档</span>
             <h2>{{ currentTacticTitle }}</h2>
+            <div class="board-badges">
+              <span v-if="tacticsStore.currentId === null" class="board-badge draft">未存档草稿</span>
+              <span v-else-if="boardDirty" class="board-badge dirty">● 有未保存修改</span>
+              <span v-else class="board-badge clean">✓ 已保存</span>
+              <span class="board-badge template" :title="formationTooltip">{{ formationBadge }}</span>
+            </div>
           </div>
           <span class="board-mode">
             <span></span>
@@ -328,7 +338,7 @@ import { useMatchStore } from "@/stores/matchStore";
 import { useWorkspaceFullscreen } from "@/composables/useWorkspaceFullscreen";
 import { useMediaQuery } from "@vueuse/core";
 import MobileWorkspaceTabs, { type WorkspaceTab } from "@/components/MobileWorkspaceTabs.vue";
-import { MATCH_FORMATIONS, type MatchPlayerCount } from "@/data/matchFormats";
+import { findFormation, type MatchPlayerCount } from "@/data/matchFormats";
 
 // 组合式函数初始化
 const { startDrawing } = useDrawing();
@@ -447,39 +457,82 @@ const animationItems = computed(() => currentFrameElements.value);
 
 const showWatermark = GAME_CONSTANTS.showWatermark;
 
-// 一键阵型
-const activeFormation = ref<string | null>(null);
-const awayFormation = ref<string | null>(null);
+// 一键阵型：模板只决定落位起点。选中态 / 微调态 / 未保存态统一存 tacticsStore，
+// 由 useFormation.applyFormationState、loadTactic/saveTactic 双向同步，见三层模型注释。
+const { currentFormationId, awayFormationId, formationCustomized, boardDirty } = storeToRefs(tacticsStore);
 const rosterOpen = ref(true);
 const tacticsOpen = ref(false);
 const coachingOpen = ref(false);
+
+// 场上有走位线条时一键落位可能让线条错位（可撤销），先确认；纯换模板不打扰。
+const confirmRelayout = (kind: string) => {
+  if (drawStore.drawings.getDrawings().length === 0) return true;
+  return confirm(`${kind}一键落位将重排场上球员站位，现有线条保留但可能错位（可撤销），继续？`);
+};
 const onApplyFormation = (id: string) => {
+  // 模板状态干净时重复点击是纯 no-op；已微调后点击则按就近落位收敛到模板网格。
+  if (id === currentFormationId.value && !formationCustomized.value) return;
+  if (!confirmRelayout("主队")) return;
   applyFormation(id);
-  activeFormation.value = id;
 };
 
 const onApplyOpponent = (id: string) => {
+  if (id === awayFormationId.value) return;
+  if (!confirmRelayout("对手")) return;
   applyOpponent(id);
-  awayFormation.value = id;
+  awayFormationId.value = id;
 };
 
 const onClearOpponents = () => {
   clearOpponents();
-  awayFormation.value = null;
+  awayFormationId.value = null;
 };
 const onOpponentChange = (id: string) => (id ? onApplyOpponent(id) : onClearOpponents());
 const onPlayerCountChange = (count: MatchPlayerCount) => {
   changePlayerCount(count);
-  activeFormation.value = MATCH_FORMATIONS[count][0].id;
-  awayFormation.value = awayCount.value ? MATCH_FORMATIONS[count][0].id : null;
+  if (awayCount.value) awayFormationId.value = matchStore.getDefaultFormation(count);
 };
+const onSetDefaultFormation = (id: string) => {
+  matchStore.setDefaultFormation(matchStore.playerCount, id);
+  ElMessage({ message: `已将 ${matchStore.playerCount} 人制默认阵型设为 ${id}`, type: "success", duration: 2000 });
+};
+
+// 手动编辑（拖棋子 / 画线 / 橡皮擦）标脏 + 标“已微调”；程序化落位/打开/保存走
+// tacticsStore.applyFormationState/markBoardClean（内部挂起本 watcher），不误标。
 watch(
-  () => matchStore.playerCount,
+  () => [itemStore.items.getAll(), drawStore.drawings.getDrawings()],
   () => {
-    activeFormation.value = null;
-    awayFormation.value = null;
+    if (tacticsStore.dirtySuspended) return;
+    tacticsStore.markBoardEdited();
   },
-  { flush: "sync" }
+  { deep: true }
+);
+
+// 模板徽标：模板名 + 已微调 + 默认标记；无血缘显示自定义站位。
+const formationBadge = computed(() => {
+  const id = currentFormationId.value;
+  const name = id ? (findFormation(id)?.name ?? id) : "自定义站位";
+  const suffix = id && formationCustomized.value ? "·已微调" : "";
+  const isDefault = !!id && id === matchStore.getDefaultFormation(matchStore.playerCount);
+  return `模板：${name}${suffix}${isDefault ? "（默认）" : ""}`;
+});
+const formationTooltip = "阵型模板只决定一键落位起点，拖动微调后记得保存到战术库";
+
+// 空工作台首次载入被套用默认阵型时提示一次，解释“默认阵型”从哪来。
+const defaultSeedNotified = ref(false);
+watch(
+  () => useCoachingDeskStore().ready,
+  (ready) => {
+    if (!ready || defaultSeedNotified.value) return;
+    defaultSeedNotified.value = true;
+    if (tacticsStore.currentId === null && currentFormationId.value && homeCount.value > 0) {
+      ElMessage({
+        message: `已套用 ${matchStore.playerCount} 人制默认阵型 ${currentFormationId.value}，可在上方切换模板`,
+        type: "info",
+        duration: 3500,
+      });
+    }
+  }
 );
 
 // 一键动态演示：名单前 8 人真名，边路套路自动播放

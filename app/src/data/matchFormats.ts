@@ -32,3 +32,7 @@ export const MATCH_FORMATIONS: Record<MatchPlayerCount, Formation[]> = {
   6: ["2-2-1", "1-3-1", "2-1-2", "1-2-2", "3-1-1"].map(formation),
   5: ["1-2-1", "2-2", "3-1", "1-3"].map(formation),
 };
+
+// 跨人数按 id 找模板（徽标/战术库展示用，同名取首个即可）。
+export const findFormation = (id: string): Formation | undefined =>
+  (Object.values(MATCH_FORMATIONS) as Formation[][]).flat().find((f) => f.id === id);

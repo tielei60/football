@@ -793,3 +793,23 @@ test("malformed nested practice details are rejected before they can break board
   );
   assert.deepEqual((await app.request("/api/tactics")).body, []);
 });
+
+test("invalid formation metadata is rejected without changing the desk edition", async (t) => {
+  const app = await fixture(t);
+  for (const metadata of [
+    { formationId: 42 },
+    { awayFormationId: {} },
+    { formationCustomized: "true" },
+  ]) {
+    const result = await app.request("/api/coaching-desk", "PUT", {
+      edition: 0,
+      desk: {
+        board: { ...board, ...metadata },
+        players: [player],
+        selectedTacticId: null,
+      },
+    });
+    assert.equal(result.status, 400);
+    assert.equal((await app.request("/api/coaching-desk")).body.edition, 0);
+  }
+});

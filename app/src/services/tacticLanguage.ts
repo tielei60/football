@@ -38,6 +38,10 @@ export interface Board {
   playerCount?: number;
   pieces: Piece[];
   markings: Marking[];
+  // 当前画布的阵型血缘（模板起点），随工作台自动保存；重载后恢复徽标与高亮。
+  formationId?: string | null;
+  awayFormationId?: string | null;
+  formationCustomized?: boolean;
   trainingPlan?: BoardSnapshot["coaching"];
   demonstration?: {
     demonstrationId: PieceId;
@@ -117,6 +121,9 @@ export function toBoard(value: BoardSnapshot): Board {
   const animation = restoreAnimation(value.animation)?.toJSON();
   return {
     playerCount: normalizePlayerCount(value.playerCount),
+    formationId: value.formationId,
+    awayFormationId: value.awayFormationId,
+    formationCustomized: value.formationCustomized,
     pieces: value.items.filter((p) => !p.creationMode || p.creationMode === "normal").map(toPiece),
     markings: value.drawings.map((d) => ({
       markingId: d.id as PieceId,
@@ -162,6 +169,9 @@ export function fromBoard(board: Board): BoardSnapshot {
   const demonstration = board.demonstration;
   return {
     playerCount: normalizePlayerCount(board.playerCount),
+    formationId: board.formationId,
+    awayFormationId: board.awayFormationId,
+    formationCustomized: board.formationCustomized,
     items: board.pieces.map((p) => fromPiece(p)),
     drawings: board.markings.map((d) => ({
       id: d.markingId,

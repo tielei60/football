@@ -260,3 +260,84 @@ test("deleting the selected tactic elsewhere detaches it and preserves subsequen
   expect(desk.players).toEqual(before.desk.players);
   expect(desk.board.pieces).toEqual(before.desk.board.pieces);
 });
+
+test("formation metadata survives tactic save, versions and backup conversion", async ({ page, request }) => {
+  await page.goto("/board");
+  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await page.evaluate(async () => {
+    const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+    const store = useTacticsStore();
+    store.applyFormationState("2-3-2", "3-3-1");
+    store.markBoardEdited();
+    await store.saveTactic("阵型元数据", []);
+  });
+  const [saved] = await (await request.get("/api/tactics")).json();
+  const expected = { formationId: "2-3-2", awayFormationId: "3-3-1", formationCustomized: true };
+  expect(saved.board).toMatchObject(expected);
+  const [version] = await (await request.get(`/api/tactics/${saved.tacticId}/versions`)).json();
+  expect(version.board).toMatchObject(expected);
+  const converted = await page.evaluate(async (tactic) => {
+    const { readCollection } = await import("/src/services/tacticLanguage.ts");
+    return readCollection({ tactics: [tactic] }).tactics[0].board;
+  }, saved);
+  expect(converted).toMatchObject(expected);
+});
+
+test("metadata-only edits autosave and remain customized after reload", async ({ page, request }) => {
+  await page.goto("/board");
+  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await page.evaluate(async () => {
+    const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+    useTacticsStore().applyFormationState("2-3-2", "3-3-1");
+    useTacticsStore().markBoardEdited();
+  });
+  await expect
+    .poll(async () => (await (await request.get("/api/coaching-desk")).json()).desk.board.formationCustomized)
+    .toBe(true);
+  await page.reload();
+  await expect(page.locator("#field")).toBeVisible();
+  expect(
+    await page.evaluate(async () => {
+      const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+      return useTacticsStore().formationCustomized;
+    })
+  ).toBe(true);
+});
+
+test("editing during a tactic save keeps the newer draft dirty", async ({ page }) => {
+  await page.goto("/board");
+  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let started!: () => void;
+  const received = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route("**/api/tactics", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    started();
+    await gate;
+    await route.continue();
+  });
+  const saving = page.evaluate(async () => {
+    const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+    await useTacticsStore().saveTactic("保存中编辑", []);
+  });
+  await received;
+  await page.evaluate(async () => {
+    const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+    const { useCoachingStore } = await import("/src/stores/coachingStore.ts");
+    useCoachingStore().plan.objective = "请求发出后的修改";
+    useTacticsStore().markBoardEdited();
+  });
+  release();
+  await saving;
+  expect(
+    await page.evaluate(async () => {
+      const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
+      return useTacticsStore().boardDirty;
+    })
+  ).toBe(true);
+});

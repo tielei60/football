@@ -23,10 +23,10 @@ test("Makefile manages both services, proxies the API and refuses an occupied po
   const frontendPort = frontendSocket.address().port;
   await new Promise((resolve) => frontendSocket.close(resolve));
   const env = { ...process.env, FOOTBALL_RUN_DIR: directory, FOOTBALL_DB_PATH: join(directory, "test.sqlite") };
-  const make = (target) =>
+  const make = (target, envOverrides = {}) =>
     exec("make", ["--no-print-directory", target, `BACKEND_PORT=${port}`, `FRONTEND_PORT=${frontendPort}`], {
       cwd: root,
-      env,
+      env: { ...env, ...envOverrides },
     });
   t.after(async () => {
     await make("stop").catch(() => {});
@@ -36,10 +36,10 @@ test("Makefile manages both services, proxies the API and refuses an occupied po
   assert.match((await make("status")).stdout, /后端：未运行/);
   await assert.rejects(make("start-backend"), /端口.*已被占用/);
   await new Promise((resolve) => blocker.close(resolve));
-  assert.match((await make("start-backend")).stdout, /后端：已启动/);
+  assert.match((await make("start-backend", { LC_ALL: "zh_CN.UTF-8" })).stdout, /后端：已启动/);
   assert.deepEqual(await (await fetch(`http://127.0.0.1:${port}/api/tactics`)).json(), []);
-  assert.match((await make("start-backend")).stdout, /后端：已在运行/);
-  assert.match((await make("status")).stdout, /后端：运行中/);
+  assert.match((await make("status", { LC_ALL: "C" })).stdout, /后端：运行中/);
+  assert.match((await make("start-backend", { LC_ALL: "C" })).stdout, /后端：已在运行/);
   assert.match((await make("restart-backend")).stdout, /后端：已启动/);
   assert.match((await make("logs-backend")).stdout, /Football server listening/);
   assert.match((await make("start")).stdout, /前端：已启动/);
