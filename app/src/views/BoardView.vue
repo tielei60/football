@@ -1,7 +1,12 @@
 <template>
   <div
     class="board"
-    :class="{ presenting, 'compact-workspace': stacked, 'workspace-fullscreen': isFullscreen && !presenting }"
+    :class="{
+      presenting,
+      'compact-workspace': stacked,
+      'animation-workspace': isAnimationMode,
+      'workspace-fullscreen': isFullscreen && !presenting,
+    }"
   >
     <WorkspaceHeader
       v-if="!presenting"
@@ -48,7 +53,7 @@
         v-show="!stacked || (mobilePanelOpen && mobileTab === 'roster')"
         :open="rosterOpen && !presenting"
       />
-      <section class="pitch-workspace" aria-label="战术画布">
+      <section class="pitch-workspace" aria-label="战术画布" :tabindex="isAnimationMode && !stacked ? 0 : undefined">
         <div v-if="!presenting" class="pitch-heading">
           <div>
             <span class="section-eyebrow">TACTICS BOARD · 模板 → 草稿 → 存档</span>
@@ -169,7 +174,7 @@
                 <!-- 水印 -->
                 <template v-if="showWatermark" #watermark>
                   <Watermark
-                    :text="`柏林花园FC · ${matchStore.playerCount}人制战术板`"
+                    :text="`${teamName} · ${matchStore.playerCount}人制战术板`"
                     :x="portraitPitch ? 110 : 950"
                     :y="portraitPitch ? 413 : 730"
                     :transform="portraitPitch ? 'rotate(90 110 413)' : undefined"
@@ -339,6 +344,9 @@ import { useWorkspaceFullscreen } from "@/composables/useWorkspaceFullscreen";
 import { useMediaQuery } from "@vueuse/core";
 import MobileWorkspaceTabs, { type WorkspaceTab } from "@/components/MobileWorkspaceTabs.vue";
 import { findFormation, type MatchPlayerCount } from "@/data/matchFormats";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName } = useTeamIdentity();
 
 // 组合式函数初始化
 const { startDrawing } = useDrawing();
@@ -537,11 +545,11 @@ watch(
 
 // 一键动态演示：名单前 8 人真名，边路套路自动播放
 const onDemoAnimation = (id = "cross") => {
-  if (currentAnimation.value && !confirm("载入场景将替换当前动画和训练计划，是否继续？")) return;
   if (matchStore.playerCount !== 8) {
     ElMessage({ message: "预置动态演示适用于 8 人制，请先切换比赛人数。", type: "info" });
     return;
   }
+  if (currentAnimation.value && !confirm("载入场景将替换当前动画和训练计划，是否继续？")) return;
   const healthy = rosterStore.players.filter((p) => !p.status || p.status === "ok");
   const selected = healthy.filter((p) => p.fieldId !== null);
   const squad = [...selected, ...healthy.filter((p) => p.fieldId === null)].slice(0, 8);
@@ -563,7 +571,7 @@ const presentTitle = computed(() => {
 const presentSub = computed(() => {
   const list = tacticsStore.tactics;
   if (useCoachingStore().plan.objective) return useCoachingStore().plan.objective;
-  if (!list.length) return `柏林花园 FC · ${matchStore.playerCount} 人制`;
+  if (!list.length) return `${teamName.value} · ${matchStore.playerCount} 人制`;
   const t = list[presentIndex.value] ?? list[0];
   const match = [t.match?.opponent, t.match?.date, t.match?.score].filter(Boolean).join(" · ");
   const paging = `${presentIndex.value + 1} / ${list.length}`;

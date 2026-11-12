@@ -1,5 +1,5 @@
 import "./assets/styles/main.css";
-import "virtual:svg-icons-register";
+import "./utils/registerIcons";
 import "element-plus/es/components/message/style/css";
 import { createApp } from "vue";
 import { debug } from "./utils/debugBus";

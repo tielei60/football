@@ -2,8 +2,8 @@
   <header class="navbar">
     <div class="nav-container">
       <div class="nav-logo">
-        <img src="/team-badge.png" class="logo-badge" alt="" @error="hideBadge" />
-        <span class="logo-text">柏林花园FC · 战术板</span>
+        <img :src="teamBadge" class="logo-badge" alt="" @error="hideBadge" />
+        <span class="logo-text">{{ teamName }} · 战术板</span>
       </div>
       <nav class="nav-menu" :class="{ active: mobileMenuOpen }">
         <template v-if="showFullMenu">
@@ -29,6 +29,9 @@
 
 <script setup lang="ts">
 import { ref, defineProps } from "vue";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName, teamBadge } = useTeamIdentity();
 
 interface Props {
   showFullMenu?: boolean;

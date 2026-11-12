@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("an empty new board can apply its default formation", async ({ page }) => {
   await page.goto("/board");

@@ -1,7 +1,7 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("opens the workspace directly and keeps drawing controls usable after zoom", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/board");
   await expect(page.locator("#field")).toBeVisible();
   const select = page.getByRole("button", { name: "选择 (V)", exact: true });
   const before = await select.boundingBox();
@@ -25,13 +25,19 @@ test("filters roster by availability and recovers from an empty search", async (
   await expect(page.locator(".roster-item")).toHaveCount(20);
 });
 
-test("roster loads CSV positions and supports selecting multiple enumerated positions", async ({ page }) => {
+test("roster loads explicitly seeded multi-position profiles and supports selecting multiple enumerated positions", async ({
+  page,
+}) => {
   await page.goto("/board");
-  const player = page.locator(".roster-item").filter({ has: page.locator(".roster-name", { hasText: "刘作涛" }) });
+  const player = page
+    .locator(".roster-item")
+    .filter({ has: page.locator(".roster-name", { hasText: "虚构战术队员01" }) });
   await expect(player.locator(".roster-pos")).toHaveText("中后卫、后腰");
-  const pitchPlayer = page.locator("#players > g").filter({ has: page.locator(".player-name", { hasText: "刘作涛" }) });
+  const pitchPlayer = page
+    .locator("#players > g")
+    .filter({ has: page.locator(".player-name", { hasText: "虚构战术队员01" }) });
   await expect(pitchPlayer.locator(".player-position")).toHaveText("中后卫、后腰");
-  await player.getByRole("button", { name: "刘作涛 队员详情" }).click();
+  await player.getByRole("button", { name: "虚构战术队员01 队员详情" }).click();
   await expect(player.getByRole("checkbox", { name: "中后卫", exact: true })).toBeChecked();
   await expect(player.getByRole("checkbox", { name: "后腰", exact: true })).toBeChecked();
   await player.getByRole("checkbox", { name: "前腰", exact: true }).check();
@@ -43,6 +49,7 @@ test("roster loads CSV positions and supports selecting multiple enumerated posi
 
 test("default formation assigns starters to position-matched slots", async ({ page }) => {
   await page.goto("/board");
+  await expect(page.locator("#players > g:visible")).toHaveCount(8);
   const lineup = await page.locator("#players > g").evaluateAll((groups) =>
     groups
       .map((group) => ({
@@ -55,10 +62,10 @@ test("default formation assigns starters to position-matched slots", async ({ pa
       .map((player) => player.name)
   );
 
-  expect(lineup[0]).toBe("刘建宏");
-  expect(lineup.slice(1, 3).sort()).toEqual(["刘作涛", "朱子言"].sort());
-  expect(lineup.slice(3, 6).sort()).toEqual(["史丙林", "余哲", "韩达"].sort());
-  expect(lineup.slice(6).sort()).toEqual(["妥昰", "王伟"].sort());
+  expect(lineup[0]).toBe("虚构战术队员02");
+  expect(lineup.slice(1, 3).sort()).toEqual(["虚构战术队员01", "虚构战术队员04"].sort());
+  expect(lineup.slice(3, 6).sort()).toEqual(["虚构战术队员03", "虚构战术队员08", "虚构战术队员07"].sort());
+  expect(lineup.slice(6).sort()).toEqual(["虚构战术队员06", "虚构战术队员05"].sort());
 });
 
 test("new players can enter the pitch and injured players are excluded from formations", async ({ page }) => {

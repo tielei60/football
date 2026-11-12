@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("footer fullscreen expands the pitch and both controls stay synchronized", async ({ page }) => {
   await page.goto("/board");

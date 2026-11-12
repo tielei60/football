@@ -5,7 +5,6 @@
 /柏林花园_人员头像/
 /app/public/avatars/
 /app/public/case-2.png
-/app/src/data/berlinGarden.ts
 node_modules/
 dist/
 test-results/
@@ -18,3 +17,7 @@ playwright-report/
 .env
 .env.*
 !.env.example
+
+# Fictional local demo manifests contain per-run credentials.
+demo-manifest.json
+.football-demo-owned

@@ -1,9 +1,11 @@
 // 指定区域截图
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
 import { inlineImages } from "./inlineImages";
 import { prepareBoardExport } from "./boardExport";
 import { useMatchStore } from "@/stores/matchStore";
 
 export const captureScreenshot = async (area: SVGElement) => {
+  const { teamName, teamFileName } = useTeamIdentity();
   // 获取 area 的边界框
   const { bounds: bbox, content: clonedContent } = prepareBoardExport(area as SVGGraphicsElement);
 
@@ -63,11 +65,15 @@ export const captureScreenshot = async (area: SVGElement) => {
     ctx.font = `${20 * SCALE}px sans-serif`;
     ctx.textAlign = "right";
     const playerCount = useMatchStore().playerCount;
-    ctx.fillText(`柏林花园FC · ${playerCount}人制 · ${date}`, canvas.width - 16 * SCALE, canvas.height - 12 * SCALE);
+    ctx.fillText(
+      `${teamName.value} · ${playerCount}人制 · ${date}`,
+      canvas.width - 16 * SCALE,
+      canvas.height - 12 * SCALE
+    );
     const pngUrl = canvas.toDataURL("image/png");
 
     const link = document.createElement("a");
-    link.download = `柏林花园FC_${playerCount}人制_${date}.png`;
+    link.download = `${teamFileName.value}_${playerCount}人制_${date}.png`;
     link.href = pngUrl;
     link.click();
   }

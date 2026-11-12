@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test.use({ hasTouch: true });
 

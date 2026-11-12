@@ -2,12 +2,14 @@
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { Play, Pause, SkipBack, SkipForward, RotateCcw, Plus, Trash2, Save, Clock3 } from "lucide-vue-next";
+import { useMatchStore } from "@/stores/matchStore";
 import { useAnimationStore } from "@/stores/animationStore";
 import { TACTICAL_SCENARIOS } from "@/data/tacticalScenarios";
 
 defineProps<{ presenting: boolean; saving: boolean }>();
 const emit = defineEmits<{ save: []; scenario: [id: string] }>();
 const store = useAnimationStore();
+const match = useMatchStore();
 const {
   currentAnimation,
   currentFrameIndex,
@@ -37,10 +39,12 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
       <select
         v-if="!presenting"
         aria-label="演示场景"
+        :disabled="match.playerCount !== 8"
+        :title="match.playerCount === 8 ? '选择预置演示' : '预置演示仅适用于 8 人制；其他赛制可自定义动画'"
         :value="scenarioId"
         @change="emit('scenario', inputValue($event))"
       >
-        <option value="" disabled>选择演示场景</option>
+        <option value="" disabled>{{ match.playerCount === 8 ? "选择演示场景" : "预置演示仅限 8 人制" }}</option>
         <option v-for="scenario in TACTICAL_SCENARIOS" :key="scenario.id" :value="scenario.id">
           {{ scenario.title }}
         </option>

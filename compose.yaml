@@ -1,0 +1,16 @@
+services:
+  football:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:13001:13001"
+    environment:
+      FOOTBALL_ADMIN_USERNAME: ${FOOTBALL_ADMIN_USERNAME:-}
+      FOOTBALL_ADMIN_PASSWORD: ${FOOTBALL_ADMIN_PASSWORD:-}
+      FOOTBALL_PUBLIC_ORIGIN: ${FOOTBALL_PUBLIC_ORIGIN:-http://localhost:13001}
+      FOOTBALL_COOKIE_SECURE: ${FOOTBALL_COOKIE_SECURE:-false}
+      FOOTBALL_TRUSTED_PROXY_ADDRESSES: ${FOOTBALL_TRUSTED_PROXY_ADDRESSES:-}
+    volumes:
+      - football-data:/data
+volumes:
+  football-data:

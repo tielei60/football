@@ -2,6 +2,8 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+export const MAX_PLAYER_AVATAR_CHARACTERS = 20 * 1024 * 1024;
+
 export class FootballError extends Error {
   constructor(status, message) {
     super(message);
@@ -163,7 +165,10 @@ function formationRoleScore(positions, role) {
       边前卫: 70,
     },
   };
-  return Math.max(0, ...positions.map((position) => scores[role]?.[position] ?? 0));
+  return Math.max(
+    0,
+    ...positions.map((position) => scores[role]?.[position] ?? 0),
+  );
 }
 function positionMatchedStarterOrder(roles) {
   const remaining = berlinGardenPositions
@@ -198,7 +203,9 @@ function migrateBerlinGardenBoard(board, roles = starterSlotRoles) {
     piece.position = role;
     piece.color = roleColors[role];
   }
-  const starterIds = new Set(berlinGardenPositions.slice(0, 8).map(([playerId]) => playerId));
+  const starterIds = new Set(
+    berlinGardenPositions.slice(0, 8).map(([playerId]) => playerId),
+  );
   const pieces = (board.pieces ?? []).filter(
     (piece) => piece.team !== "away" && starterIds.has(piece.playerId),
   );
@@ -424,18 +431,19 @@ function validatePlayer(player) {
   if (!string(player.playerId, "球员编号", 200)) reject("请填写球员编号。");
   if (!string(player.name, "球员姓名", 200).trim()) reject("请填写球员姓名。");
   if (
-    !Number.isInteger(player.number) ||
-    player.number < 0 ||
-    player.number > 9999
+    player.number !== null &&
+    (!Number.isInteger(player.number) ||
+      player.number < 0 ||
+      player.number > 9999)
   )
-    reject("球衣号码须在 0 到 9999 之间。");
+    reject("球衣号码须在 0 到 9999 之间，未记录时请留空。");
   for (const name of ["preferredFoot", "status", "note"])
     string(player[name], "球员资料");
   player.positions = normalizePlayerPositions(player);
   if (!["ok", "injured", "suspended"].includes(player.status))
     reject("球员状态须为健康、受伤或停赛。");
   if (player.avatar !== undefined && player.avatar !== null)
-    string(player.avatar, "球员头像", 20 * 1024 * 1024);
+    string(player.avatar, "球员头像", MAX_PLAYER_AVATAR_CHARACTERS);
   if (
     player.fieldPieceId !== null &&
     typeof player.fieldPieceId !== "string" &&
@@ -449,6 +457,7 @@ export function openFootballStore(databasePath) {
   if (databasePath !== ":memory:")
     mkdirSync(dirname(resolve(databasePath)), { recursive: true });
   const database = new DatabaseSync(databasePath);
+  const appliedMigrations = [];
   database.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -473,7 +482,7 @@ export function openFootballStore(databasePath) {
     ) STRICT;
     CREATE TABLE IF NOT EXISTS team_players (
       player_id TEXT PRIMARY KEY, desk_id INTEGER NOT NULL REFERENCES coaching_desks(desk_id) ON DELETE CASCADE,
-      team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER NOT NULL,
+      team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER,
       position TEXT NOT NULL, preferred_foot TEXT NOT NULL, availability TEXT NOT NULL,
       note TEXT NOT NULL, portrait TEXT, field_piece_id TEXT
     ) STRICT;
@@ -484,6 +493,36 @@ export function openFootballStore(databasePath) {
       migration_name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL
     ) STRICT;
   `);
+  // Existing SQLite tables cannot drop NOT NULL in place. Copy every legacy
+  // field in one transaction before swapping tables; history and IDs stay intact.
+  if (
+    database
+      .prepare("PRAGMA table_info(team_players)")
+      .all()
+      .find((column) => column.name === "shirt_number")?.notnull
+  ) {
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      database.exec(`CREATE TABLE team_players_nullable_v7 (
+        player_id TEXT PRIMARY KEY, desk_id INTEGER NOT NULL REFERENCES coaching_desks(desk_id) ON DELETE CASCADE,
+        team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER,
+        position TEXT NOT NULL, preferred_foot TEXT NOT NULL, availability TEXT NOT NULL,
+        note TEXT NOT NULL, portrait TEXT, field_piece_id TEXT
+      ) STRICT;
+      INSERT INTO team_players_nullable_v7 SELECT * FROM team_players;
+      DROP TABLE team_players;
+      ALTER TABLE team_players_nullable_v7 RENAME TO team_players;`);
+      database
+        .prepare(
+          "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES (?,?)",
+        )
+        .run("team-player-unknown-number-v7", Date.now());
+      database.exec("COMMIT");
+    } catch (error) {
+      database.exec("ROLLBACK");
+      throw error;
+    }
+  }
   const rosterMigration = "berlin-garden-roster-csv-positions-v2";
   const migrationApplied = database
     .prepare("SELECT 1 FROM app_migrations WHERE migration_name = ?")
@@ -540,6 +579,7 @@ export function openFootballStore(databasePath) {
           "INSERT INTO app_migrations (migration_name, applied_at) VALUES (?, ?)",
         )
         .run(rosterMigration, Date.now());
+      appliedMigrations.push(rosterMigration);
       database.exec("COMMIT");
     } catch (error) {
       database.exec("ROLLBACK");
@@ -554,12 +594,15 @@ export function openFootballStore(databasePath) {
     database.exec("BEGIN IMMEDIATE");
     try {
       const desk = database
-        .prepare(`SELECT coaching_desks.board, tactics.formation_name
+        .prepare(
+          `SELECT coaching_desks.board, tactics.formation_name
           FROM coaching_desks LEFT JOIN tactics ON tactics.tactic_id = coaching_desks.selected_tactic_id
-          WHERE coaching_desks.desk_id = 1`)
+          WHERE coaching_desks.desk_id = 1`,
+        )
         .get();
       if (desk?.board) {
-        const roles = formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(desk.board), roles);
         database
           .prepare("UPDATE coaching_desks SET board = ? WHERE desk_id = 1")
@@ -581,18 +624,23 @@ export function openFootballStore(databasePath) {
     .prepare("SELECT 1 FROM app_migrations WHERE migration_name = ?")
     .get(presetLineupMigration);
   const knownPresets = database
-    .prepare("SELECT count(*) AS total FROM tactics WHERE preset_name IS NOT NULL")
+    .prepare(
+      "SELECT count(*) AS total FROM tactics WHERE preset_name IS NOT NULL",
+    )
     .get().total;
   if (!presetLineupMigrationApplied && knownPresets > 0) {
     database.exec("BEGIN IMMEDIATE");
     try {
       const desk = database
-        .prepare(`SELECT coaching_desks.board, tactics.formation_name
+        .prepare(
+          `SELECT coaching_desks.board, tactics.formation_name
           FROM coaching_desks LEFT JOIN tactics ON tactics.tactic_id = coaching_desks.selected_tactic_id
-          WHERE coaching_desks.desk_id = 1`)
+          WHERE coaching_desks.desk_id = 1`,
+        )
         .get();
       if (desk?.board) {
-        const roles = formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(desk.board), roles);
         database
           .prepare("UPDATE coaching_desks SET board = ? WHERE desk_id = 1")
@@ -606,7 +654,8 @@ export function openFootballStore(databasePath) {
           "SELECT tactic_id, formation_name, board FROM tactics WHERE preset_name IS NOT NULL",
         )
         .all()) {
-        const roles = formationSlotRoles[preset.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[preset.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(preset.board), roles);
         updatePreset.run(JSON.stringify(board), preset.tactic_id);
       }
@@ -747,6 +796,8 @@ export function openFootballStore(databasePath) {
     };
   };
   return {
+    database,
+    appliedMigrations,
     close: () => database.close(),
     listTactics,
     getTactic,
@@ -824,9 +875,10 @@ export function openFootballStore(databasePath) {
         return getTactic(tacticId);
       });
     },
-    deleteTactic(tacticId) {
+    deleteTactic(tacticId, beforeDelete) {
       return transaction(() => {
         getTactic(tacticId);
+        beforeDelete?.();
         prepare("DELETE FROM tactics WHERE tactic_id = ?").run(tacticId);
       });
     },
@@ -839,7 +891,7 @@ export function openFootballStore(databasePath) {
         return addVersion(tacticId, note, request.board);
       });
     },
-    saveDesk(request) {
+    saveDesk(request, afterSave) {
       if (
         !isObject(request) ||
         !Number.isSafeInteger(request.edition) ||
@@ -902,6 +954,8 @@ export function openFootballStore(databasePath) {
               : JSON.stringify(player.fieldPieceId),
           ),
         );
+        // Keep club reconciliation in the same transaction as the legacy desk.
+        afterSave?.();
         return getDesk();
       });
     },

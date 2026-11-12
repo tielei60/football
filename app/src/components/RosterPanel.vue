@@ -82,7 +82,7 @@
               <span class="avatar-fallback">{{ p.name[0] }}</span>
               <img v-if="p.avatar" :src="p.avatar" class="avatar-photo" alt="" @error="hideAvatar" />
             </span>
-            <span class="roster-number">{{ p.number }}</span>
+            <span class="roster-number">{{ p.number ?? "—" }}</span>
             <span class="roster-name">{{ p.name }}</span>
             <span
               v-if="p.status && p.status !== 'ok'"
@@ -116,7 +116,14 @@
             </label>
             <label>
               号码
-              <input type="number" :value="p.number" min="1" max="99" @change="onNumber(p.id, $event)" />
+              <input
+                type="number"
+                :value="p.number"
+                min="0"
+                max="999"
+                placeholder="未知"
+                @change="onNumber(p.id, $event)"
+              />
             </label>
             <fieldset class="position-field">
               <legend>位置</legend>
@@ -143,7 +150,7 @@
             </label>
             <div class="detail-status">{{ onPitch(p) ? "状态：在场上" : "状态：替补席" }}</div>
             <SubstitutionControl v-if="!onPitch(p) && (!p.status || p.status === 'ok')" :incoming-id="p.id" />
-            <button class="detail-delete" @click="onRemove(p.id, p.name)">删除该队员</button>
+            <button class="detail-delete" @click="onRemove(p.id, p.name)">归档该队员</button>
           </div>
         </div>
       </li>
@@ -162,7 +169,7 @@
     </div>
     <div class="roster-bottom">
       <span>{{ filtered.length }} / {{ players.length }} 名队员</span>
-      <span>柏林花园 FC</span>
+      <span>{{ teamName }}</span>
     </div>
   </aside>
 </template>
@@ -175,7 +182,6 @@ import { useRosterStore } from "@/stores/rosterStore";
 import SubstitutionControl from "./SubstitutionControl.vue";
 import {
   PLAYER_POSITION_OPTIONS,
-  TEAM,
   normalizePlayerPositions,
   STATUS_META,
   statusLabel,
@@ -184,6 +190,9 @@ import {
 } from "@/data/berlinGarden";
 
 import { useMatchStore } from "@/stores/matchStore";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName } = useTeamIdentity();
 
 defineProps<{ open: boolean }>();
 const match = useMatchStore();
@@ -226,7 +235,9 @@ const onAdd = () => {
 };
 
 const onRemove = (id: string, name: string) => {
-  if (confirm(`删除队员 ${name}？（场上棋子一并清除）`)) {
+  if (
+    confirm(`归档队员 ${name}？场上棋子将移除，球员账号将停用，历史比赛记录保留。可在俱乐部球员管理中重新设为在队。`)
+  ) {
     roster.removePlayer(id);
     if (detailId.value === id) detailId.value = null;
   }
@@ -250,8 +261,10 @@ const focusPlayer = (id: string) => {
 defineExpose({ focusPlayer });
 
 const onNumber = (id: string, e: Event) => {
-  const value = Number((e.target as HTMLInputElement).value);
-  if (value >= 1 && value <= 99) roster.updatePlayer(id, { number: value });
+  const raw = (e.target as HTMLInputElement).value;
+  const value = raw === "" ? null : Number(raw);
+  if (value === null || (Number.isInteger(value) && value >= 0 && value <= 999))
+    roster.updatePlayer(id, { number: value });
 };
 
 const onPosition = (id: string, positions: PlayerPosition[], position: PlayerPosition, event: Event) => {
@@ -272,7 +285,7 @@ const onStatus = (id: string, e: Event) => {
   roster.setStatus(id, (e.target as HTMLSelectElement).value as PlayerStatus);
 };
 
-const teamCoach = TEAM.coach;
+const teamCoach = "待设置";
 const onPitch = (p: { fieldId: unknown }) => p.fieldId !== null;
 const onCount = computed(() => players.value.filter((p) => p.fieldId !== null).length);
 const offCount = computed(

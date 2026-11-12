@@ -422,7 +422,7 @@ function layoutPhase(phase: Phase) {
   return [...players, ball];
 }
 
-export function buildScenario(id: string, squad: { id?: string; name: string; number: number }[]): Animation {
+export function buildScenario(id: string, squad: { id?: string; name: string; number: number | null }[]): Animation {
   const scenario = TACTICAL_SCENARIOS.find((s) => s.id === id) ?? TACTICAL_SCENARIOS[0];
   const animation = new Animation(scenario.title, []);
   const roles =
@@ -449,7 +449,7 @@ export function buildScenario(id: string, squad: { id?: string; name: string; nu
             r: i === 16 ? 13 : 18,
             team: home ? "home" : "away",
             text: home ? (squad[i]?.name ?? `队员${i + 1}`) : "",
-            number: home ? (squad[i]?.number ?? i + 1) : i - 7,
+            number: home ? (squad[i] ? (squad[i].number ?? undefined) : i + 1) : i - 7,
             rosterId: home ? squad[i]?.id : undefined,
             playerPosition: role,
             color: home ? posColor(role) : "#434b57",

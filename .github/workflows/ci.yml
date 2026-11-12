@@ -1,0 +1,65 @@
+name: Football checks
+on:
+  push:
+permissions:
+  contents: read
+concurrency:
+  group: football-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm run build
+      - run: npm run test:unit
+      - run: npm run test:server
+      - run: npm run demo:check
+      - run: npm run test:bundle
+      - run: node scripts/services.test.mjs
+      - name: Build deployment image
+        working-directory: .
+        run: docker build -t football-club:ci .
+      - name: Smoke test deployment image
+        working-directory: .
+        run: |
+          docker run -d --rm --name football-ci -p 127.0.0.1:13002:13001 \
+            -e FOOTBALL_ADMIN_USERNAME=ciadmin -e FOOTBALL_ADMIN_PASSWORD=ci-only-password-123 \
+            -e FOOTBALL_PUBLIC_ORIGIN=http://127.0.0.1:13002 football-club:ci
+          trap 'docker rm -f football-ci || true' EXIT
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:13002/api/health && break || sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:13002/api/health
+          curl --fail --silent http://127.0.0.1:13002/ | grep '<!DOCTYPE html>'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:13002/api/players)" = 401
+          curl --fail --silent -H 'Content-Type: application/json' -H 'Origin: http://127.0.0.1:13002' \
+            -d '{"username":"ciadmin","password":"ci-only-password-123"}' \
+            http://127.0.0.1:13002/api/auth/login | grep '"role":"admin"'
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Save visual review evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-review
+          path: app/test-results/visual-review
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: app/test-results
+          retention-days: 7

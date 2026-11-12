@@ -1,50 +1,93 @@
 <template>
-  <div class="wrapper" :class="[`device-${deviceType}`, `orientation-${orientation}`]">
+  <div class="wrapper" :class="[`device-${deviceType}`, `orientation-${orientation}`, { 'club-wrapper': !isBoard }]">
     <Debug v-if="isDev && showDebug" />
-    <RouterView v-if="desk.ready" />
+    <RouterView v-if="!isBoard || desk.ready" />
     <main v-else class="coaching-startup" aria-live="polite">
-      <img src="/team-badge.png" alt="柏林花园 FC" width="64" height="64" />
+      <RouterLink class="club-board-back" to="/club">← 俱乐部</RouterLink>
+      <br />
+      <img :src="teamBadge" :alt="teamName" width="64" height="64" />
       <h1>教练工作台</h1>
-      <p>{{ desk.status === 'loading' ? '正在载入战术与球队名单' : desk.message }}</p>
+      <p>{{ desk.status === "loading" ? "正在载入战术与球队名单" : desk.message }}</p>
       <button v-if="desk.status !== 'loading'" @click="desk.initialize">重新连接</button>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
 import { storeToRefs } from "pinia";
-import { onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
+import { useRoute } from "vue-router";
+import "./assets/styles/club.css";
 import { useCoachingDeskStore } from "./stores/coachingDeskStore";
 import { useGlobalStore } from "./stores/globalStore";
 import Debug from "@/components/common/Debug.vue";
 
 const isDev = import.meta.env.DEV;
-const showDebug = new URLSearchParams(window.location.search).has('debug');
+const showDebug = new URLSearchParams(window.location.search).has("debug");
 
 const desk = useCoachingDeskStore();
+const route = useRoute();
+const isBoard = computed(() => route.name === "board");
+watch(
+  isBoard,
+  (active) => {
+    if (active && !desk.ready) void desk.initialize();
+  },
+  { immediate: true }
+);
 const globalStore = useGlobalStore();
 const { orientation, deviceType } = storeToRefs(globalStore);
 
 onMounted(() => {
-  void desk.initialize();
   window.addEventListener("resize", globalStore.updateOrientation);
 });
 
 onUnmounted(() => {
   window.removeEventListener("resize", globalStore.updateOrientation);
 });
+
+const { teamName, teamBadge } = useTeamIdentity();
 </script>
 
 <style lang="scss">
+.wrapper.club-wrapper {
+  height: auto;
+  min-height: 100%;
+  align-items: stretch;
+}
+.club-board-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 5px 10px;
+  background: #e9f2e9;
+  color: #1b4934;
+  font-size: 12px;
+  border-radius: 6px;
+  text-decoration: none;
+}
 .coaching-startup {
   margin: auto;
   max-width: 440px;
   padding: 24px;
   text-align: center;
   color: #263b36;
-  h1 { font-size: 24px; }
-  p { font-size: 14px; line-height: 1.6; }
-  button { background: #247354; color: white; border: 0; border-radius: 4px; padding: 10px 18px; cursor: pointer; }
+  h1 {
+    font-size: 24px;
+  }
+  p {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  button {
+    background: #247354;
+    color: white;
+    border: 0;
+    border-radius: 4px;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
 }
 .wrapper {
   display: flex;

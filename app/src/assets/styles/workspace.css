@@ -621,3 +621,14 @@ body.coach .wrapper .board.compact-workspace {
     display: none !important;
   }
 }
+
+/* Desktop timeline must not consume the pitch's entire viewport allocation.
+   Keep a usable editing canvas and scroll the workspace to reach its timeline. */
+.board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-workspace {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-stage {
+  flex: 0 0 380px;
+  min-height: 380px;
+}

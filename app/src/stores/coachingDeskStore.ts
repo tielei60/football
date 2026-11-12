@@ -4,7 +4,6 @@ import { useTacticsStore } from "./tacticsStore";
 import { useRosterStore, type RosterEntry } from "./rosterStore";
 import { useHistoryStore } from "./historyStore";
 import { useFormation } from "@/composables/useFormation";
-import { migrateBoardIfNeeded } from "@/utils/migrateBoard";
 import { apiRequest, TacticsApiError } from "@/services/tacticsApi";
 import { toBoard, fromBoard, type Board } from "@/services/tacticLanguage";
 import { normalizePlayerPositions, type PlayerPosition } from "@/data/berlinGarden";
@@ -17,7 +16,7 @@ import { useMatchStore } from "./matchStore";
 interface TeamPlayer {
   playerId: string;
   name: string;
-  number: number;
+  number: number | null;
   positions?: PlayerPosition[];
   position?: string;
   preferredFoot: string;
@@ -33,6 +32,7 @@ interface CoachingDesk {
 }
 interface SavedDesk {
   desk: CoachingDesk | null;
+  initialPlayers?: TeamPlayer[];
   edition: number;
   savedAt: number | null;
 }
@@ -62,12 +62,22 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
       preferredFoot: p.foot,
       status: p.status ?? "ok",
       note: p.note,
-      avatar: p.avatar,
+      avatar: p.avatar ?? null,
       fieldPieceId: p.fieldId,
     })),
     selectedTacticId: tactics.currentId,
   });
   const content = () => JSON.stringify(capture());
+  // Ignore object-key order while comparing canonical server data with the sent snapshot.
+  const canonicalContent = (value: unknown) =>
+    JSON.stringify(value, (_key, entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+      return Object.fromEntries(
+        Object.keys(entry)
+          .sort()
+          .map((key) => [key, entry[key]])
+      );
+    });
   const hasUnsavedChanges = computed(() => ready.value && content() !== savedContent.value);
 
   async function apply(saved: SavedDesk) {
@@ -131,6 +141,33 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
         edition.value = saved.edition;
         savedAt.value = saved.savedAt;
         savedContent.value = nextContent;
+        // The server may append club-only profiles during the first desk save.
+        // Never replace a draft changed while this request was in flight.
+        if (
+          content() === nextContent &&
+          saved.desk &&
+          canonicalContent(saved.desk.players) !== canonicalContent(nextDesk.players)
+        ) {
+          applying = true;
+          try {
+            // Reconcile only the roster: board, animation, dirty flags and undo history stay intact.
+            roster.players = saved.desk.players.map((p) => ({
+              id: p.playerId,
+              name: p.name,
+              number: p.number,
+              positions: normalizePlayerPositions(p.positions ?? p.position),
+              foot: p.preferredFoot,
+              status: p.status,
+              note: p.note,
+              avatar: p.avatar ?? undefined,
+              fieldId: p.fieldPieceId,
+            }));
+            savedContent.value = JSON.stringify({ ...nextDesk, players: capture().players });
+            await nextTick();
+          } finally {
+            applying = false;
+          }
+        }
       } catch (error) {
         if (error instanceof TacticsApiError && error.status === 404 && nextDesk.selectedTacticId !== null) {
           try {
@@ -213,7 +250,22 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
       }
       await apply(saved);
       if (!saved.desk) {
-        migrateBoardIfNeeded();
+        // Server-empty desks must never publish unrelated browser caches or demonstration players.
+        // Existing server desks remain intact; the old local draft is backed up above.
+        if (!Array.isArray(saved.initialPlayers)) throw new Error("服务器未提供球队初始名单，请更新服务后重试。");
+        roster.players = saved.initialPlayers.map((p) => ({
+          id: p.playerId,
+          name: p.name,
+          number: p.number,
+          positions: normalizePlayerPositions(p.positions ?? p.position),
+          foot: p.preferredFoot,
+          status: p.status,
+          note: p.note,
+          avatar: p.avatar ?? undefined,
+          fieldId: null,
+        }));
+        tactics.restoreSnapshot(fromBoard({ playerCount: useMatchStore().playerCount, pieces: [], markings: [] }));
+        tactics.currentId = null;
         const formation = useFormation();
         formation.seedDefaultFormation();
         formation.tidyCurrentBoard();
@@ -238,6 +290,15 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
     await initializing;
   }
 
+  async function settleInitialization() {
+    if (initializing) await initializing;
+  }
+
+  function suspend() {
+    clearTimeout(timer);
+    ready.value = false;
+  }
+
   function downloadDraft() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([JSON.stringify(capture(), null, 2)], { type: "application/json" }));
@@ -247,5 +308,17 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
     URL.revokeObjectURL(url);
   }
 
-  return { ready, status, message, savedAt, edition, hasUnsavedChanges, initialize, flush, downloadDraft };
+  return {
+    ready,
+    status,
+    message,
+    savedAt,
+    edition,
+    hasUnsavedChanges,
+    initialize,
+    flush,
+    settleInitialization,
+    suspend,
+    downloadDraft,
+  };
 });

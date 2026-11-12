@@ -1,11 +1,15 @@
 <template>
   <footer class="footer">
-    <img src="/team-badge.png" class="footer-badge" alt="" @error="hideBadge" />
-    <span>柏林花园 FC · 8人制战术板 — 数据仅存于本机浏览器</span>
+    <img :src="teamBadge" class="footer-badge" alt="" @error="hideBadge" />
+    <span>{{ teamName }} · 战术板 — 数据保存在球队服务</span>
   </footer>
 </template>
 
 <script setup lang="ts">
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName, teamBadge } = useTeamIdentity();
+
 const hideBadge = (e: Event) => {
   (e.target as HTMLImageElement).style.display = "none";
 };

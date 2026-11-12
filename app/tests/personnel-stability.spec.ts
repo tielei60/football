@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 import type { Page } from "@playwright/test";
 
 // 在场名单：name@x,y（排序后对比，既验人员也验站位）

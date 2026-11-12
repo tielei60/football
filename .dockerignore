@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/dist
+app/data/
+**/.run
+**/test-results
+**/playwright-report
+**/*.sqlite*
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log

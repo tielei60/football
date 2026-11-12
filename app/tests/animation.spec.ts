@@ -1,5 +1,5 @@
 import { type Page } from "@playwright/test";
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 async function openBoard(page: Page) {
   await page.goto("/board");

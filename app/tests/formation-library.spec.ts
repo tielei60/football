@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 const formationButton = (name: string) => `.formation-segment button:has-text("${name}")`;
 

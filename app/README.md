@@ -42,7 +42,7 @@
 git clone https://github.com/CJ-cooper6/coco-tacticx.git
 
 #安装依赖
-yarn install
+npm ci
 
 #启动开发服务器
 yarn run dev

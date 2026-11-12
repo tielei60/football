@@ -103,7 +103,7 @@ const lineup = (tid: string, spots: FormationSpot[]) => {
   const players = assignPlayersToFormation(STARTERS, spots);
   return spots.map((spot, index) => {
     const player = players[index];
-    return P(tid, player.number, player.name, player.number, spot.nx, spot.ny, spot.role);
+    return P(tid, player.number ?? index + 1, player.name, player.number ?? index + 1, spot.nx, spot.ny, spot.role);
   });
 };
 

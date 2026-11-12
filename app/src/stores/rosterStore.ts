@@ -1,7 +1,6 @@
 import { ref, watch } from "vue";
 import { defineStore } from "pinia";
 import {
-  BERLIN_GARDEN_PLAYERS,
   avatarPath,
   normalizePlayerPositions,
   posColor,
@@ -17,14 +16,6 @@ import { PITCH_8V8 } from "@/data/eightFormations";
 export interface RosterEntry extends TeamPlayer {
   fieldId: string | number | null; // 对应场上 FieldElement.id，为 null 表示在替补席
 }
-
-const cloneSeed = (): RosterEntry[] =>
-  BERLIN_GARDEN_PLAYERS.map((p) => ({
-    ...p,
-    positions: [...p.positions],
-    status: "ok" as PlayerStatus,
-    fieldId: null,
-  }));
 
 // 老缓存缺字段统一补齐
 const fillDefaults = (list: RosterEntry[]) => {
@@ -46,7 +37,7 @@ const benchPos = (index: number) => ({
 export const useRosterStore = defineStore(
   "roster",
   () => {
-    const players = ref<RosterEntry[]>(cloneSeed());
+    const players = ref<RosterEntry[]>([]);
     const itemStore = useItemStore();
     const { pushHistory } = useHistory();
 
@@ -85,7 +76,7 @@ export const useRosterStore = defineStore(
       pushHistory();
       element.rosterId = incoming.id;
       element.text = incoming.name;
-      element.number = incoming.number;
+      element.number = incoming.number ?? undefined;
       incoming.fieldId = element.id;
       outgoing.fieldId = null;
       return true;
@@ -101,7 +92,7 @@ export const useRosterStore = defineStore(
         x: x ?? benchPos(idx).x,
         y: y ?? benchPos(idx).y,
         color: posColor(primaryRole(entry.positions)),
-        number: entry.number,
+        number: entry.number ?? undefined,
         text: entry.name,
         playerPosition: primaryRole(entry.positions),
         elementType: "player",
@@ -130,7 +121,7 @@ export const useRosterStore = defineStore(
         const el = itemStore.items.findById(entry.fieldId);
         if (el) {
           if (patch.name !== undefined) el.text = patch.name;
-          if (patch.number !== undefined) el.number = patch.number;
+          if (patch.number !== undefined) el.number = patch.number ?? undefined;
           if (patch.positions !== undefined) {
             const role = primaryRole(patch.positions);
             el.playerPosition = role;
@@ -152,7 +143,7 @@ export const useRosterStore = defineStore(
       const clean = name.trim();
       if (!clean) return null;
       pushHistory();
-      const maxNumber = players.value.reduce((m, p) => Math.max(m, p.number), 0);
+      const maxNumber = players.value.reduce((m, p) => Math.max(m, p.number ?? 0), 0);
       const entry: RosterEntry = {
         id: `bg-${Date.now()}`,
         name: clean,

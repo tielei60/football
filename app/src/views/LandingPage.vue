@@ -3,15 +3,15 @@
     <Header />
     <div id="showcase" class="showcase-section">
       <div class="showcase-container">
-        <img src="/team-badge.png" class="hero-badge" alt="柏林花园FC队徽" @error="hideBadge" />
-        <h1 class="title">柏林花园 FC · 8人制战术板</h1>
+        <img :src="teamBadge" class="hero-badge" :alt="`${teamName}队徽`" @error="hideBadge" />
+        <h1 class="title">{{ teamName }} · 足球战术板</h1>
         <p class="showcase-subtitle">一键阵型 · 点名布阵 · 战术库与历史版本 · 投屏演示，为每一场比赛做准备</p>
         <div class="hero-ctas">
           <router-link :to="{ name: 'board' }" class="start-button">进入战术板</router-link>
-          <span class="hero-note">本地运行 · 数据不出浏览器 · 可安装到平板离线使用</span>
+          <span class="hero-note">球队账号登录 · SQLite 持久化 · 球员报名与比赛统计</span>
         </div>
         <div class="showcase-image">
-          <img src="/case-2.png" alt="战术板界面展示" />
+          <img :src="teamBadge" :alt="`${teamName}队徽`" />
         </div>
       </div>
     </div>
@@ -47,11 +47,13 @@
         </div>
         <div class="faq-item">
           <h3>数据存在哪里？</h3>
-          <p>全部存在本机浏览器（IndexedDB），不注册不上传；JSON 导出可分享给助教导入。</p>
+          <p>
+            球队资料、比赛和战术保存在部署服务器的 SQLite 数据库中。登录后按账号权限访问，请由管理员定期备份数据库。
+          </p>
         </div>
         <div class="faq-item">
           <h3>没网能用吗？</h3>
-          <p>可以。安装为应用后离线打开，历史战术与名单都在。</p>
+          <p>登录、载入和保存资料需要连接服务器。请保持网络连接，并确认保存成功后再关闭页面。</p>
         </div>
       </div>
     </div>
@@ -64,6 +66,9 @@
 import Header from "@/components/common/Header.vue";
 import Footer from "@/components/common/Footer.vue";
 import { Users, ClipboardList, LibraryBig, Presentation } from "lucide-vue-next";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName, teamBadge } = useTeamIdentity();
 
 const hideBadge = (e: Event) => {
   (e.target as HTMLImageElement).style.display = "none";

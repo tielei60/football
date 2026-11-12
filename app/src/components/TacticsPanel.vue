@@ -134,7 +134,9 @@
           <div class="tactic-info">
             <div class="tactic-title">{{ t.title }}</div>
             <div class="tactic-meta">{{ fmtTime(t.updatedAt) }} · {{ t.tags.join("/") || "无标签" }}</div>
-            <div v-if="formationName(t.formationId)" class="tactic-formation">阵型：{{ formationName(t.formationId) }}</div>
+            <div v-if="formationName(t.formationId)" class="tactic-formation">
+              阵型：{{ formationName(t.formationId) }}
+            </div>
             <div v-if="matchText(t)" class="tactic-match">{{ matchText(t) }}</div>
             <p v-if="t.snapshot.coaching?.objective" class="tactic-objective">{{ t.snapshot.coaching.objective }}</p>
             <span v-if="t.snapshot.animation" class="animation-count">
@@ -198,6 +200,9 @@ import { TACTIC_TAGS, type VersionRecord } from "@/db";
 import { inlineImages } from "@/utils/inlineImages";
 import { fromBoard, toBoard } from "@/services/tacticLanguage";
 import { useCoachingDeskStore } from "@/stores/coachingDeskStore";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamFileName } = useTeamIdentity();
 
 defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -396,7 +401,7 @@ const onBackup = async () => {
     }
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    download(`柏林花园FC_战术库备份_${stamp()}.json`, url);
+    download(`${teamFileName.value}_战术库备份_${stamp()}.json`, url);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   });
 };
@@ -441,7 +446,7 @@ const onExportJSON = () => {
   };
   const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  download(`柏林花园FC_战术_${stamp()}.json`, url);
+  download(`${teamFileName.value}_战术_${stamp()}.json`, url);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
 
@@ -478,7 +483,7 @@ const onExportSVG = async () => {
   svg.appendChild(cloned);
   const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
-  download(`柏林花园FC_战术_${stamp()}.svg`, url);
+  download(`${teamFileName.value}_战术_${stamp()}.svg`, url);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
 </script>

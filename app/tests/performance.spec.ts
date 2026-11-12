@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("animated players move as a group without relaying out avatar coordinates", async ({ page }) => {
   await page.goto("/board");
