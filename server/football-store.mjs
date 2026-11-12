@@ -2,6 +2,8 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+export const MAX_PLAYER_AVATAR_CHARACTERS = 20 * 1024 * 1024;
+
 export class FootballError extends Error {
   constructor(status, message) {
     super(message);
@@ -163,7 +165,10 @@ function formationRoleScore(positions, role) {
       边前卫: 70,
     },
   };
-  return Math.max(0, ...positions.map((position) => scores[role]?.[position] ?? 0));
+  return Math.max(
+    0,
+    ...positions.map((position) => scores[role]?.[position] ?? 0),
+  );
 }
 function positionMatchedStarterOrder(roles) {
   const remaining = berlinGardenPositions
@@ -198,7 +203,9 @@ function migrateBerlinGardenBoard(board, roles = starterSlotRoles) {
     piece.position = role;
     piece.color = roleColors[role];
   }
-  const starterIds = new Set(berlinGardenPositions.slice(0, 8).map(([playerId]) => playerId));
+  const starterIds = new Set(
+    berlinGardenPositions.slice(0, 8).map(([playerId]) => playerId),
+  );
   const pieces = (board.pieces ?? []).filter(
     (piece) => piece.team !== "away" && starterIds.has(piece.playerId),
   );
@@ -435,7 +442,7 @@ function validatePlayer(player) {
   if (!["ok", "injured", "suspended"].includes(player.status))
     reject("球员状态须为健康、受伤或停赛。");
   if (player.avatar !== undefined && player.avatar !== null)
-    string(player.avatar, "球员头像", 20 * 1024 * 1024);
+    string(player.avatar, "球员头像", MAX_PLAYER_AVATAR_CHARACTERS);
   if (
     player.fieldPieceId !== null &&
     typeof player.fieldPieceId !== "string" &&
@@ -556,12 +563,15 @@ export function openFootballStore(databasePath) {
     database.exec("BEGIN IMMEDIATE");
     try {
       const desk = database
-        .prepare(`SELECT coaching_desks.board, tactics.formation_name
+        .prepare(
+          `SELECT coaching_desks.board, tactics.formation_name
           FROM coaching_desks LEFT JOIN tactics ON tactics.tactic_id = coaching_desks.selected_tactic_id
-          WHERE coaching_desks.desk_id = 1`)
+          WHERE coaching_desks.desk_id = 1`,
+        )
         .get();
       if (desk?.board) {
-        const roles = formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(desk.board), roles);
         database
           .prepare("UPDATE coaching_desks SET board = ? WHERE desk_id = 1")
@@ -583,18 +593,23 @@ export function openFootballStore(databasePath) {
     .prepare("SELECT 1 FROM app_migrations WHERE migration_name = ?")
     .get(presetLineupMigration);
   const knownPresets = database
-    .prepare("SELECT count(*) AS total FROM tactics WHERE preset_name IS NOT NULL")
+    .prepare(
+      "SELECT count(*) AS total FROM tactics WHERE preset_name IS NOT NULL",
+    )
     .get().total;
   if (!presetLineupMigrationApplied && knownPresets > 0) {
     database.exec("BEGIN IMMEDIATE");
     try {
       const desk = database
-        .prepare(`SELECT coaching_desks.board, tactics.formation_name
+        .prepare(
+          `SELECT coaching_desks.board, tactics.formation_name
           FROM coaching_desks LEFT JOIN tactics ON tactics.tactic_id = coaching_desks.selected_tactic_id
-          WHERE coaching_desks.desk_id = 1`)
+          WHERE coaching_desks.desk_id = 1`,
+        )
         .get();
       if (desk?.board) {
-        const roles = formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[desk.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(desk.board), roles);
         database
           .prepare("UPDATE coaching_desks SET board = ? WHERE desk_id = 1")
@@ -608,7 +623,8 @@ export function openFootballStore(databasePath) {
           "SELECT tactic_id, formation_name, board FROM tactics WHERE preset_name IS NOT NULL",
         )
         .all()) {
-        const roles = formationSlotRoles[preset.formation_name] ?? starterSlotRoles;
+        const roles =
+          formationSlotRoles[preset.formation_name] ?? starterSlotRoles;
         const board = migrateBerlinGardenBoard(JSON.parse(preset.board), roles);
         updatePreset.run(JSON.stringify(board), preset.tactic_id);
       }
@@ -828,9 +844,10 @@ export function openFootballStore(databasePath) {
         return getTactic(tacticId);
       });
     },
-    deleteTactic(tacticId) {
+    deleteTactic(tacticId, beforeDelete) {
       return transaction(() => {
         getTactic(tacticId);
+        beforeDelete?.();
         prepare("DELETE FROM tactics WHERE tactic_id = ?").run(tacticId);
       });
     },

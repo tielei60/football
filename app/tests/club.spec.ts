@@ -94,7 +94,7 @@ test("leaving a loading board settles and suspends it before club profile edits"
     const response = await route.fetch();
     seen();
     await held;
-    await route.fulfill({ response });
+    return route.fulfill({ response });
   });
   await page.goto("/board");
   await intercepted;
@@ -104,7 +104,7 @@ test("leaving a loading board settles and suspends it before club profile edits"
   await expect(page).toHaveURL(/\/club$/);
   await page.unroute("**/api/coaching-desk");
   const newName = `延迟载入回归${Date.now()}`;
-  const edited = await request.put(`/api/players/${player.id}`, { data: { name: newName } });
+  const edited = await request.put(`/api/players/${player.id}`, { data: { name: newName, revision: player.revision } });
   expect(edited.ok()).toBeTruthy();
   try {
     await page.getByRole("link", { name: "战术板 ↗" }).click();
@@ -112,7 +112,8 @@ test("leaving a loading board settles and suspends it before club profile edits"
   } finally {
     await page.getByRole("link", { name: "← 俱乐部" }).click();
     await expect(page).toHaveURL(/\/club$/);
-    await request.put(`/api/players/${player.id}`, { data: { name: player.name } });
+    const current = await (await request.get(`/api/players/${player.id}`)).json();
+    await request.put(`/api/players/${player.id}`, { data: { name: player.name, revision: current.revision } });
   }
 });
 
@@ -139,7 +140,7 @@ test("statistics disclose completed matches with no roster and missing individua
   await expect(page.getByText(/未录入个人明细不等于确认未出场/)).toBeVisible();
 });
 
-for (const width of [320, 390]) {
+[320, 390].forEach((width) => {
   test(`club return link leaves mobile roster navigation clickable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/board");
@@ -151,7 +152,7 @@ for (const width of [320, 390]) {
     await expect(rosterTab).toHaveAttribute("aria-expanded", "true");
     await expect(page.locator("#mobile-roster-panel")).toBeVisible();
   });
-}
+});
 
 test("first board save adopts club-only players immediately and persists them on reopening", async ({
   page,

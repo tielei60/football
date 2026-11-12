@@ -1,8 +1,15 @@
+export interface Team {
+  id: number;
+  name: string;
+  crest: string | null;
+  revision: number;
+}
 export interface Session {
   user: { id: number; username: string; role: "admin" | "player"; playerId: string | null; teamId: number };
-  team: { id: number; name: string };
+  team: Team;
 }
 export interface ClubPlayer {
+  revision: number;
   id: string;
   name: string;
   number: number | null;
@@ -14,6 +21,7 @@ export interface ClubPlayer {
   hasAccount: boolean;
 }
 export interface Season {
+  revision: number;
   id: number;
   name: string;
   startDate: string;
@@ -27,6 +35,7 @@ export interface Appearance {
   assists: number | null;
 }
 export interface ClubMatch {
+  revision: number;
   id: number;
   opponent: string;
   date: string;
@@ -40,7 +49,21 @@ export interface ClubMatch {
   rsvps: { playerId: string; response: "yes" | "no" | "maybe" }[];
   roster: Appearance[];
 }
+export interface TeamSummary {
+  matches: number;
+  scoredMatches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number | null;
+  goalsAgainst: number | null;
+  goalsForKnownMatches: number;
+  goalsAgainstKnownMatches: number;
+}
 export interface Statistics {
+  team: TeamSummary;
+  opponents: (TeamSummary & { opponent: string })[];
+
   filter: { startDate: string; endDate: string; label: string };
   matches: number;
   matchesWithoutRoster: number;

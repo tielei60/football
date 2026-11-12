@@ -2,7 +2,7 @@
   <div class="club-app">
     <header class="club-nav">
       <div class="club-brand">
-        <img src="/team-badge.png" alt="" />
+        <img :src="auth.session?.team.crest || '/team-badge.png'" alt="球队队徽" />
         {{ auth.session?.team.name || "球队俱乐部" }}
       </div>
       <RouterLink to="/club" active-class="" exact-active-class="router-link-active">比赛</RouterLink>
@@ -11,7 +11,7 @@
       <RouterLink v-if="auth.isAdmin" to="/board">战术板 ↗</RouterLink>
       <RouterLink to="/club/account">账号</RouterLink>
     </header>
-    <main class="club-content"><RouterView /></main>
+    <main class="club-content"><RouterView :key="$route.fullPath" /></main>
   </div>
 </template>
 <script setup lang="ts">

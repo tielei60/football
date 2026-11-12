@@ -11,7 +11,9 @@ if (!target || target === source || !existsSync(source) || existsSync(target)) {
   console.error('Source must exist; destination must be a new file. Never overwrite a live database.');
   process.exit(1);
 }
-mkdirSync(dirname(target), { recursive: true });
+// Restrict the backup before SQLite opens it: it contains hashes and private data.
+const previousUmask = process.umask(0o077);
+mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
 const database = new DatabaseSync(source);
 try {
   database.exec('PRAGMA busy_timeout = 10000');
@@ -21,4 +23,4 @@ try {
     if (copy.prepare('PRAGMA integrity_check').get().integrity_check !== 'ok') throw new Error('Backup integrity check failed');
   } finally { copy.close(); }
   console.log(`Verified SQLite backup: ${target}`);
-} finally { database.close(); }
+} finally { database.close(); process.umask(previousUmask); }

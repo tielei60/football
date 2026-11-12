@@ -7,11 +7,11 @@
       <p v-if="error" class="club-error" role="alert">{{ error }}</p>
       <label>
         用户名
-        <input v-model="username" autocomplete="username" required autofocus />
+        <input v-model="username" autocomplete="username" :disabled="busy" required autofocus />
       </label>
       <label>
         密码
-        <input v-model="password" type="password" autocomplete="current-password" required />
+        <input v-model="password" type="password" autocomplete="current-password" :disabled="busy" required />
       </label>
       <button class="primary" :disabled="busy">{{ busy ? "正在登录…" : "登录" }}</button>
       <p class="club-muted" style="margin-top: 18px; font-size: 13px">
@@ -32,6 +32,7 @@ const password = ref("");
 const error = ref("");
 const busy = ref(false);
 async function login() {
+  if (busy.value) return;
   busy.value = true;
   error.value = "";
   try {

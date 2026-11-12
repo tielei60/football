@@ -21,6 +21,7 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm audit --omit=dev
       - run: npm run build
       - run: npm run test:unit
       - run: npm run test:server
@@ -47,6 +48,14 @@ jobs:
             http://127.0.0.1:13002/api/auth/login | grep '"role":"admin"'
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Save visual review evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-review
+          path: app/test-results/visual-review
+          if-no-files-found: warn
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

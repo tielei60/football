@@ -49,6 +49,7 @@ function resetClubTestDataAttempt(databasePath) {
         DELETE FROM club_sessions;
         DELETE FROM club_users WHERE role = 'player';
         DELETE FROM club_players;
+        UPDATE club_teams SET name='我的球队',crest=NULL,revision=1 WHERE id=1;
         DELETE FROM tactic_collections;
       `);
       database.exec("COMMIT");
@@ -77,6 +78,8 @@ export async function resetClubTestData(databasePath, { timeoutMs = 3000 } = {})
           { cause: error }
         );
       }
+      // Each SQLite lock retry must wait for the previous attempt to finish.
+      // eslint-disable-next-line no-await-in-loop
       await delay(Math.min(50, Math.max(1, deadline - Date.now())));
     }
   }

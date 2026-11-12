@@ -272,3 +272,36 @@
     font-size: 14px;
   }
 }
+
+/* Keep nested cards, long club names and opponent names inside narrow screens. */
+.club-app fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.club-app fieldset:disabled {
+  opacity: 0.8;
+}
+.club-app h1,
+.club-app h2,
+.club-app p,
+.club-brand {
+  overflow-wrap: anywhere;
+}
+.club-brand {
+  white-space: normal;
+  min-width: 0;
+}
+.club-brand img {
+  flex-shrink: 0;
+}
+.club-heading > div {
+  min-width: 0;
+}
+.club-heading > button {
+  flex-shrink: 0;
+}
+.club-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}

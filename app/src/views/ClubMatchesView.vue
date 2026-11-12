@@ -4,33 +4,38 @@
       <h1>球队比赛</h1>
       <p class="club-muted">发布比赛、报名与赛后记录，都在这里。</p>
     </div>
-    <button v-if="auth.isAdmin" class="primary" @click="creating = !creating">
+    <button v-if="auth.isAdmin" class="primary" :disabled="busy" @click="creating = !creating">
       {{ creating ? "收起" : "新建比赛" }}
     </button>
   </div>
-  <p v-if="error" role="alert" class="club-error">{{ error }}</p>
+  <div v-if="error" role="alert" class="club-error">
+    <p>{{ error }}</p>
+    <button type="button" :disabled="busy || loading" @click="load">重试载入比赛</button>
+  </div>
   <form v-if="creating" class="club-card" @submit.prevent="create">
-    <h2>安排一场比赛</h2>
-    <div class="club-fields">
-      <label>
-        对手
-        <input v-model="opponent" required maxlength="150" />
-      </label>
-      <label>
-        比赛日期
-        <input v-model="date" type="date" required />
-      </label>
-      <label>
-        开球时间
-        <input v-model="kickoff" type="time" />
-      </label>
-      <label>
-        地点
-        <input v-model="location" maxlength="200" />
-      </label>
-    </div>
-    <button class="primary" :disabled="busy">创建草稿</button>
-    <p class="club-muted" style="margin-top: 12px">草稿仅管理员可见，发布后球员即可报名。</p>
+    <fieldset :disabled="busy">
+      <h2>安排一场比赛</h2>
+      <div class="club-fields">
+        <label>
+          对手
+          <input v-model="opponent" required maxlength="150" />
+        </label>
+        <label>
+          比赛日期
+          <input v-model="date" type="date" required />
+        </label>
+        <label>
+          开球时间
+          <input v-model="kickoff" type="time" />
+        </label>
+        <label>
+          地点
+          <input v-model="location" maxlength="200" />
+        </label>
+      </div>
+      <button class="primary" :disabled="busy">创建草稿</button>
+      <p class="club-muted" style="margin-top: 12px">草稿仅管理员可见，发布后球员即可报名。</p>
+    </fieldset>
   </form>
   <div class="club-actions" style="margin-bottom: 20px">
     <label>
@@ -86,6 +91,7 @@ const filtered = computed(() =>
   matches.value.filter((m) => !filter.value || m.status === filter.value).sort((a, b) => b.date.localeCompare(a.date))
 );
 async function create() {
+  if (busy.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -102,7 +108,9 @@ async function create() {
     busy.value = false;
   }
 }
-onMounted(async () => {
+async function load() {
+  loading.value = true;
+  error.value = "";
   try {
     matches.value = await clubApi<ClubMatch[]>("/matches");
   } catch (e) {
@@ -110,5 +118,6 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+onMounted(load);
 </script>

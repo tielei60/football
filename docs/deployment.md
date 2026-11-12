@@ -13,7 +13,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-默认只绑定宿主机 `127.0.0.1:13001`，通过可信 HTTPS 反向代理访问。代理保留 Host 与浏览器 Origin，不要将其他站点加入允许列表。`FOOTBALL_PUBLIC_ORIGIN` 必须为浏览器实际使用的精确 origin，不能含路径。不要公开开发服务器或直接暴露 HTTP 登录到互联网。设置 HTTPS origin 或 COOKIE_SECURE=true 后，HTTP 浏览器不会携带登录 Cookie，这是预期保护。
+默认只绑定宿主机 `127.0.0.1:13001`，通过可信 HTTPS 反向代理访问。代理保留 Host 与浏览器 Origin，不要将其他站点加入允许列表。`FOOTBALL_PUBLIC_ORIGIN` 必须为浏览器实际使用的精确 origin，不能含路径。不要公开开发服务器或直接暴露 HTTP 登录到互联网。设置 HTTPS origin 或 COOKIE_SECURE=true 后，HTTP 浏览器不会携带登录 Cookie，这是预期保护。可信代理和客户端地址配置见 [安全部署说明](security-deployment.md)，不要盲信转发头。
 
 数据在命名卷 `football-data` 的 `/data/football.sqlite`。不执行 `docker compose down -v`，它会删除数据卷。首次管理员创建成功后从 .env 删除两个 ADMIN 变量并重建容器，密码保存在 SQLite 的 scrypt 哈希中。无管理员时登录不能使用；不存在匿名创建管理员接口。
 
@@ -34,7 +34,7 @@ docker compose up -d --build
 FOOTBALL_DB_PATH=/absolute/path/football.sqlite node scripts/backup.mjs /absolute/backup/football-YYYYMMDD.sqlite
 ```
 
-备份目标必须不存在，脚本不会覆盖源库或已有备份，并对结果执行 integrity_check。脚本使用 SQLite 一致性快照，不能简单在线复制主文件而遗漏 WAL。
+备份目标必须不存在，脚本不会覆盖源库或已有备份，并对结果执行 integrity_check。新备份文件为 Unix 0600，新建目录为 0700，仅所有者可访问。脚本使用 SQLite 一致性快照，不能简单在线复制主文件而遗漏 WAL。
 
 Docker 可执行 `docker compose exec football node scripts/backup.mjs /data/backup-YYYYMMDD.sqlite`，然后用 `docker compose cp football:/data/backup-YYYYMMDD.sqlite ./backup-YYYYMMDD.sqlite` 把备份另存到安全位置。另一个选择是先停止容器后备份整个命名卷。恢复前先停止服务。
 
@@ -49,4 +49,4 @@ Docker 可执行 `docker compose exec football node scripts/backup.mjs /data/bac
 
 ## 安全检查范围
 
-后台运行只使用 Node 标准库，不在生产镜像安装 npm 依赖。网页运行依赖已进行非破坏性安全更新，`npm audit --omit=dev` 当前无已知告警。开发工具链仍有旧 SVG/PWA 等间接依赖告警，需要单独升级和完整浏览器兼容性验证；没有使用 `npm audit fix --force` 做未经验证的破坏性降级。开发服务仅绑定本机，勿将它作为生产服务或处理不可信源码。
+后台运行只使用 Node 标准库，不在生产镜像安装 npm 依赖。网页运行依赖的 `npm audit --omit=dev` 当前无已知告警。复核升级 Vite/Vue 构建与类型检查工具，并移除旧 SVG 插件；25 个仓库 SVG 以原属性静态注册。完整开发依赖扫描仍有11项间接告警（9中、2低，无高/严重），来自 PWA/Workbox 与 ESLint 的 glob/minimatch/deepmerge；未执行 audit 建议的强制旧版本降级。开发服务仅绑定本机，不要用作生产服务或处理不可信源码。告警数量会随安全数据库更新变化。

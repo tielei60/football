@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import viteCompression from "vite-plugin-compression";
@@ -13,10 +12,6 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    createSvgIconsPlugin({
-      iconDirs: [path.resolve(process.cwd(), "src/assets/icons")],
-      symbolId: "icon-[name]",
-    }),
     viteCompression({
       verbose: true,
       disable: false,
@@ -28,8 +23,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon/**/*", "logo.png", "pwa-512.png"],
       manifest: {
-        name: "柏林花园 FC · 俱乐部",
-        short_name: "柏林花园 FC",
+        name: "足球俱乐部 · 战术管理",
+        short_name: "足球俱乐部",
         start_url: "/club",
         display: "standalone",
         background_color: "#0b2a1d",
@@ -47,13 +42,6 @@ export default defineConfig({
       },
     }),
   ],
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: "modern-compiler",
-      },
-    },
-  },
   build: {
     outDir: path.resolve(__dirname, "dist"),
     chunkSizeWarningLimit: 1500,

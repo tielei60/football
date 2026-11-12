@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { isIP } from "node:net";
 import { stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
@@ -157,9 +158,29 @@ export function createFootballServer({
       }
     : undefined,
   publicOrigin = process.env.FOOTBALL_PUBLIC_ORIGIN,
+  trustedProxyAddresses = (process.env.FOOTBALL_TRUSTED_PROXY_ADDRESSES || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
   secureCookies = process.env.FOOTBALL_COOKIE_SECURE === "true" ||
     publicOrigin?.startsWith("https:"),
 } = {}) {
+  if (
+    !Array.isArray(trustedProxyAddresses) ||
+    trustedProxyAddresses.some((ip) => !isIP(ip))
+  )
+    throw new Error("Trusted proxy addresses must be explicit IP addresses.");
+  const trustedProxies = new Set(trustedProxyAddresses);
+  const clientAddress = (request) => {
+    const peer = request.socket.remoteAddress;
+    const forwarded = request.headers["x-forwarded-for"];
+    // A configured proxy must overwrite this header with one client IP. Never trust chains.
+    return trustedProxies.has(peer) &&
+      typeof forwarded === "string" &&
+      isIP(forwarded.trim())
+      ? forwarded.trim()
+      : peer;
+  };
   const store = openFootballStore(databasePath);
   const club = createClubStore(store.database, store, { bootstrapAdmin });
   const cookie = (token, clear = false) =>
@@ -197,7 +218,7 @@ export function createFootballServer({
       if (pathname === "/api/auth/login" && method === "POST") {
         const { token: sessionToken, ...session } = club.login(
           await readRequest(request, Math.min(maximumRequestBytes, 16384)),
-          request.socket.remoteAddress,
+          clientAddress(request),
         );
         response.setHeader("Set-Cookie", cookie(sessionToken));
         return send(response, 200, session);
@@ -206,6 +227,23 @@ export function createFootballServer({
         club.logout(token);
         response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
+      }
+      // Read untrusted input before authenticating. A password reset, logout, or
+      // archival during a slow upload must invalidate that pending write too.
+      let parsedBody;
+      if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method)) {
+        const largeBody =
+          /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
+            pathname,
+          );
+        parsedBody = await readRequest(
+          request,
+          pathname === "/api/team"
+            ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
+            : largeBody
+              ? maximumRequestBytes
+              : Math.min(maximumRequestBytes, 1024 * 1024),
+        );
       }
       const user = club.authenticate(token);
       const admin = () => {
@@ -218,14 +256,21 @@ export function createFootballServer({
           throw new FootballError(400, "资源编号不正确。");
         return id;
       };
-      const body = () =>
-        readRequest(request, Math.min(maximumRequestBytes, 1024 * 1024));
+      const body = () => parsedBody;
       if (pathname === "/api/auth/me" && method === "GET")
         return send(response, 200, club.sessionView(user));
       if (pathname === "/api/auth/password" && method === "PUT") {
-        club.changePassword(user, await body());
+        club.changePassword(user, body());
         response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
+      }
+      if (pathname === "/api/team") {
+        if (method === "GET")
+          return send(response, 200, club.getTeam(user.team_id));
+        if (method === "PUT") {
+          admin();
+          return send(response, 200, club.saveTeam(user.team_id, body()));
+        }
       }
       if (pathname === "/api/players") {
         if (method === "GET")
@@ -235,7 +280,7 @@ export function createFootballServer({
           return send(
             response,
             201,
-            club.savePlayer(user.team_id, null, await body()),
+            club.savePlayer(user.team_id, null, body()),
           );
         }
       }
@@ -247,19 +292,15 @@ export function createFootballServer({
           return send(response, 200, club.getPlayer(user.team_id, id));
         admin();
         if (!action && method === "PUT")
-          return send(
-            response,
-            200,
-            club.savePlayer(user.team_id, id, await body()),
-          );
+          return send(response, 200, club.savePlayer(user.team_id, id, body()));
         if (action === "account" && method === "POST")
           return send(
             response,
             201,
-            club.createAccount(user.team_id, id, await body()),
+            club.createAccount(user.team_id, id, body()),
           );
         if (action === "password" && method === "PUT") {
-          club.resetPassword(user.team_id, id, await body());
+          club.resetPassword(user.team_id, id, body());
           return send(response, 204);
         }
       }
@@ -271,7 +312,7 @@ export function createFootballServer({
           return send(
             response,
             201,
-            club.saveSeason(user.team_id, null, await body()),
+            club.saveSeason(user.team_id, null, body()),
           );
         }
       }
@@ -281,7 +322,7 @@ export function createFootballServer({
         return send(
           response,
           200,
-          club.saveSeason(user.team_id, routeId(seasonRoute[1]), await body()),
+          club.saveSeason(user.team_id, routeId(seasonRoute[1]), body()),
         );
       }
       if (pathname === "/api/statistics" && method === "GET")
@@ -298,7 +339,7 @@ export function createFootballServer({
           return send(response, 200, club.listMatches(user));
         if (method === "POST") {
           admin();
-          return send(response, 201, club.saveMatch(user, null, await body()));
+          return send(response, 201, club.saveMatch(user, null, body()));
         }
       }
       const matchRoute =
@@ -309,12 +350,12 @@ export function createFootballServer({
         if (!action && method === "GET")
           return send(response, 200, club.getMatch(user, id));
         if (action === "rsvp" && method === "PUT")
-          return send(response, 200, club.saveRsvp(user, id, await body()));
+          return send(response, 200, club.saveRsvp(user, id, body()));
         admin();
         if (!action && method === "PUT")
-          return send(response, 200, club.saveMatch(user, id, await body()));
+          return send(response, 200, club.saveMatch(user, id, body()));
         if (action === "roster" && method === "PUT")
-          return send(response, 200, club.saveRoster(user, id, await body()));
+          return send(response, 200, club.saveRoster(user, id, body()));
       }
       // Legacy tactical resources belong to the original team. Never expose them to future teams.
       if (user.team_id !== 1)
@@ -323,32 +364,17 @@ export function createFootballServer({
       if (pathname === "/api/tactics") {
         if (method === "GET") return send(response, 200, store.listTactics());
         if (method === "POST")
-          return send(
-            response,
-            201,
-            store.saveTactic(
-              null,
-              await readRequest(request, maximumRequestBytes),
-            ),
-          );
+          return send(response, 201, store.saveTactic(null, body()));
       } else if (pathname === "/api/coaching-desk") {
         if (method === "GET") return send(response, 200, club.tacticalDesk());
         if (method === "PUT") {
-          return send(
-            response,
-            200,
-            club.saveTacticalDesk(
-              await readRequest(request, maximumRequestBytes),
-            ),
-          );
+          return send(response, 200, club.saveTacticalDesk(body()));
         }
       } else if (pathname === "/api/tactic-collections") {
         if (method === "GET")
           return send(response, 200, store.exportCollection());
         if (method === "POST") {
-          const { repeated, ...collection } = store.importCollection(
-            await readRequest(request, maximumRequestBytes),
-          );
+          const { repeated, ...collection } = store.importCollection(body());
           return send(response, repeated ? 200 : 201, collection);
         }
       } else {
@@ -363,37 +389,18 @@ export function createFootballServer({
           if (method === "GET")
             return send(response, 200, store.listVersions(tacticId));
           if (method === "POST")
-            return send(
-              response,
-              201,
-              store.saveVersion(
-                tacticId,
-                await readRequest(request, maximumRequestBytes),
-              ),
-            );
+            return send(response, 201, store.saveVersion(tacticId, body()));
         } else {
           if (method === "GET")
             return send(response, 200, store.getTactic(tacticId));
           if (method === "PUT")
-            return send(
-              response,
-              200,
-              store.saveTactic(
-                tacticId,
-                await readRequest(request, maximumRequestBytes),
-              ),
-            );
+            return send(response, 200, store.saveTactic(tacticId, body()));
           if (method === "PATCH")
-            return send(
-              response,
-              200,
-              store.updateTactic(
-                tacticId,
-                await readRequest(request, maximumRequestBytes),
-              ),
-            );
+            return send(response, 200, store.updateTactic(tacticId, body()));
           if (method === "DELETE") {
-            store.deleteTactic(tacticId);
+            store.deleteTactic(tacticId, () =>
+              club.assertTacticDeletable(tacticId),
+            );
             return send(response, 204);
           }
         }
