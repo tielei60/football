@@ -218,6 +218,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
     await writeFile(`${evidenceDir}/realistic-board-export.json`, JSON.stringify(exported, null, 2));
   });
   await test.step("CLI备份及独立临时路径恢复", async () => {
+    await page.getByRole("button", { name: "关闭战术库", exact: true }).click();
     await page.getByRole("link", { name: "← 俱乐部" }).click();
     await expect(page).toHaveURL(/\/club$/);
     await expect(page.getByRole("heading", { name: "球队比赛" })).toBeVisible();

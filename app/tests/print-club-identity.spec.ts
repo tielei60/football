@@ -23,6 +23,7 @@ test("print media uses current club identity but archived player details, with e
         title: "打印存档核对",
         tags: [],
         favorite: false,
+        formationName: null,
         thumbnail: null,
         board: {
           playerCount: 7,
@@ -55,7 +56,7 @@ test("print media uses current club identity but archived player details, with e
       },
     },
   });
-  expect(created.ok()).toBe(true);
+  expect(created.ok(), `Tactic fixture rejected: ${await created.text()}`).toBe(true);
   expect(
     (
       await request.put(`/api/players/${player.id}`, {

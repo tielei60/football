@@ -1,4 +1,5 @@
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- Stateful setup and UI steps are deliberately sequential. */
+import { assertNeutralBadge } from "./assert-neutral-badge";
 import { test, expect } from "./fixtures";
 
 test("fresh four-person club never adopts legacy local roster or demonstration branding", async ({ page, request }) => {
@@ -19,7 +20,7 @@ test("fresh four-person club never adopts legacy local roster or demonstration b
   expect((await request.post("/api/auth/logout", { data: {} })).ok()).toBe(true);
   await page.goto("/login");
   const loginBadge = page.getByAltText("球队徽章");
-  await expect(loginBadge).toHaveAttribute("src", /default-club-badge/);
+  await assertNeutralBadge(loginBadge);
   const defaultSrc = (await loginBadge.getAttribute("src"))!;
   await page.getByLabel("用户名").fill("testadmin");
   await page.getByLabel("密码", { exact: true }).fill("test-password-123");
@@ -57,6 +58,7 @@ test("fresh four-person club never adopts legacy local roster or demonstration b
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "导出JSON", exact: true }).click();
   expect((await downloading).suggestedFilename()).toMatch(/^四人星河队（虚构）_战术_/);
+  await page.getByRole("button", { name: "关闭战术库", exact: true }).click();
   await page.getByRole("link", { name: "← 俱乐部" }).click();
   await expect(page).toHaveURL(/\/club$/);
   const after = await (await request.get("/api/players")).json();
