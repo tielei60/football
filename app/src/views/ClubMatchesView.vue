@@ -17,6 +17,33 @@
       <h2>安排一场比赛</h2>
       <div class="club-fields">
         <label>
+          赛事名称
+          <input v-model="competition" maxlength="150" placeholder="例如：周末联赛" />
+        </label>
+        <label>
+          比赛人数制
+          <select v-model="format">
+            <option :value="null">未知</option>
+            <option v-for="count in [5, 6, 7, 8, 9, 11]" :key="count" :value="count">{{ count }} 人制</option>
+          </select>
+        </label>
+        <label>
+          主客场
+          <select v-model="side">
+            <option value="unknown">未知</option>
+            <option value="home">主场</option>
+            <option value="away">客场</option>
+            <option value="neutral">中立场</option>
+          </select>
+        </label>
+        <label>
+          归属赛季
+          <select v-model="seasonId">
+            <option :value="null">暂未归属赛季</option>
+            <option v-for="season in seasons" :key="season.id" :value="season.id">{{ season.name }}</option>
+          </select>
+        </label>
+        <label>
           对手
           <input v-model="opponent" required maxlength="150" />
         </label>
@@ -73,16 +100,28 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
-import { clubApi, unknown, matchStatuses, type ClubMatch } from "@/services/clubApi";
+import {
+  clubApi,
+  unknown,
+  matchStatuses,
+  type Season,
+  type ClubMatch,
+  type ClubMatchSummary,
+} from "@/services/clubApi";
 
 const auth = useAuthStore();
 const router = useRouter();
-const matches = ref<ClubMatch[]>([]);
+const matches = ref<ClubMatchSummary[]>([]);
+const seasons = ref<Season[]>([]);
 const loading = ref(true);
 const busy = ref(false);
 const error = ref("");
 const creating = ref(false);
 const opponent = ref("");
+const competition = ref("");
+const format = ref<ClubMatch["format"]>(null);
+const side = ref<ClubMatch["side"]>("unknown");
+const seasonId = ref<number | null>(null);
 const date = ref("");
 const kickoff = ref("");
 const location = ref("");
@@ -96,6 +135,10 @@ async function create() {
   error.value = "";
   try {
     const m = await clubApi<ClubMatch>("/matches", "POST", {
+      competition: competition.value,
+      format: format.value,
+      side: side.value,
+      seasonId: seasonId.value,
       opponent: opponent.value,
       date: date.value,
       kickoff: kickoff.value,
@@ -112,7 +155,10 @@ async function load() {
   loading.value = true;
   error.value = "";
   try {
-    matches.value = await clubApi<ClubMatch[]>("/matches");
+    [matches.value, seasons.value] = await Promise.all([
+      clubApi<ClubMatchSummary[]>("/matches"),
+      clubApi<Season[]>("/seasons"),
+    ]);
   } catch (e) {
     error.value = (e as Error).message;
   } finally {

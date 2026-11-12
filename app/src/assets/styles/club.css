@@ -305,3 +305,29 @@
 .club-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
+
+.club-match-heading .club-score {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+.club-match-heading > div {
+  flex: 1;
+}
+.club-scroll-hint {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.club-table-wrap:focus-visible {
+  outline: 3px solid #89bc57;
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .club-match-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .club-match-heading .club-score {
+    align-self: flex-start;
+  }
+}

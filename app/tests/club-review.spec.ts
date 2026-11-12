@@ -242,6 +242,19 @@ for (const width of [320, 390, 1440]) {
   test(`club screens fit ${width}px and provide admin and player review screenshots`, async ({ page, request }) => {
     await page.setViewportSize({ width, height: 960 });
     const player = await seedPlayer(request, "视觉复核球员");
+    const season = await (
+      await request.post("/api/seasons", {
+        data: { name: "视觉复核赛季", startDate: "2091-08-01", endDate: "2092-07-31" },
+      })
+    ).json();
+    expect(
+      (
+        await request.put(`/api/seasons/${season.id}/roster`, {
+          data: { revision: season.revision, roster: [{ playerId: player.id, number: 7 }] },
+        })
+      ).ok()
+    ).toBe(true);
+    const savedTactic = await seedSnapshotTactic(request, player.id);
     const match = await seedMatch(
       request,
       "非常长的对手球队名称LongOpponentNameWithoutAnySpacesABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -250,6 +263,11 @@ for (const width of [320, 390, 1440]) {
         homeScore: 2,
         awayScore: null,
         analysis: "比赛观察：保持传接球节奏。\n下一场改善回防与保护。",
+        seasonId: season.id,
+        competition: "周末联赛",
+        format: 8,
+        side: "home",
+        tacticIds: [savedTactic.tacticId],
       }
     );
     expect(
@@ -257,7 +275,9 @@ for (const width of [320, 390, 1440]) {
         await request.put(`/api/matches/${match.id}/roster`, {
           data: {
             revision: match.revision,
-            roster: [{ playerId: player.id, position: "中场", appeared: true, goals: 1, assists: null }],
+            roster: [
+              { playerId: player.id, position: "中场", selection: "starter", appeared: true, goals: 1, assists: null },
+            ],
           },
         })
       ).ok()
@@ -304,10 +324,39 @@ for (const width of [320, 390, 1440]) {
           await page.getByLabel("年份").blur();
           await expect(page.getByRole("region", { name: "球队汇总" })).toContainText("0 / 1 场");
         }
+        if (name === "detail") {
+          const score = page.locator(".club-match-heading .club-score");
+          expect(await score.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe("nowrap");
+          const scoreBox = await score.boundingBox();
+          expect(scoreBox!.height).toBeLessThan(65);
+          if (role === "player") await expect(page.getByText(/先更新并保存本队比分/)).toHaveCount(0);
+          await page.getByText("查看已保存战术：快照阵型").click();
+          await expect(page.getByRole("img", { name: "快照阵型已保存战术画布" })).toBeVisible();
+          if (width <= 390) {
+            const table = page.getByRole("region", { name: "比赛名单表", exact: true });
+            await expect(page.getByText("表格还有更多列，请左右滑动或使用方向键查看。")).toBeVisible();
+            expect(
+              await table.evaluate((el) => {
+                el.scrollTo(el.scrollWidth, 0);
+                return el.scrollLeft;
+              })
+            ).toBeGreaterThan(0);
+            await table.evaluate((el) => {
+              el.scrollTo(0, 0);
+            });
+          }
+        }
         await expect(page.getByText(/正在载入|正在计算统计/)).toHaveCount(0);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         if (width !== 320)
           await page.screenshot({ path: `test-results/visual-review/${role}-${name}-${width}.png`, fullPage: true });
+        if (name === "statistics") {
+          await page.getByRole("button", { name: "赛季名单", exact: true }).click();
+          const rosterCard = page.getByRole("form", { name: "赛季名单详情", exact: true });
+          await expect(rosterCard).toBeVisible();
+          if (width !== 320)
+            await rosterCard.screenshot({ path: `test-results/visual-review/${role}-season-roster-${width}.png` });
+        }
       }
     }
   });
@@ -333,10 +382,7 @@ test("failed match save retains the draft and retry sends only one new request",
   await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
   expect((await (await request.get(`/api/matches/${match.id}`)).json()).analysis).toBe("失败后保留的分析");
 });
-test("linked tactic deletion explains the match dependency and keeps the saved tactic visible", async ({
-  page,
-  request,
-}) => {
+test("deleting a template preserves the match tactic snapshot", async ({ page, request }) => {
   await page.goto("/board");
   await expect(page.getByLabel("保存状态")).toContainText("已保存");
   await page.getByRole("button", { name: "战术库", exact: true }).click();
@@ -348,10 +394,11 @@ test("linked tactic deletion explains the match dependency and keeps the saved t
   const match = await seedMatch(request, "保留战术关联", { tacticIds: [tactic.tacticId] });
   page.once("dialog", (dialog) => dialog.accept());
   await card.getByRole("button", { name: "删除战术", exact: true }).click();
-  await expect(page.getByText(/请先解除比赛关联后再删除/)).toBeVisible();
-  await expect(card).toBeVisible();
+  await expect(card).toHaveCount(0);
   expect((await (await request.get(`/api/matches/${match.id}`)).json()).tacticIds).toEqual([tactic.tacticId]);
-  expect((await request.get(`/api/tactics/${tactic.tacticId}`)).ok()).toBe(true);
+  expect((await request.get(`/api/tactics/${tactic.tacticId}`)).status()).toBe(404);
+  const saved = await (await request.get(`/api/matches/${match.id}`)).json();
+  expect(saved.tacticSnapshots[0].tactic.title).toBe("关联比赛不能误删的战术");
 });
 async function crestImage(page: Page, color = "green") {
   return page.evaluate((fill) => {
@@ -531,6 +578,11 @@ test("opponent results follow cross-year season and calendar-year filters with u
   });
   expect(response.ok()).toBe(true);
   const season = await response.json();
+  const assignedMatches = await (await request.get("/api/matches")).json();
+  for (const m of assignedMatches)
+    expect(
+      (await request.put(`/api/matches/${m.id}`, { data: { revision: m.revision, seasonId: season.id } })).ok()
+    ).toBe(true);
   await page.goto("/club/statistics");
   await page.getByLabel("统计周期").selectOption("season");
   await page.getByLabel("赛季", { exact: true }).selectOption(String(season.id));
@@ -548,4 +600,248 @@ test("opponent results follow cross-year season and calendar-year filters with u
   await page.getByLabel("年份").blur();
   await expect(row.getByRole("cell").nth(1)).toHaveText("1");
   await expect(row.getByRole("cell").nth(3)).toHaveText("1 / 1 场");
+});
+
+async function seedSnapshotTactic(request: APIRequestContext, playerId: string) {
+  const response = await request.post("/api/tactics", {
+    data: {
+      tactic: {
+        title: "快照阵型",
+        tags: [],
+        favorite: false,
+        formationName: "2-3-2",
+        thumbnail: null,
+        board: {
+          playerCount: 8,
+          pieces: [
+            {
+              pieceId: "saved-player",
+              kind: "player",
+              x: 300,
+              y: 400,
+              label: "保存时球员",
+              shirtNumber: 7,
+              playerId,
+              color: "#2465a8",
+            },
+          ],
+          markings: [],
+          trainingPlan: { objective: "保存时计划", instructions: "保持宽度", durationMinutes: 20 },
+          demonstration: {
+            demonstrationId: "saved-demo",
+            title: "保存演示",
+            participants: [
+              {
+                pieceId: "saved-player",
+                kind: "player",
+                x: 300,
+                y: 400,
+                label: "保存时球员",
+                shirtNumber: 7,
+                playerId,
+              },
+            ],
+            stages: [
+              { stageNumber: 0, title: "初始", positions: [{ pieceId: "saved-player", x: 300, y: 400 }] },
+              { stageNumber: 1, title: "前插", positions: [{ pieceId: "saved-player", x: 500, y: 400 }] },
+            ],
+            runs: [],
+          },
+        },
+      },
+      note: "快照测试",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  return response.json();
+}
+
+test("season roster and match fields preserve historical identity, number and tactic after later edits", async ({
+  page,
+  request,
+}) => {
+  const player = await seedPlayer(request, "赛时姓名");
+  const tactic = await seedSnapshotTactic(request, player.id);
+  const season = await (
+    await request.post("/api/seasons", { data: { name: "归属跨年季", startDate: "2091-08-01", endDate: "2092-07-31" } })
+  ).json();
+  await page.goto("/club/statistics");
+  await page.getByRole("button", { name: "赛季名单", exact: true }).click();
+  await page.getByLabel("添加赛季球员").selectOption(player.id);
+  await page.getByRole("button", { name: "加入赛季名单" }).click();
+  await page.getByLabel("赛时姓名赛季号码").fill("22");
+  const seasonSaved = page.waitForResponse(
+    (r) => r.url().endsWith(`/api/seasons/${season.id}/roster`) && r.request().method() === "PUT"
+  );
+  await page.getByRole("button", { name: "保存赛季名单" }).click();
+  expect((await seasonSaved).ok()).toBe(true);
+  await page.getByRole("link", { name: "比赛", exact: true }).click();
+  await page.getByRole("button", { name: "新建比赛" }).click();
+  await page.getByLabel("对手", { exact: true }).fill("归属对手");
+  await page.getByLabel("比赛日期").fill("2092-01-01");
+  await page.getByLabel("赛事名称").fill("业余杯");
+  await page.getByLabel("比赛人数制").selectOption("8");
+  await page.getByLabel("主客场", { exact: true }).selectOption("away");
+  await page.getByLabel("归属赛季").selectOption(String(season.id));
+  await page.getByRole("button", { name: "创建草稿" }).click();
+  await expect(page.getByLabel("赛事名称")).toHaveValue("业余杯");
+  await expect(page.getByLabel("主客场", { exact: true })).toHaveValue("away");
+  await page.getByLabel("快照阵型", { exact: true }).check();
+  await page.getByLabel("发布状态").selectOption("completed");
+  await page.getByRole("button", { name: "保存比赛信息" }).click();
+  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await page.getByLabel("添加至名单").selectOption(player.id);
+  await page.getByRole("button", { name: "添加球员", exact: true }).click();
+  await page.getByLabel("赛时姓名首发替补").selectOption("bench");
+  await page.getByLabel("赛时姓名实际出场").selectOption({ label: "已出场" });
+  await page.getByRole("button", { name: "保存名单与出场数据" }).click();
+  await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+  const id = Number(page.url().split("/").pop());
+  const roster = page.getByRole("region", { name: "比赛名单表", exact: true });
+  await expect(roster.getByRole("row").filter({ hasText: "赛时姓名" }).getByRole("cell").nth(1)).toHaveText("22");
+  const freshPlayer = await (await request.get(`/api/players/${player.id}`)).json();
+  expect(
+    (
+      await request.put(`/api/players/${player.id}`, {
+        data: { revision: freshPlayer.revision, name: "现在姓名", number: 88 },
+      })
+    ).ok()
+  ).toBe(true);
+  const sr = await (await request.get(`/api/seasons/${season.id}/roster`)).json();
+  expect(
+    (
+      await request.put(`/api/seasons/${season.id}/roster`, {
+        data: { revision: sr.season.revision, roster: [{ playerId: player.id, number: 44 }] },
+      })
+    ).ok()
+  ).toBe(true);
+  expect(
+    (
+      await request.put(`/api/tactics/${tactic.tacticId}`, {
+        data: { tactic: { ...tactic, title: "新版模板", board: { ...tactic.board, pieces: [] } } },
+      })
+    ).ok()
+  ).toBe(true);
+  expect((await request.delete(`/api/tactics/${tactic.tacticId}`)).ok()).toBe(true);
+  await page.reload();
+  await expect(roster).toContainText("赛时姓名");
+  await expect(roster).not.toContainText("现在姓名");
+  await expect(roster.getByRole("row").filter({ hasText: "赛时姓名" }).getByRole("cell").nth(1)).toHaveText("22");
+  await page.getByText("查看已保存战术：快照阵型").click();
+  const canvas = page.getByRole("img", { name: "快照阵型已保存战术画布" });
+  await expect(canvas).toContainText("保存时球员");
+  await page.getByLabel("战术演示步骤").selectOption("1");
+  await expect(canvas.locator('[data-piece-id="saved-player"]')).toHaveAttribute("transform", "translate(500 400)");
+  await page.getByLabel("地点", { exact: true }).fill("只改地点");
+  await page.getByRole("button", { name: "保存比赛信息" }).click();
+  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  expect((await (await request.get(`/api/matches/${id}`)).json()).tacticSnapshots[0].tactic.title).toBe("快照阵型");
+});
+
+test("registration yes no maybe unanswered and actual attendance remain separate", async ({ page, request }) => {
+  const player = await seedPlayer(request, "报名统计球员");
+  expect(
+    (
+      await request.post(`/api/players/${player.id}/account`, {
+        data: { username: "registration-review", password: "registration-password" },
+      })
+    ).ok()
+  ).toBe(true);
+  const season = await (
+    await request.post("/api/seasons", { data: { name: "报名赛季", startDate: "2091-08-01", endDate: "2092-07-31" } })
+  ).json();
+  const matches = [];
+  for (const response of ["yes", "no", "maybe", "unanswered"])
+    matches.push(await seedMatch(request, response, { seasonId: season.id }));
+  await seedMatch(request, "不归属赛季", { status: "completed" });
+  await request.post("/api/auth/logout", { data: {} });
+  expect(
+    (
+      await request.post("/api/auth/login", {
+        data: { username: "registration-review", password: "registration-password" },
+      })
+    ).ok()
+  ).toBe(true);
+  for (let i = 0; i < 3; i += 1)
+    expect(
+      (await request.put(`/api/matches/${matches[i].id}/rsvp`, { data: { response: ["yes", "no", "maybe"][i] } })).ok()
+    ).toBe(true);
+  await request.post("/api/auth/logout", { data: {} });
+  expect(
+    (await request.post("/api/auth/login", { data: { username: "testadmin", password: "test-password-123" } })).ok()
+  ).toBe(true);
+  const completed = await (
+    await request.put(`/api/matches/${matches[0].id}`, { data: { revision: matches[0].revision, status: "completed" } })
+  ).json();
+  expect(
+    (
+      await request.put(`/api/matches/${completed.id}/roster`, {
+        data: { revision: completed.revision, roster: [{ playerId: player.id, selection: "starter", appeared: null }] },
+      })
+    ).ok()
+  ).toBe(true);
+  await page.goto("/club/statistics");
+  await page.getByLabel("统计周期").selectOption("season");
+  await page.getByLabel("赛季", { exact: true }).selectOption(String(season.id));
+  const row = page
+    .getByRole("region", { name: "球员统计表", exact: true })
+    .getByRole("row")
+    .filter({ hasText: player.name });
+  for (const i of [8, 9, 10, 11]) await expect(row.getByRole("cell").nth(i)).toHaveText("1");
+  await expect(row.getByRole("cell").nth(1)).toHaveText("0");
+  await expect(row.getByRole("cell").nth(2)).toHaveText("1");
+  await expect(page.getByRole("region", { name: "球队汇总", exact: true })).toContainText("出场待确认 1 人次");
+  await expect(page.getByText(/球队有 1 场未归属赛季/)).toBeVisible();
+});
+
+test("season roster conflict retains edited number and migration snapshots disclose their origin", async ({
+  page,
+  request,
+}) => {
+  const player = await seedPlayer(request);
+  const season = await (
+    await request.post("/api/seasons", { data: { name: "冲突赛季", startDate: "2091-08-01", endDate: "2092-07-31" } })
+  ).json();
+  expect(
+    (
+      await request.put(`/api/seasons/${season.id}/roster`, {
+        data: { revision: season.revision, roster: [{ playerId: player.id, number: 0 }] },
+      })
+    ).ok()
+  ).toBe(true);
+  await page.goto("/club/statistics");
+  await page.getByRole("button", { name: "赛季名单", exact: true }).click();
+  await page.getByLabel(`${player.name}赛季号码`).fill("55");
+  const fresh = await (await request.get(`/api/seasons/${season.id}/roster`)).json();
+  expect(
+    (
+      await request.put(`/api/seasons/${season.id}/roster`, {
+        data: { revision: fresh.season.revision, roster: [{ playerId: player.id, number: 66 }] },
+      })
+    ).ok()
+  ).toBe(true);
+  await page.getByRole("button", { name: "保存赛季名单" }).click();
+  await expect(page.getByRole("alert")).toContainText("你的输入已保留");
+  await expect(page.getByLabel(`${player.name}赛季号码`)).toHaveValue("55");
+  const match = await seedMatch(request);
+  await page.route(`**/api/matches/${match.id}`, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.roster = [
+      {
+        playerId: player.id,
+        position: "",
+        selection: "unknown",
+        appeared: null,
+        goals: null,
+        assists: null,
+        playerSnapshot: { id: player.id, name: player.name, number: null, positions: [] },
+        snapshotCapturedAt: 1,
+        snapshotSource: "migration",
+      },
+    ];
+    return route.fulfill({ response, json: body });
+  });
+  await page.goto(`/club/matches/${match.id}`);
+  await expect(page.getByText(/并非真实赛时资料还原/)).toBeVisible();
 });

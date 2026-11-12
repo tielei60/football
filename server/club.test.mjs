@@ -97,6 +97,20 @@ async function fixture(t, before) {
   };
 }
 
+// These fixtures explicitly assign their intended matches. Production never infers
+// membership from dates, even when season ranges overlap.
+async function assignFixtureMatches(call, season) {
+  for (const match of (await call("/api/matches")).body) {
+    if (match.date >= season.startDate && match.date <= season.endDate) {
+      const response = await call(`/api/matches/${match.id}`, "PUT", {
+        revision: match.revision,
+        seasonId: season.id,
+      });
+      assert.equal(response.status, 200);
+    }
+  }
+}
+
 test("complete club workflow, RSVP is not appearance, null metrics, inclusive seasons and year boundaries", async (t) => {
   const f = await fixture(t),
     cookie = await f.login();
@@ -168,6 +182,7 @@ test("complete club workflow, RSVP is not appearance, null metrics, inclusive se
       endDate: "2026-01-01",
     })
   ).body;
+  await assignFixtureMatches(admin, season);
   let stats = (await admin(`/api/statistics?seasonId=${season.id}`)).body;
   assert.equal(
     stats.players.find((p) => p.playerId === player.id).appearances,
@@ -189,6 +204,7 @@ test("complete club workflow, RSVP is not appearance, null metrics, inclusive se
   const second = (
     await admin("/api/matches", "POST", {
       opponent: "新年队",
+      seasonId: season.id,
       date: "2026-01-01",
       status: "completed",
     })
@@ -662,6 +678,7 @@ test("statistics expose missing and partial rosters separately from explicit unk
       endDate: "2026-01-01",
     })
   ).body;
+  await assignFixtureMatches(call, season);
   const scoped = (await call(`/api/statistics?seasonId=${season.id}`)).body;
   assert.equal(scoped.matches, 2);
   assert.equal(scoped.matchesWithoutRoster, 1);
@@ -1138,9 +1155,15 @@ test("team statistics use independent score coverage and inclusive season and ye
       endDate: "2026-01-04",
     })
   ).body;
+  await assignFixtureMatches(call, season);
   const seasonal = (await call(`/api/statistics?seasonId=${season.id}`)).body
     .team;
   assert.deepEqual(seasonal, {
+    attendance: {
+      confirmedAppearances: 0,
+      unknownAppearances: 0,
+      matchesWithoutRoster: 5,
+    },
     matches: 5,
     scoredMatches: 3,
     wins: 1,
@@ -1153,6 +1176,11 @@ test("team statistics use independent score coverage and inclusive season and ye
   });
   const year = (await call("/api/statistics?year=2026")).body.team;
   assert.deepEqual(year, {
+    attendance: {
+      confirmedAppearances: 0,
+      unknownAppearances: 0,
+      matchesWithoutRoster: 5,
+    },
     matches: 5,
     scoredMatches: 2,
     wins: 0,
@@ -1170,7 +1198,7 @@ test("team statistics use independent score coverage and inclusive season and ye
   assert.equal(empty.scoredMatches, 0);
 });
 
-test("linked match tactics require explicit unlinking before deletion", async (t) => {
+test("linked match tactics retain independent snapshots after template deletion", async (t) => {
   const f = await fixture(t),
     cookie = await f.login();
   const call = (route, method = "GET", body) =>
@@ -1195,19 +1223,20 @@ test("linked match tactics require explicit unlinking before deletion", async (t
       tacticIds: [tactic.tacticId],
     })
   ).body;
-  const blocked = await call(`/api/tactics/${tactic.tacticId}`, "DELETE");
-  assert.equal(blocked.status, 409);
-  assert.match(blocked.body.message, /1 场比赛/);
-  assert.deepEqual((await call(`/api/matches/${match.id}`)).body.tacticIds, [
-    tactic.tacticId,
-  ]);
-  await call(`/api/matches/${match.id}`, "PUT", {
-    revision: match.revision,
-    tacticIds: [],
-  });
+  const deleted = await call(`/api/tactics/${tactic.tacticId}`, "DELETE");
+  assert.equal(deleted.status, 204);
+  const history = (await call(`/api/matches/${match.id}`)).body;
+  assert.deepEqual(history.tacticIds, [tactic.tacticId]);
+  assert.equal(history.tacticSnapshots[0].tactic.title, "历史关联");
+  assert.equal(history.tacticSnapshots[0].captureSource, "association");
   assert.equal(
-    (await call(`/api/tactics/${tactic.tacticId}`, "DELETE")).status,
-    204,
+    (
+      await call(`/api/matches/${match.id}`, "PUT", {
+        revision: history.revision,
+        analysis: "模板删除后仍可编辑",
+      })
+    ).status,
+    200,
   );
 });
 
@@ -1395,6 +1424,7 @@ test("opponent summaries group trimmed names within season/year and retain unkno
       endDate: "2026-01-01",
     })
   ).body;
+  await assignFixtureMatches(call, season);
   const seasonal = (await call(`/api/statistics?seasonId=${season.id}`)).body
     .opponents;
   assert.equal(seasonal.length, 2);
@@ -1467,4 +1497,540 @@ test("team profile migration preserves existing names and membership", async (t)
     (await f.request("/api/auth/me", { cookie })).body.team,
     team,
   );
+});
+
+test("historical tactic and player snapshots survive edits, version pruning, archival and restart", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const player = (
+    await call("/api/players", "POST", {
+      name: "历史姓名",
+      number: 9,
+      positions: ["前锋"],
+    })
+  ).body;
+  const original = {
+    title: "当时战术",
+    tags: [],
+    favorite: false,
+    formationName: "2-3-2",
+    board: { pieces: [], markings: [] },
+    thumbnail: null,
+  };
+  const tactic = (await call("/api/tactics", "POST", { tactic: original }))
+    .body;
+  const m = (
+    await call("/api/matches", "POST", {
+      opponent: "历史",
+      date: "2026-01-01",
+      status: "completed",
+      tacticIds: [tactic.tacticId],
+    })
+  ).body;
+  const first = (
+    await call(`/api/matches/${m.id}/roster`, "PUT", {
+      roster: [
+        { playerId: player.id, position: "前锋", appeared: true, goals: 1 },
+      ],
+    })
+  ).body;
+  await call(`/api/tactics/${tactic.tacticId}`, "PUT", {
+    tactic: { ...original, title: "新模板", formationName: "3-3-1" },
+  });
+  for (let i = 0; i < 55; i++)
+    await call(`/api/tactics/${tactic.tacticId}/versions`, "POST", {
+      board: { pieces: [], markings: [] },
+      note: String(i),
+    });
+  await call(`/api/players/${player.id}`, "PUT", {
+    name: "现在姓名",
+    number: 88,
+    positions: ["后卫"],
+    status: "inactive",
+  });
+  await call(`/api/matches/${m.id}`, "PUT", { location: "仅修改地点" });
+  const changed = (
+    await call(`/api/matches/${m.id}/roster`, "PUT", {
+      roster: [
+        {
+          playerId: player.id,
+          position: "前锋",
+          appeared: true,
+          goals: 2,
+          playerSnapshot: { name: "伪造" },
+          snapshotSource: "migration",
+        },
+      ],
+    })
+  ).body;
+  assert.deepEqual(changed.tacticSnapshots, first.tacticSnapshots);
+  assert.deepEqual(changed.roster[0].playerSnapshot, {
+    id: player.id,
+    name: "历史姓名",
+    number: 9,
+    positions: ["前锋"],
+  });
+  assert.equal(changed.roster[0].snapshotSource, "roster");
+  assert.equal(
+    changed.roster[0].snapshotCapturedAt,
+    first.roster[0].snapshotCapturedAt,
+  );
+  assert.equal(
+    (await call(`/api/tactics/${tactic.tacticId}`, "DELETE")).status,
+    204,
+  );
+  await f.restart();
+  const next = await f.login();
+  const after = (await f.request(`/api/matches/${m.id}`, { cookie: next }))
+    .body;
+  assert.deepEqual(after.tacticSnapshots, first.tacticSnapshots);
+  assert.deepEqual(
+    after.roster[0].playerSnapshot,
+    first.roster[0].playerSnapshot,
+  );
+  const db = new DatabaseSync(f.path);
+  db.exec("INSERT INTO club_teams(id,name) VALUES(2,'其他球队')");
+  db.prepare(
+    "INSERT INTO club_users(team_id,username,password_hash,role) SELECT 2,'outsider',password_hash,'admin' FROM club_users WHERE username='owner'",
+  ).run();
+  db.close();
+  const outsider = await f.login({
+    username: "outsider",
+    password: credentials.password,
+  });
+  assert.equal(
+    (await f.request(`/api/matches/${m.id}`, { cookie: outsider })).status,
+    404,
+  );
+  assert.deepEqual(
+    (await f.request("/api/matches", { cookie: outsider })).body,
+    [],
+  );
+  assert.equal(
+    (
+      await f.request("/api/matches", {
+        cookie: outsider,
+        method: "POST",
+        body: {
+          opponent: "越权",
+          date: "2026-01-01",
+          tacticIds: [tactic.tacticId],
+        },
+      })
+    ).status,
+    403,
+  );
+});
+
+test("legacy match snapshots are honestly marked migration captures and never refreshed on restart", async (t) => {
+  let matchId, tacticId, playerId;
+  const f = await fixture(t, (path) => {
+    const legacy = openFootballStore(path),
+      club = createClubStore(legacy.database, legacy);
+    const p = club.savePlayer(1, null, { name: "迁移时姓名", number: 7 });
+    playerId = p.id;
+    const tactic = legacy.saveTactic(null, {
+      tactic: {
+        title: "迁移时战术",
+        tags: [],
+        favorite: false,
+        formationName: "2-3-2",
+        board: { pieces: [], markings: [] },
+        thumbnail: null,
+      },
+    });
+    tacticId = tactic.tacticId;
+    const m = club.saveMatch({ team_id: 1, role: "admin" }, null, {
+      opponent: "旧比赛",
+      date: "2026-01-01",
+      tacticIds: [tacticId],
+    });
+    matchId = m.id;
+    club.saveRoster({ team_id: 1, role: "admin" }, m.id, {
+      revision: m.revision,
+      roster: [{ playerId, appeared: null }],
+    });
+    legacy.database.exec(
+      "DROP TABLE club_match_tactic_snapshots; ALTER TABLE club_roster DROP COLUMN player_snapshot; ALTER TABLE club_roster DROP COLUMN snapshot_captured_at; ALTER TABLE club_roster DROP COLUMN snapshot_source; DELETE FROM app_migrations WHERE migration_name='club-match-snapshots-v4'",
+    );
+    legacy.close();
+  });
+  const cookie = await f.login();
+  const before = (await f.request(`/api/matches/${matchId}`, { cookie })).body;
+  assert.equal(before.tacticSnapshots[0].captureSource, "migration");
+  assert.equal(before.roster[0].snapshotSource, "migration");
+  assert.equal(before.roster[0].playerSnapshot.name, "迁移时姓名");
+  await f.request(`/api/players/${playerId}`, {
+    cookie,
+    method: "PUT",
+    body: { name: "迁移后姓名" },
+  });
+  await f.request(`/api/tactics/${tacticId}`, { cookie, method: "DELETE" });
+  await f.restart();
+  const next = await f.login();
+  const after = (await f.request(`/api/matches/${matchId}`, { cookie: next }))
+    .body;
+  assert.deepEqual(after.tacticSnapshots, before.tacticSnapshots);
+  assert.deepEqual(after.roster, before.roster);
+});
+
+test("explicit season membership validates dates, team ownership and revisions without inferring legacy matches", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (r, m = "GET", b) =>
+    f.request(r, { cookie, method: m, body: b });
+  const legacy = (
+    await call("/api/matches", "POST", {
+      opponent: "未归属",
+      date: "2026-01-01",
+      status: "completed",
+    })
+  ).body;
+  assert.equal(legacy.seasonId, null);
+  assert.equal(legacy.side, "unknown");
+  assert.equal(legacy.format, null);
+  const season = (
+    await call("/api/seasons", "POST", {
+      name: "跨年",
+      startDate: "2025-12-31",
+      endDate: "2026-01-02",
+    })
+  ).body;
+  const overlap = (
+    await call("/api/seasons", "POST", {
+      name: "重叠",
+      startDate: "2025-12-31",
+      endDate: "2026-01-02",
+    })
+  ).body;
+  assert.equal(
+    (await call(`/api/statistics?seasonId=${season.id}`)).body.matches,
+    0,
+  );
+  assert.equal(
+    (await call("/api/statistics?year=2026")).body.unassignedMatches,
+    1,
+  );
+  const assigned = (
+    await call(`/api/matches/${legacy.id}`, "PUT", {
+      revision: legacy.revision,
+      seasonId: season.id,
+      competition: "社区杯",
+      format: 8,
+      side: "away",
+    })
+  ).body;
+  assert.equal(assigned.competition, "社区杯");
+  assert.equal(assigned.side, "away");
+  assert.equal(assigned.format, 8);
+  assert.equal(
+    (await call(`/api/statistics?seasonId=${season.id}`)).body.matches,
+    1,
+  );
+  assert.equal(
+    (await call(`/api/statistics?seasonId=${overlap.id}`)).body.matches,
+    0,
+  );
+  assert.equal((await call("/api/statistics?year=2026")).body.matches, 1);
+  assert.equal(
+    (
+      await call("/api/matches", "POST", {
+        opponent: "越界",
+        date: "2026-01-03",
+        seasonId: season.id,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await call(`/api/matches/${legacy.id}`, "PUT", { date: "2025-12-30" }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(`/api/seasons/${season.id}`, "PUT", {
+        revision: season.revision,
+        endDate: "2025-12-31",
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await call("/api/matches", "POST", {
+        opponent: "坏人数",
+        date: "2026-01-01",
+        format: 10,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call("/api/matches", "POST", {
+        opponent: "坏场地",
+        date: "2026-01-01",
+        side: "invalid",
+      })
+    ).status,
+    400,
+  );
+  const db = new DatabaseSync(f.path);
+  db.exec(
+    "INSERT INTO club_teams(id,name) VALUES(2,'别队'); INSERT INTO club_seasons(team_id,name,start_date,end_date) VALUES(2,'外队赛季','2025-01-01','2027-01-01')",
+  );
+  const foreign = db.prepare("SELECT max(id) AS id FROM club_seasons").get().id;
+  db.close();
+  assert.equal(
+    (await call(`/api/matches/${legacy.id}`, "PUT", { seasonId: foreign }))
+      .status,
+    404,
+  );
+  await f.restart();
+  const next = await f.login();
+  const final = (await f.request(`/api/matches/${legacy.id}`, { cookie: next }))
+    .body;
+  assert.equal(final.seasonId, season.id);
+  assert.equal(final.competition, "社区杯");
+});
+
+test("season rosters preserve identity, use independent numbers and feed immutable match snapshots", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (r, m = "GET", b) =>
+    f.request(r, { cookie, method: m, body: b });
+  const player = (
+    await call("/api/players", "POST", {
+      name: "赛季姓名",
+      number: 9,
+      positions: ["前锋"],
+    })
+  ).body;
+  const season = (
+    await call("/api/seasons", "POST", {
+      name: "本季",
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+    })
+  ).body;
+  const stored = (
+    await call(`/api/seasons/${season.id}/roster`, "PUT", {
+      revision: season.revision,
+      roster: [{ playerId: player.id, number: 17 }],
+    })
+  ).body;
+  assert.equal(stored.roster[0].number, 17);
+  assert.equal(stored.season.revision, season.revision + 1);
+  assert.equal(
+    (
+      await call(`/api/seasons/${season.id}/roster`, "PUT", {
+        revision: season.revision,
+        roster: [],
+      })
+    ).status,
+    409,
+  );
+  await call(`/api/players/${player.id}`, "PUT", {
+    name: "当前新名",
+    number: 88,
+    positions: ["后卫"],
+  });
+  assert.equal(
+    (await call(`/api/seasons/${season.id}/roster`)).body.roster[0].name,
+    "赛季姓名",
+  );
+  const match = (
+    await call("/api/matches", "POST", {
+      opponent: "本季对手",
+      date: "2026-01-01",
+      seasonId: season.id,
+      status: "completed",
+    })
+  ).body;
+  const roster = (
+    await call(`/api/matches/${match.id}/roster`, "PUT", {
+      roster: [
+        { playerId: player.id, selection: "bench", appeared: true, goals: 1 },
+      ],
+    })
+  ).body;
+  assert.equal(roster.roster[0].selection, "bench");
+  assert.equal(roster.roster[0].playerSnapshot.number, 17);
+  assert.equal(roster.roster[0].playerSnapshot.name, "赛季姓名");
+  await call(`/api/seasons/${season.id}/roster`, "PUT", {
+    revision: stored.season.revision,
+    roster: [{ playerId: player.id, number: 22 }],
+  });
+  const next = (
+    await call(`/api/matches/${match.id}/roster`, "PUT", {
+      roster: [
+        { playerId: player.id, selection: "starter", appeared: true, goals: 2 },
+      ],
+    })
+  ).body;
+  assert.equal(next.roster[0].playerSnapshot.number, 17);
+  assert.equal(next.roster[0].selection, "starter");
+  const bad = await call(`/api/matches/${match.id}/roster`, "PUT", {
+    roster: [{ playerId: player.id, selection: "invalid", appeared: true }],
+  });
+  assert.equal(bad.status, 400);
+  await call(`/api/players/${player.id}/account`, "POST", {
+    username: "season-player",
+    password: "season-player-password",
+  });
+  const pc = await f.login({
+    username: "season-player",
+    password: "season-player-password",
+  });
+  assert.equal(
+    (await f.request(`/api/seasons/${season.id}/roster`, { cookie: pc }))
+      .status,
+    200,
+  );
+  assert.equal(
+    (
+      await f.request(`/api/seasons/${season.id}/roster`, {
+        cookie: pc,
+        method: "PUT",
+        body: { revision: 2, roster: [] },
+      })
+    ).status,
+    403,
+  );
+  await f.restart();
+  const admin = await f.login();
+  assert.equal(
+    (await f.request(`/api/seasons/${season.id}/roster`, { cookie: admin }))
+      .body.roster[0].number,
+    22,
+  );
+});
+
+test("registration and attendance statistics distinguish replies, missing replies and actual appearances", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (r, m = "GET", b) =>
+    f.request(r, { cookie, method: m, body: b });
+  const p = (await call("/api/players", "POST", { name: "报名球员" })).body;
+  await call(`/api/players/${p.id}/account`, "POST", {
+    username: "rsvp-player",
+    password: "rsvp-player-password",
+  });
+  const pc = await f.login({
+    username: "rsvp-player",
+    password: "rsvp-player-password",
+  });
+  const season = (
+    await call("/api/seasons", "POST", {
+      name: "跨年报名",
+      startDate: "2025-12-31",
+      endDate: "2026-12-31",
+    })
+  ).body;
+  const rows = [];
+  for (const [date, response, status] of [
+    ["2025-12-31", "yes", "completed"],
+    ["2026-01-01", "no", "completed"],
+    ["2026-01-02", "maybe", "published"],
+    ["2026-01-03", null, "published"],
+    ["2026-01-04", "yes", "cancelled"],
+  ]) {
+    const match = (
+      await call("/api/matches", "POST", {
+        opponent: "报名场次",
+        date,
+        status: "published",
+        seasonId: season.id,
+      })
+    ).body;
+    rows.push(match);
+    if (response)
+      await f.request(`/api/matches/${match.id}/rsvp`, {
+        cookie: pc,
+        method: "PUT",
+        body: { response },
+      });
+    if (status !== "published")
+      await call(`/api/matches/${match.id}`, "PUT", { status });
+  }
+  await call("/api/matches", "POST", {
+    opponent: "草稿",
+    date: "2026-01-05",
+    seasonId: season.id,
+  });
+  await call(`/api/matches/${rows[0].id}/roster`, "PUT", {
+    roster: [{ playerId: p.id, appeared: true, goals: 0 }],
+  });
+  await call(`/api/matches/${rows[1].id}/roster`, "PUT", {
+    roster: [{ playerId: p.id, appeared: null }],
+  });
+  const stats = (await call(`/api/statistics?seasonId=${season.id}`)).body;
+  assert.equal(stats.registrationMatches, 4);
+  assert.deepEqual(
+    stats.players.find((x) => x.playerId === p.id).registration,
+    { yes: 1, no: 1, maybe: 1, unanswered: 1 },
+  );
+  assert.deepEqual(stats.team.attendance, {
+    confirmedAppearances: 1,
+    unknownAppearances: 1,
+    matchesWithoutRoster: 0,
+  });
+  assert.equal(stats.players.find((x) => x.playerId === p.id).appearances, 1);
+  const year = (await call("/api/statistics?year=2026")).body;
+  assert.equal(year.registrationMatches, 3);
+  assert.deepEqual(year.players.find((x) => x.playerId === p.id).registration, {
+    yes: 0,
+    no: 1,
+    maybe: 1,
+    unanswered: 1,
+  });
+  assert.equal(year.team.attendance.confirmedAppearances, 0);
+  assert.equal(year.team.attendance.unknownAppearances, 1);
+});
+
+test("match metadata migration leaves old season membership and side explicitly unknown", async (t) => {
+  let matchId;
+  const f = await fixture(t, (path) => {
+    const legacy = openFootballStore(path),
+      club = createClubStore(legacy.database, legacy);
+    const p = club.savePlayer(1, null, { name: "旧名单" });
+    club.saveSeason(1, null, {
+      name: "旧周期",
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+    });
+    const m = club.saveMatch({ team_id: 1, role: "admin" }, null, {
+      opponent: "旧比赛",
+      date: "2026-01-01",
+      status: "completed",
+    });
+    matchId = m.id;
+    club.saveRoster({ team_id: 1, role: "admin" }, m.id, {
+      revision: m.revision,
+      roster: [{ playerId: p.id, appeared: true, goals: 0 }],
+    });
+    legacy.database.exec(
+      "DROP TABLE club_season_roster; ALTER TABLE club_matches DROP COLUMN season_id; ALTER TABLE club_matches DROP COLUMN competition; ALTER TABLE club_matches DROP COLUMN format; ALTER TABLE club_matches DROP COLUMN side; ALTER TABLE club_roster DROP COLUMN selection; DELETE FROM app_migrations WHERE migration_name='club-season-membership-v5'",
+    );
+    legacy.close();
+  });
+  const cookie = await f.login();
+  const match = (await f.request(`/api/matches/${matchId}`, { cookie })).body;
+  assert.equal(match.seasonId, null);
+  assert.equal(match.side, "unknown");
+  assert.equal(match.format, null);
+  assert.equal(match.competition, "");
+  assert.equal(match.roster[0].selection, "unknown");
+  const season = (await f.request("/api/seasons", { cookie })).body[0];
+  assert.equal(
+    (await f.request(`/api/statistics?seasonId=${season.id}`, { cookie })).body
+      .matches,
+    0,
+  );
+  const year = (await f.request("/api/statistics?year=2026", { cookie })).body;
+  assert.equal(year.matches, 1);
+  assert.equal(year.unassignedMatches, 1);
 });

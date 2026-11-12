@@ -49,13 +49,30 @@
           </select>
         </label>
       </div>
+      <div class="club-avatar-editor">
+        <label>
+          上传球员头像
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="selectAvatar" />
+        </label>
+        <p class="club-muted">支持 PNG、JPEG、WebP、GIF，最大 2 MiB。预览后保存才会更新；已有头像可直接保留。</p>
+        <img
+          v-if="form.avatar"
+          :src="form.avatar"
+          alt="球员头像预览"
+          class="club-avatar-preview"
+          referrerpolicy="no-referrer"
+        />
+        <p v-else class="club-muted">未设置头像</p>
+        <p v-if="readingAvatar" role="status">正在读取头像…</p>
+        <button type="button" :disabled="!form.avatar && !readingAvatar" @click="removeAvatar">移除头像</button>
+      </div>
       <label>
         备注
         <textarea v-model="form.note" maxlength="2000" />
       </label>
       <div class="club-actions" style="margin-top: 18px">
-        <button class="primary" :disabled="busy">保存球员</button>
-        <button type="button" @click="form = null">取消</button>
+        <button class="primary" :disabled="busy || readingAvatar">保存球员</button>
+        <button type="button" @click="cancelEdit">取消</button>
       </div>
     </fieldset>
   </form>
@@ -93,7 +110,7 @@
       <input v-model="search" placeholder="姓名、号码或位置" />
     </label>
     <p v-if="loading" role="status">正在载入球员…</p>
-    <div v-else class="club-table-wrap">
+    <ClubTableWrap v-else label="球员资料表">
       <table>
         <thead>
           <tr>
@@ -108,7 +125,19 @@
         <tbody>
           <tr v-for="p in filtered" :key="p.id">
             <td>
-              <strong>{{ p.name }}</strong>
+              <div class="club-player-identity">
+                <img
+                  v-if="p.avatar"
+                  :src="p.avatar"
+                  :alt="`${p.name}头像`"
+                  class="club-player-avatar"
+                  referrerpolicy="no-referrer"
+                />
+                <strong>
+                  {{ p.name }}
+                  <span v-if="p.id === auth.session?.user.playerId">（我）</span>
+                </strong>
+              </div>
               <div v-if="p.note" class="club-muted" style="font-size: 12px; white-space: normal; max-width: 260px">
                 {{ p.note }}
               </div>
@@ -125,7 +154,7 @@
                 <button
                   :disabled="busy"
                   @click="
-                    form = null;
+                    cancelEdit();
                     account = p;
                     username = '';
                     password = '';
@@ -140,11 +169,12 @@
         </tbody>
       </table>
       <p v-if="!filtered.length" class="club-empty">暂无符合条件的球员</p>
-    </div>
+    </ClubTableWrap>
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import ClubTableWrap from "@/components/ClubTableWrap.vue";
 import { useAuthStore } from "@/stores/authStore";
 import { clubApi, ClubApiError, unknown, type ClubPlayer } from "@/services/clubApi";
 
@@ -175,6 +205,75 @@ const error = ref("");
 const success = ref("");
 const busy = ref(false);
 const loading = ref(true);
+const readingAvatar = ref(false);
+let avatarSelection = 0;
+let avatarReader: FileReader | undefined;
+let disposed = false;
+function stopAvatarRead() {
+  avatarSelection += 1;
+  avatarReader?.abort();
+  avatarReader = undefined;
+  readingAvatar.value = false;
+}
+function cancelEdit() {
+  if (busy.value) return;
+  stopAvatarRead();
+  form.value = null;
+}
+function removeAvatar() {
+  if (busy.value || !form.value) return;
+  stopAvatarRead();
+  form.value.avatar = null;
+  error.value = "";
+}
+function validSignature(value: string, mime: string) {
+  const bytes = atob(value.slice(value.indexOf(",") + 1, value.indexOf(",") + 33));
+  if (mime === "image/png") return bytes.startsWith("\x89PNG\r\n\x1a\n");
+  if (mime === "image/jpeg") return bytes.startsWith("\xff\xd8\xff");
+  if (mime === "image/gif") return bytes.startsWith("GIF87a") || bytes.startsWith("GIF89a");
+  return mime === "image/webp" && bytes.startsWith("RIFF") && bytes.slice(8, 12) === "WEBP";
+}
+function selectAvatar(event: Event) {
+  if (busy.value || !form.value) return;
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  stopAvatarRead();
+  const selected = avatarSelection;
+  const draft = form.value;
+  input.value = "";
+  error.value = "";
+  success.value = "";
+  if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+    error.value = "请选择 PNG、JPEG、WebP 或 GIF 头像图片。";
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    error.value = "新头像不能超过 2 MiB，请缩小图片后重试。";
+    return;
+  }
+  const next = new FileReader();
+  avatarReader = next;
+  readingAvatar.value = true;
+  next.onload = () => {
+    if (disposed || selected !== avatarSelection || draft !== form.value) return;
+    readingAvatar.value = false;
+    avatarReader = undefined;
+    try {
+      if (typeof next.result !== "string" || !validSignature(next.result, file.type)) throw new Error("invalid");
+      draft.avatar = next.result;
+    } catch {
+      error.value = "图片内容与格式不符，原有头像已保留。";
+    }
+  };
+  next.onerror = () => {
+    if (disposed || selected !== avatarSelection || draft !== form.value) return;
+    readingAvatar.value = false;
+    avatarReader = undefined;
+    error.value = "头像读取失败，请重新选择。原有头像已保留。";
+  };
+  next.readAsDataURL(file);
+}
 const filtered = computed(() =>
   players.value.filter((p) =>
     `${p.name} ${p.number ?? ""} ${p.positions.join(" ")}`.toLowerCase().includes(search.value.toLowerCase())
@@ -191,6 +290,7 @@ async function load() {
 }
 function edit(p?: ClubPlayer) {
   if (busy.value) return;
+  stopAvatarRead();
   account.value = null;
   password.value = "";
   form.value = p
@@ -211,7 +311,7 @@ function edit(p?: ClubPlayer) {
   success.value = "";
 }
 async function save() {
-  if (busy.value || !form.value) return;
+  if (busy.value || readingAvatar.value || !form.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -227,6 +327,7 @@ async function save() {
       preferredFoot: p.preferredFoot,
       status: p.status,
       note: p.note,
+      avatar: p.avatar,
     });
     form.value = null;
     success.value = "球员资料已保存";
@@ -263,6 +364,7 @@ async function saveAccount() {
 }
 async function reload() {
   if (busy.value) return;
+  stopAvatarRead();
   busy.value = true;
   error.value = "";
   try {
@@ -279,4 +381,34 @@ async function reload() {
   }
 }
 onMounted(load);
+onUnmounted(() => {
+  disposed = true;
+  stopAvatarRead();
+});
 </script>
+
+<style scoped>
+.club-avatar-editor {
+  margin: 18px 0;
+}
+.club-avatar-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
+  margin: 12px 0;
+}
+.club-player-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.club-player-avatar {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+</style>

@@ -1,3 +1,5 @@
+import type { Tactic } from "./tacticLanguage";
+
 export interface Team {
   id: number;
   name: string;
@@ -27,7 +29,15 @@ export interface Season {
   startDate: string;
   endDate: string;
 }
+export interface SeasonRoster {
+  season: Season;
+  roster: { playerId: string; name: string; number: number | null; positions: string[] }[];
+}
 export interface Appearance {
+  selection: "starter" | "bench" | "unknown";
+  playerSnapshot?: { id: string; name: string; number: number | null; positions: string[] };
+  snapshotCapturedAt?: number;
+  snapshotSource?: "roster" | "migration";
   playerId: string;
   position: string;
   appeared: boolean | null;
@@ -37,6 +47,10 @@ export interface Appearance {
 export interface ClubMatch {
   revision: number;
   id: number;
+  competition: string;
+  format: 5 | 6 | 7 | 8 | 9 | 11 | null;
+  side: "home" | "away" | "neutral" | "unknown";
+  seasonId: number | null;
   opponent: string;
   date: string;
   kickoff: string;
@@ -46,9 +60,16 @@ export interface ClubMatch {
   awayScore: number | null;
   analysis: string;
   tacticIds: number[];
+  tacticSnapshots: {
+    sourceTacticId: number;
+    tactic: Tactic;
+    capturedAt: number;
+    captureSource: "association" | "migration";
+  }[];
   rsvps: { playerId: string; response: "yes" | "no" | "maybe" }[];
   roster: Appearance[];
 }
+export type ClubMatchSummary = Omit<ClubMatch, "tacticSnapshots">;
 export interface TeamSummary {
   matches: number;
   scoredMatches: number;
@@ -61,7 +82,11 @@ export interface TeamSummary {
   goalsAgainstKnownMatches: number;
 }
 export interface Statistics {
-  team: TeamSummary;
+  team: TeamSummary & {
+    attendance: { confirmedAppearances: number; unknownAppearances: number; matchesWithoutRoster: number };
+  };
+  registrationMatches: number;
+  unassignedMatches: number;
   opponents: (TeamSummary & { opponent: string })[];
 
   filter: { startDate: string; endDate: string; label: string };
@@ -70,6 +95,7 @@ export interface Statistics {
   players: {
     playerId: string;
     name: string;
+    registration: { yes: number; no: number; maybe: number; unanswered: number };
     appearances: number;
     unknownAppearances: number;
     unrecordedMatches: number;

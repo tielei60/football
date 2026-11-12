@@ -47,8 +47,10 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
     INSERT INTO club_sessions(token_hash,user_id,expires_at) SELECT 'previous-player-token',id,9999999999999 FROM club_users WHERE role='player';
     INSERT INTO club_matches(id,team_id,opponent,match_date,status) VALUES (1,1,'Previous opponent','2027-01-01','published');
     INSERT INTO club_rsvps VALUES (1,1,'dirty-player','yes');
-    INSERT INTO club_roster VALUES (1,1,'dirty-player','中场',1,0,NULL);
-    INSERT INTO club_seasons(team_id,name,start_date,end_date) VALUES (1,'Previous season','2026-08-01','2027-07-31');
+    INSERT INTO club_roster (team_id,match_id,player_id,position,appeared,goals,assists) VALUES (1,1,'dirty-player','中场',1,0,NULL);
+    INSERT INTO club_seasons(id,team_id,name,start_date,end_date) VALUES (1,1,'Previous season','2026-08-01','2027-07-31');
+    INSERT INTO club_season_roster(team_id,season_id,player_id,name,number,positions) VALUES (1,1,'dirty-player','Saved identity',22,'["中场"]');
+    UPDATE club_matches SET season_id=1 WHERE id=1;
   `);
   database.close();
   const tacticResponse = await request("/api/tactics", "POST", {
@@ -66,6 +68,9 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
   const tactic = await tacticResponse.json();
   const linked = new DatabaseSync(databasePath);
   linked.prepare("INSERT INTO club_match_tactics VALUES (1,?)").run(tactic.tacticId);
+  linked
+    .prepare("INSERT INTO club_match_tactic_snapshots VALUES (1,?,?,?,?)")
+    .run(tactic.tacticId, JSON.stringify(tactic), Date.now(), "association");
   linked.close();
   assert.equal((await (await request("/api/players")).json()).length, 1);
 
@@ -108,7 +113,15 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
     assert.deepEqual(checked.prepare("PRAGMA foreign_key_check").all(), []);
     assert.equal(checked.prepare("SELECT count(*) AS n FROM club_users WHERE role='player'").get().n, 0);
     assert.equal(checked.prepare("SELECT count(*) AS n FROM club_users WHERE role='admin'").get().n, 1);
-    ["club_match_tactics", "club_rsvps", "club_roster", "club_matches", "club_seasons"].forEach((table) => {
+    [
+      "club_match_tactics",
+      "club_match_tactic_snapshots",
+      "club_season_roster",
+      "club_rsvps",
+      "club_roster",
+      "club_matches",
+      "club_seasons",
+    ].forEach((table) => {
       assert.equal(checked.prepare(`SELECT count(*) AS n FROM ${table}`).get().n, 0);
     });
   } finally {

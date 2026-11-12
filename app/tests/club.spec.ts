@@ -15,6 +15,7 @@ test("club admin records unknown statistics separately from zero and creates cro
   await page.getByLabel("比赛日期").fill("2027-01-15");
   await page.getByRole("button", { name: "创建草稿" }).click();
   await expect(page.getByRole("heading", { name: /比赛信息与分析/ })).toBeVisible();
+  const matchId = Number(page.url().split("/").pop());
   await page.getByLabel("发布状态").selectOption("completed");
   await page.getByLabel("本队比分").fill("0");
   await page.getByLabel("对手比分").fill("1");
@@ -36,6 +37,17 @@ test("club admin records unknown statistics separately from zero and creates cro
   await page.getByLabel("结束日期").fill("2027-07-31");
   await page.getByRole("button", { name: "保存赛季" }).click();
   await expect(page.getByRole("heading", { name: "新建赛季", exact: true })).not.toBeVisible();
+  const savedSeason = (await (await request.get("/api/seasons")).json()).find(
+    (s: { name: string }) => s.name === `跨年赛季${suffix}`
+  );
+  const currentMatch = await (await request.get(`/api/matches/${matchId}`)).json();
+  expect(
+    (
+      await request.put(`/api/matches/${matchId}`, {
+        data: { revision: currentMatch.revision, seasonId: savedSeason.id },
+      })
+    ).ok()
+  ).toBe(true);
   await page.getByLabel("统计周期").selectOption("season");
   await page
     .getByLabel("赛季", { exact: true })

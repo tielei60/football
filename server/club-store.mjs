@@ -136,6 +136,26 @@ function validateCrest(value) {
   if (!valid) fail(400, "队徽图片内容与格式不符。");
   return value;
 }
+function validateChangedAvatar(value, allowLocal = false) {
+  if (value === null) return;
+  if (
+    allowLocal &&
+    typeof value === "string" &&
+    value.length <= 2048 &&
+    /^\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|gif)$/.test(
+      value,
+    )
+  )
+    return;
+  try {
+    validateCrest(value);
+  } catch (error) {
+    if (error instanceof FootballError)
+      error.message = error.message.replaceAll("队徽", "头像");
+    throw error;
+  }
+}
+const MAX_MATCH_SNAPSHOT_BYTES = 32 * 1024 * 1024;
 const userView = (r) => ({
   id: r.id,
   username: r.username,
@@ -237,17 +257,64 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-team-profile-v3',?)",
     ).run(Date.now());
   });
+  tx(() => {
+    const columns = new Set(
+      q("PRAGMA table_info(club_matches)")
+        .all()
+        .map((c) => c.name),
+    );
+    if (!columns.has("season_id"))
+      database.exec(
+        "ALTER TABLE club_matches ADD COLUMN season_id INTEGER REFERENCES club_seasons(id)",
+      );
+    if (!columns.has("competition"))
+      database.exec(
+        "ALTER TABLE club_matches ADD COLUMN competition TEXT NOT NULL DEFAULT ''",
+      );
+    if (!columns.has("format"))
+      database.exec(
+        "ALTER TABLE club_matches ADD COLUMN format INTEGER CHECK(format IN (5,6,7,8,9,11))",
+      );
+    if (!columns.has("side"))
+      database.exec(
+        "ALTER TABLE club_matches ADD COLUMN side TEXT NOT NULL DEFAULT 'unknown' CHECK(side IN ('home','away','neutral','unknown'))",
+      );
+    if (
+      !q("PRAGMA table_info(club_roster)")
+        .all()
+        .some((c) => c.name === "selection")
+    )
+      database.exec(
+        "ALTER TABLE club_roster ADD COLUMN selection TEXT NOT NULL DEFAULT 'unknown' CHECK(selection IN ('starter','bench','unknown'))",
+      );
+    database.exec(`CREATE UNIQUE INDEX IF NOT EXISTS club_seasons_team_id ON club_seasons(team_id,id);
+      CREATE TABLE IF NOT EXISTS club_season_roster (
+      team_id INTEGER NOT NULL,season_id INTEGER NOT NULL,player_id TEXT NOT NULL,name TEXT NOT NULL,number INTEGER,positions TEXT NOT NULL,
+      PRIMARY KEY(season_id,player_id),
+      FOREIGN KEY(team_id,season_id) REFERENCES club_seasons(team_id,id) ON DELETE CASCADE,
+      FOREIGN KEY(team_id,player_id) REFERENCES club_players(team_id,id)
+    ) STRICT`);
+    q(
+      "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-season-membership-v5',?)",
+    ).run(Date.now());
+  });
   function checkRevision(input, current) {
     if (!Number.isSafeInteger(input.revision) || input.revision < 1)
       fail(428, "请携带当前版本号保存，重新加载后再试。");
     if (input.revision !== current.revision)
       fail(409, "资料已在其他页面更新，请重新加载后再保存。");
   }
-  function syncLegacy({ overwrite = false, reactivate = false } = {}) {
+  function syncLegacy({
+    overwrite = false,
+    reactivate = false,
+    validateChanges = false,
+  } = {}) {
     for (const p of legacy.getDesk().desk?.players ?? []) {
       const previous = q("SELECT * FROM club_players WHERE id=?").get(
         p.playerId,
       );
+      if (validateChanges && (p.avatar ?? null) !== (previous?.avatar ?? null))
+        validateChangedAvatar(p.avatar ?? null, true);
       if (!previous)
         q(
           "INSERT INTO club_players (id,team_id,name,number,positions,preferred_foot,note,avatar) VALUES (?,1,?,?,?,?,?,?)",
@@ -358,6 +425,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         p.avatar.length > MAX_PLAYER_AVATAR_CHARACTERS)
     )
       fail(400, "球员头像超过长度限制。");
+    if (p.avatar !== old.avatar) validateChangedAvatar(p.avatar);
     const updating = Boolean(id);
     id ||= randomUUID();
     return tx(() => {
@@ -425,6 +493,65 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     });
   }
   const sessionView = (u) => ({ user: userView(u), team: getTeam(u.team_id) });
+  const playerSnapshot = (player) => ({
+    id: player.id,
+    name: player.name,
+    number: player.number,
+    positions: player.positions,
+  });
+  tx(() => {
+    database.exec(`CREATE TABLE IF NOT EXISTS club_match_tactic_snapshots (
+      match_id INTEGER NOT NULL REFERENCES club_matches(id) ON DELETE CASCADE,
+      source_tactic_id INTEGER NOT NULL, tactic TEXT NOT NULL,
+      captured_at INTEGER NOT NULL, capture_source TEXT NOT NULL CHECK(capture_source IN ('association','migration')),
+      PRIMARY KEY(match_id,source_tactic_id)
+    ) STRICT`);
+    const columns = new Set(
+      q("PRAGMA table_info(club_roster)")
+        .all()
+        .map((column) => column.name),
+    );
+    if (!columns.has("player_snapshot"))
+      database.exec("ALTER TABLE club_roster ADD COLUMN player_snapshot TEXT");
+    if (!columns.has("snapshot_captured_at"))
+      database.exec(
+        "ALTER TABLE club_roster ADD COLUMN snapshot_captured_at INTEGER",
+      );
+    if (!columns.has("snapshot_source"))
+      database.exec(
+        "ALTER TABLE club_roster ADD COLUMN snapshot_source TEXT CHECK(snapshot_source IN ('roster','migration'))",
+      );
+    // Older databases never stored historical contents. Capture current values,
+    // explicitly labelled migration, once rather than pretending to recover history.
+    const capturedAt = Date.now();
+    for (const link of q(`SELECT t.match_id,t.tactic_id FROM club_match_tactics t JOIN club_matches m ON m.id=t.match_id
+      LEFT JOIN club_match_tactic_snapshots s ON s.match_id=t.match_id AND s.source_tactic_id=t.tactic_id
+      WHERE s.match_id IS NULL AND m.team_id=1`).all()) {
+      q(
+        "INSERT INTO club_match_tactic_snapshots VALUES (?,?,?,?,'migration')",
+      ).run(
+        link.match_id,
+        link.tactic_id,
+        JSON.stringify(legacy.getTactic(link.tactic_id)),
+        capturedAt,
+      );
+    }
+    for (const row of q(
+      "SELECT team_id,match_id,player_id FROM club_roster WHERE player_snapshot IS NULL",
+    ).all()) {
+      q(
+        "UPDATE club_roster SET player_snapshot=?,snapshot_captured_at=?,snapshot_source='migration' WHERE match_id=? AND player_id=?",
+      ).run(
+        JSON.stringify(playerSnapshot(getPlayer(row.team_id, row.player_id))),
+        capturedAt,
+        row.match_id,
+        row.player_id,
+      );
+    }
+    q(
+      "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-match-snapshots-v4',?)",
+    ).run(capturedAt);
+  });
   const dummyHash = hashPassword(randomBytes(20).toString("hex"));
   const loginAttempts = new Map();
   function login(input, remoteAddress) {
@@ -546,7 +673,18 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     date(s.endDate);
     if (s.startDate > s.endDate) fail(400, "赛季结束日期不能早于开始日期。");
     return tx(() => {
-      if (id) checkRevision(input, getSeason(teamId, id));
+      if (id) {
+        checkRevision(input, getSeason(teamId, id));
+        if (
+          q(
+            "SELECT 1 FROM club_matches WHERE team_id=? AND season_id=? AND (match_date<? OR match_date>?) LIMIT 1",
+          ).get(teamId, id, s.startDate, s.endDate)
+        )
+          fail(
+            409,
+            "新的赛季日期范围会排除已归属比赛，请先调整比赛归属或日期。",
+          );
+      }
       if (id)
         q(
           "UPDATE club_seasons SET name=?,start_date=?,end_date=?,revision=revision+1 WHERE id=? AND team_id=?",
@@ -560,7 +698,60 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       return getSeason(teamId, id);
     });
   }
-  function getMatch(u, id) {
+  function getSeasonRoster(teamId, id) {
+    const season = getSeason(teamId, id);
+    const roster = q(
+      "SELECT player_id AS playerId,name,number,positions FROM club_season_roster WHERE team_id=? AND season_id=? ORDER BY number IS NULL,number,player_id",
+    )
+      .all(teamId, id)
+      .map((p) => ({ ...p, positions: JSON.parse(p.positions) }));
+    return { season, roster };
+  }
+  function saveSeasonRoster(teamId, id, input) {
+    object(input);
+    return tx(() => {
+      const old = getSeasonRoster(teamId, id);
+      checkRevision(input, old.season);
+      if (!Array.isArray(input.roster) || input.roster.length > 1000)
+        fail(400, "请提供赛季名单。");
+      const seen = new Set(),
+        previous = new Map(old.roster.map((p) => [p.playerId, p]));
+      const rows = input.roster.map((row) => {
+        object(row);
+        if (typeof row.playerId !== "string" || seen.has(row.playerId))
+          fail(400, "赛季名单球员不能重复。");
+        seen.add(row.playerId);
+        const current = getPlayer(teamId, row.playerId),
+          saved = previous.get(row.playerId);
+        return {
+          playerId: row.playerId,
+          name: saved?.name ?? current.name,
+          number:
+            row.number === undefined
+              ? saved
+                ? saved.number
+                : current.number
+              : integer(row.number),
+          positions: saved?.positions ?? current.positions,
+        };
+      });
+      q("DELETE FROM club_season_roster WHERE season_id=?").run(id);
+      for (const row of rows)
+        q("INSERT INTO club_season_roster VALUES (?,?,?,?,?,?)").run(
+          teamId,
+          id,
+          row.playerId,
+          row.name,
+          row.number,
+          JSON.stringify(row.positions),
+        );
+      q(
+        "UPDATE club_seasons SET revision=revision+1 WHERE id=? AND team_id=?",
+      ).run(id, teamId);
+      return getSeasonRoster(teamId, id);
+    });
+  }
+  function getMatch(u, id, { includeTacticSnapshots = true } = {}) {
     const r = q("SELECT * FROM club_matches WHERE team_id=? AND id=?").get(
       u.team_id,
       id,
@@ -571,6 +762,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       id: r.id,
       revision: r.revision,
       opponent: r.opponent,
+      competition: r.competition,
+      format: r.format,
+      side: r.side,
+      seasonId: r.season_id,
       date: r.match_date,
       kickoff: r.kickoff,
       location: r.location,
@@ -579,21 +774,46 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       awayScore: r.away_score,
       analysis: r.analysis,
       tacticIds: q(
-        "SELECT tactic_id FROM club_match_tactics WHERE match_id=? ORDER BY tactic_id",
+        "SELECT source_tactic_id FROM club_match_tactic_snapshots WHERE match_id=? ORDER BY source_tactic_id",
       )
         .all(id)
-        .map((t) => t.tactic_id),
+        .map((t) => t.source_tactic_id),
+      ...(includeTacticSnapshots
+        ? {
+            tacticSnapshots: q(
+              "SELECT * FROM club_match_tactic_snapshots WHERE match_id=? ORDER BY source_tactic_id",
+            )
+              .all(id)
+              .map((t) => ({
+                sourceTacticId: t.source_tactic_id,
+                tactic: JSON.parse(t.tactic),
+                capturedAt: t.captured_at,
+                captureSource: t.capture_source,
+              })),
+          }
+        : {}),
       rsvps: q(
         "SELECT player_id AS playerId,response FROM club_rsvps WHERE match_id=?",
       ).all(id),
       roster: q(
-        "SELECT player_id AS playerId,position,appeared,goals,assists FROM club_roster WHERE match_id=?",
+        "SELECT player_id AS playerId,position,selection,appeared,goals,assists,player_snapshot,snapshot_captured_at,snapshot_source FROM club_roster WHERE match_id=?",
       )
         .all(id)
-        .map((p) => ({
-          ...p,
-          appeared: p.appeared === null ? null : Boolean(p.appeared),
-        })),
+        .map(
+          ({
+            player_snapshot,
+            snapshot_captured_at,
+            snapshot_source,
+            ...p
+          }) => ({
+            ...p,
+            appeared: p.appeared === null ? null : Boolean(p.appeared),
+            playerSnapshot:
+              player_snapshot === null ? null : JSON.parse(player_snapshot),
+            snapshotCapturedAt: snapshot_captured_at,
+            snapshotSource: snapshot_source,
+          }),
+        ),
     };
   }
   function validateTotals(score, roster) {
@@ -610,6 +830,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         ? getMatch(u, id)
         : {
             opponent: "",
+            competition: "",
+            format: null,
+            side: "unknown",
+            seasonId: null,
             date: "",
             kickoff: "",
             location: "",
@@ -622,6 +846,14 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       ...input,
     };
     m.opponent = text(m.opponent, 200, true);
+    m.competition = text(m.competition, 200);
+    if (m.format !== null) oneOf(m.format, [5, 6, 7, 8, 9, 11]);
+    oneOf(m.side, ["home", "away", "neutral", "unknown"]);
+    if (
+      m.seasonId !== null &&
+      (!Number.isSafeInteger(m.seasonId) || m.seasonId < 1)
+    )
+      fail(400, "赛季编号不正确。");
     date(m.date);
     m.kickoff = text(m.kickoff, 5);
     if (m.kickoff && !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.kickoff))
@@ -639,13 +871,18 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       fail(400, "请选择有效战术。");
     if (m.tacticIds.length && u.team_id !== 1)
       fail(403, "无权关联其他球队的战术。");
-    for (const tacticId of m.tacticIds) legacy.getTactic(tacticId);
+
     validateTotals(m.homeScore, id ? getMatch(u, id).roster : []);
     return tx(() => {
       if (id) checkRevision(input, getMatch(u, id));
+      if (m.seasonId !== null) {
+        const season = getSeason(u.team_id, m.seasonId);
+        if (m.date < season.startDate || m.date > season.endDate)
+          fail(400, "比赛日期必须落在所属赛季的日期范围内。");
+      }
       if (id)
         q(
-          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,revision=revision+1 WHERE id=? AND team_id=?",
+          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,competition=?,format=?,side=?,season_id=?,revision=revision+1 WHERE id=? AND team_id=?",
         ).run(
           m.opponent,
           m.date,
@@ -655,13 +892,17 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           m.homeScore,
           m.awayScore,
           m.analysis,
+          m.competition,
+          m.format,
+          m.side,
+          m.seasonId,
           id,
           u.team_id,
         );
       else
         id = Number(
           q(
-            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis,competition,format,side,season_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
           ).run(
             u.team_id,
             m.opponent,
@@ -672,11 +913,47 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             m.homeScore,
             m.awayScore,
             m.analysis,
+            m.competition,
+            m.format,
+            m.side,
+            m.seasonId,
           ).lastInsertRowid,
         );
+      const wanted = new Set(m.tacticIds);
+      const previous = q(
+        "SELECT source_tactic_id FROM club_match_tactic_snapshots WHERE match_id=?",
+      ).all(id);
+      for (const old of previous)
+        if (!wanted.has(old.source_tactic_id))
+          q(
+            "DELETE FROM club_match_tactic_snapshots WHERE match_id=? AND source_tactic_id=?",
+          ).run(id, old.source_tactic_id);
+      let snapshotBytes = q(
+        "SELECT coalesce(sum(length(CAST(tactic AS BLOB))),0) AS bytes FROM club_match_tactic_snapshots WHERE match_id=?",
+      ).get(id).bytes;
+      for (const tacticId of wanted) {
+        if (
+          !q(
+            "SELECT 1 FROM club_match_tactic_snapshots WHERE match_id=? AND source_tactic_id=?",
+          ).get(id, tacticId)
+        ) {
+          const captured = JSON.stringify(legacy.getTactic(tacticId));
+          snapshotBytes += Buffer.byteLength(captured, "utf8");
+          if (snapshotBytes > MAX_MATCH_SNAPSHOT_BYTES)
+            fail(
+              413,
+              "单场比赛的战术快照总量不能超过 32 MiB，请减少关联战术。",
+            );
+          q(
+            "INSERT INTO club_match_tactic_snapshots VALUES (?,?,?,?,'association')",
+          ).run(id, tacticId, captured, Date.now());
+        }
+      }
+      // Compatibility links can disappear with a template; independent snapshots cannot.
       q("DELETE FROM club_match_tactics WHERE match_id=?").run(id);
-      for (const tacticId of new Set(m.tacticIds))
-        q("INSERT INTO club_match_tactics VALUES (?,?)").run(id, tacticId);
+      for (const tacticId of wanted)
+        if (q("SELECT 1 FROM tactics WHERE tactic_id=?").get(tacticId))
+          q("INSERT INTO club_match_tactics VALUES (?,?)").run(id, tacticId);
       return getMatch(u, id);
     });
   }
@@ -704,6 +981,11 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       ids.add(p.playerId);
       getPlayer(u.team_id, p.playerId);
       const position = text(p.position ?? "", 100);
+      const selection = oneOf(p.selection ?? "unknown", [
+        "starter",
+        "bench",
+        "unknown",
+      ]);
       const appeared = p.appeared ?? null;
       if (appeared !== null && typeof appeared !== "boolean")
         fail(400, "出场须为是、否或未知。");
@@ -711,17 +993,42 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         assists = integer(p.assists ?? null);
       if (appeared !== true && (goals !== null || assists !== null))
         fail(400, "仅确认出场的球员可记录进球和助攻。");
-      return { ...p, position, appeared, goals, assists };
+      return { ...p, position, selection, appeared, goals, assists };
     });
     validateTotals(getMatch(u, id).homeScore, rows);
     return tx(() => {
-      checkRevision(input, getMatch(u, id));
+      const match = getMatch(u, id);
+      checkRevision(input, match);
       q(
         "UPDATE club_matches SET revision=revision+1 WHERE id=? AND team_id=?",
       ).run(id, u.team_id);
+      const previous = new Map(
+        q(
+          "SELECT player_id,player_snapshot,snapshot_captured_at,snapshot_source FROM club_roster WHERE match_id=?",
+        )
+          .all(id)
+          .map((row) => [row.player_id, row]),
+      );
       q("DELETE FROM club_roster WHERE match_id=?").run(id);
-      for (const p of rows)
-        q("INSERT INTO club_roster VALUES (?,?,?,?,?,?,?)").run(
+      for (const p of rows) {
+        const old = previous.get(p.playerId);
+        const seasonal =
+          match.seasonId === null
+            ? undefined
+            : q(
+                "SELECT name,number,positions FROM club_season_roster WHERE team_id=? AND season_id=? AND player_id=?",
+              ).get(u.team_id, match.seasonId, p.playerId);
+        const captured = seasonal
+          ? {
+              id: p.playerId,
+              name: seasonal.name,
+              number: seasonal.number,
+              positions: JSON.parse(seasonal.positions),
+            }
+          : playerSnapshot(getPlayer(u.team_id, p.playerId));
+        q(
+          "INSERT INTO club_roster (team_id,match_id,player_id,position,appeared,goals,assists,player_snapshot,snapshot_captured_at,snapshot_source,selection) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ).run(
           u.team_id,
           id,
           p.playerId,
@@ -729,18 +1036,27 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           p.appeared === null ? null : Number(p.appeared),
           p.goals,
           p.assists,
+          old?.player_snapshot ?? JSON.stringify(captured),
+          old?.snapshot_captured_at ?? Date.now(),
+          old?.snapshot_source ?? "roster",
+          p.selection,
         );
+      }
       return getMatch(u, id);
     });
   }
   function statistics(u, params) {
-    let startDate, endDate, label;
+    let startDate,
+      endDate,
+      label,
+      filterSeasonId = null;
     if (params.has("year") && params.has("seasonId"))
       fail(400, "请选择赛季或自然年其中一种统计范围。");
     if (params.has("seasonId")) {
       const id = Number(params.get("seasonId"));
       if (!Number.isSafeInteger(id) || id < 1) fail(400, "赛季编号不正确。");
       const s = getSeason(u.team_id, id);
+      filterSeasonId = id;
       ({ startDate, endDate } = s);
       label = s.name;
     } else {
@@ -753,12 +1069,27 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       endDate = `${year}-12-31`;
       label = String(year);
     }
+    const scope =
+      filterSeasonId === null
+        ? "m.match_date BETWEEN ? AND ?"
+        : "m.season_id=?";
+    const scopeArgs =
+      filterSeasonId === null ? [startDate, endDate] : [filterSeasonId];
     const rows = q(
-      `SELECT r.* FROM club_roster r JOIN club_matches m ON m.id=r.match_id WHERE m.team_id=? AND m.status='completed' AND m.match_date BETWEEN ? AND ?`,
-    ).all(u.team_id, startDate, endDate);
+      `SELECT r.* FROM club_roster r JOIN club_matches m ON m.id=r.match_id WHERE m.team_id=? AND m.status='completed' AND ${scope}`,
+    ).all(u.team_id, ...scopeArgs);
     const completed = q(
-      "SELECT opponent,home_score,away_score FROM club_matches WHERE team_id=? AND status='completed' AND match_date BETWEEN ? AND ?",
-    ).all(u.team_id, startDate, endDate);
+      `SELECT m.opponent,m.home_score,m.away_score FROM club_matches m WHERE m.team_id=? AND m.status='completed' AND ${scope}`,
+    ).all(u.team_id, ...scopeArgs);
+    const registrationMatches = q(
+      `SELECT count(*) AS n FROM club_matches m WHERE m.team_id=? AND m.status IN ('published','completed') AND ${scope}`,
+    ).get(u.team_id, ...scopeArgs).n;
+    const registrations = q(
+      `SELECT r.player_id,r.response FROM club_rsvps r JOIN club_matches m ON m.id=r.match_id WHERE m.team_id=? AND m.status IN ('published','completed') AND ${scope}`,
+    ).all(u.team_id, ...scopeArgs);
+    const unassignedMatches = q(
+      "SELECT count(*) AS n FROM club_matches WHERE team_id=? AND season_id IS NULL AND status IN ('published','completed')",
+    ).get(u.team_id).n;
     const matches = completed.length;
     function summarizeScores(records) {
       const scored = records.filter(
@@ -806,6 +1137,11 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       );
     const matchesWithoutRoster =
       matches - new Set(rows.map((r) => r.match_id)).size;
+    team.attendance = {
+      confirmedAppearances: rows.filter((r) => r.appeared === 1).length,
+      unknownAppearances: rows.filter((r) => r.appeared === null).length,
+      matchesWithoutRoster,
+    };
     const players = listPlayers(u.team_id).map((p) => {
       const records = rows.filter((r) => r.player_id === p.id),
         played = records.filter((r) => r.appeared === 1),
@@ -814,6 +1150,20 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       return {
         playerId: p.id,
         name: p.name,
+        registration: {
+          yes: registrations.filter(
+            (r) => r.player_id === p.id && r.response === "yes",
+          ).length,
+          no: registrations.filter(
+            (r) => r.player_id === p.id && r.response === "no",
+          ).length,
+          maybe: registrations.filter(
+            (r) => r.player_id === p.id && r.response === "maybe",
+          ).length,
+          unanswered:
+            registrationMatches -
+            registrations.filter((r) => r.player_id === p.id).length,
+        },
         appearances: played.length,
         unknownAppearances: records.filter((r) => r.appeared === null).length,
         unrecordedMatches: matches - records.length,
@@ -829,6 +1179,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       filter: { startDate, endDate, label },
       matches,
       matchesWithoutRoster,
+      registrationMatches,
+      unassignedMatches,
       team,
       opponents,
       players,
@@ -839,7 +1191,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       (p) => p.playerId,
     );
     legacy.saveDesk(request, () => {
-      syncLegacy({ overwrite: true, reactivate: true });
+      syncLegacy({ overwrite: true, reactivate: true, validateChanges: true });
       // A null desk resets the board, not club membership. A non-null roster
       // removes members from the previous canonical roster. Profile edits bump
       // the desk edition, so clients unaware of appended profiles cannot remove them.
@@ -891,12 +1243,12 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   }
   function assertTacticDeletable(tacticId) {
     const linked = q(
-      "SELECT m.id,m.opponent FROM club_match_tactics t JOIN club_matches m ON m.id=t.match_id WHERE t.tactic_id=? ORDER BY m.id",
+      "SELECT m.id,m.opponent FROM club_match_tactics t JOIN club_matches m ON m.id=t.match_id LEFT JOIN club_match_tactic_snapshots s ON s.match_id=t.match_id AND s.source_tactic_id=t.tactic_id WHERE t.tactic_id=? AND s.match_id IS NULL ORDER BY m.id",
     ).all(tacticId);
     if (linked.length)
       fail(
         409,
-        `该战术仍关联 ${linked.length} 场比赛（${linked
+        `该战术仍关联 ${linked.length} 场尚未保存快照的比赛（${linked
           .slice(0, 3)
           .map((m) => `${m.id}: ${m.opponent}`)
           .join("、")}），请先解除比赛关联后再删除。`,
@@ -917,6 +1269,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     savePlayer,
     getSeason,
     saveSeason,
+    getSeasonRoster,
+    saveSeasonRoster,
     getMatch,
     saveMatch,
     saveRsvp,
@@ -940,6 +1294,6 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         `SELECT id FROM club_matches WHERE team_id=? ${u.role === "admin" ? "" : "AND status!='draft'"} ORDER BY match_date DESC,id DESC`,
       )
         .all(u.team_id)
-        .map((r) => getMatch(u, r.id)),
+        .map((r) => getMatch(u, r.id, { includeTacticSnapshots: false })),
   };
 }

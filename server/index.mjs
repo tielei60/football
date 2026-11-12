@@ -316,6 +316,22 @@ export function createFootballServer({
           );
         }
       }
+      const seasonRosterRoute = /^\/api\/seasons\/([1-9]\d*)\/roster$/.exec(
+        pathname,
+      );
+      if (seasonRosterRoute) {
+        const id = routeId(seasonRosterRoute[1]);
+        if (method === "GET")
+          return send(response, 200, club.getSeasonRoster(user.team_id, id));
+        if (method === "PUT") {
+          admin();
+          return send(
+            response,
+            200,
+            club.saveSeasonRoster(user.team_id, id, body()),
+          );
+        }
+      }
       const seasonRoute = /^\/api\/seasons\/([1-9]\d*)$/.exec(pathname);
       if (seasonRoute && method === "PUT") {
         admin();

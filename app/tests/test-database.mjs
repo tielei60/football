@@ -42,6 +42,8 @@ function resetClubTestDataAttempt(databasePath) {
     try {
       database.exec(`
         DELETE FROM club_match_tactics;
+        DELETE FROM club_match_tactic_snapshots;
+        DELETE FROM club_season_roster;
         DELETE FROM club_rsvps;
         DELETE FROM club_roster;
         DELETE FROM club_matches;
