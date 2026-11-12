@@ -664,3 +664,203 @@ test("statistics expose missing and partial rosters separately from explicit unk
   assert.equal(previous.matchesWithoutRoster, 1);
   assert.ok(previous.players.every((p) => p.unrecordedMatches === 1));
 });
+
+test("tactical removal archives persisted players, preserves history, and explicit undo restores membership", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const member = (id, number) => ({
+    playerId: id,
+    name: id,
+    number,
+    positions: ["前锋"],
+    preferredFoot: "右",
+    status: "injured",
+    note: "健康状态保留",
+    fieldPieceId: null,
+  });
+  const desk = {
+    board: { pieces: [], markings: [] },
+    players: [member("first", 9), member("second", 2)],
+    selectedTacticId: null,
+  };
+  await call("/api/coaching-desk", "PUT", { edition: 0, desk });
+  await call("/api/players/first/account", "POST", {
+    username: "first",
+    password: "first-password",
+  });
+  const playerCookie = await f.login({
+    username: "first",
+    password: "first-password",
+  });
+  const match = (
+    await call("/api/matches", "POST", {
+      opponent: "保留历史",
+      date: "2026-01-01",
+      status: "completed",
+    })
+  ).body;
+  await call(`/api/matches/${match.id}/roster`, "PUT", {
+    roster: [{ playerId: "first", appeared: true, goals: 1 }],
+  });
+  const unrelated = (
+    await call("/api/players", "POST", { name: "未保存到战术名单" })
+  ).body;
+  const current = (await call("/api/coaching-desk")).body;
+  assert.deepEqual(
+    current.desk.players.map((p) => p.playerId),
+    ["first", "second", unrelated.id],
+  );
+  const removed = (
+    await call("/api/coaching-desk", "PUT", {
+      edition: current.edition,
+      desk: {
+        ...current.desk,
+        players: current.desk.players.filter((p) => p.playerId !== "first"),
+      },
+    })
+  ).body;
+  assert.equal((await call("/api/players/first")).body.status, "inactive");
+  assert.equal(
+    (await call(`/api/players/${unrelated.id}`)).body.status,
+    "active",
+  );
+  assert.deepEqual(
+    removed.desk.players.map((p) => p.playerId),
+    ["second", unrelated.id],
+  );
+  assert.equal(removed.desk.players[0].status, "injured");
+  assert.equal(
+    (await f.request("/api/auth/me", { cookie: playerCookie })).status,
+    401,
+  );
+  assert.equal(
+    (await call("/api/statistics?year=2026")).body.players.find(
+      (p) => p.playerId === "first",
+    ).goals,
+    1,
+  );
+  assert.equal(
+    (
+      await call("/api/coaching-desk", "PUT", {
+        edition: current.edition,
+        desk,
+      })
+    ).status,
+    409,
+  );
+  await call("/api/coaching-desk", "PUT", {
+    edition: removed.edition,
+    desk: {
+      ...desk,
+      players: [
+        ...desk.players,
+        current.desk.players.find((p) => p.playerId === unrelated.id),
+      ],
+    },
+  });
+  assert.equal((await call("/api/players/first")).body.status, "active");
+  const restored = (await call("/api/coaching-desk")).body;
+  assert.deepEqual(
+    restored.desk.players.map((p) => p.playerId),
+    ["first", "second", unrelated.id],
+  );
+  await call("/api/coaching-desk", "PUT", {
+    edition: restored.edition,
+    desk: null,
+  });
+  assert.equal((await call("/api/players/first")).body.status, "active");
+});
+
+test("first board save returns club-only profiles and reconciliation failure rolls back the desk", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const p = (await call("/api/players", "POST", { name: "先创建的球员" })).body;
+  assert.equal((await call("/api/coaching-desk")).body.desk, null);
+  const desk = {
+    board: { pieces: [], markings: [] },
+    players: [],
+    selectedTacticId: null,
+  };
+  const saved = (await call("/api/coaching-desk", "PUT", { edition: 0, desk }))
+    .body;
+  assert.equal(saved.desk.players[0].playerId, p.id);
+  const db = new DatabaseSync(f.path);
+  db.exec(
+    "CREATE TRIGGER reject_club_sync BEFORE UPDATE ON club_players BEGIN SELECT RAISE(ABORT, 'injected failure'); END",
+  );
+  const loggedError = t.mock.method(console, "error", () => {});
+  const failed = await call("/api/coaching-desk", "PUT", {
+    edition: saved.edition,
+    desk: saved.desk,
+  });
+  loggedError.mock.restore();
+  assert.equal(failed.status, 500);
+  db.exec("DROP TRIGGER reject_club_sync");
+  db.close();
+  const after = (await call("/api/coaching-desk")).body;
+  assert.equal(after.edition, saved.edition);
+  const check = new DatabaseSync(f.path);
+  assert.equal(
+    check.prepare("SELECT count(*) AS n FROM team_players").get().n,
+    0,
+  );
+  check.close();
+  assert.equal((await call(`/api/players/${p.id}`)).body.status, "active");
+});
+
+test("an appended club-only profile can be removed immediately after initial board save", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const p = (await call("/api/players", "POST", { name: "先于首次战术创建" }))
+    .body;
+  const players = Array.from({ length: 20 }, (_, index) => ({
+    playerId: `seed-${index}`,
+    name: `球员${index}`,
+    number: index + 1,
+    positions: ["待定"],
+    preferredFoot: "",
+    status: "ok",
+    note: "",
+    fieldPieceId: null,
+  }));
+  const seeded = (
+    await call("/api/coaching-desk", "PUT", {
+      edition: 0,
+      desk: {
+        board: { pieces: [], markings: [] },
+        players,
+        selectedTacticId: null,
+      },
+    })
+  ).body;
+  assert.equal(seeded.desk.players.length, 21);
+  assert.equal(seeded.desk.players[20].playerId, p.id);
+  const removed = (
+    await call("/api/coaching-desk", "PUT", {
+      edition: seeded.edition,
+      desk: {
+        ...seeded.desk,
+        players: seeded.desk.players.filter(
+          (player) => player.playerId !== p.id,
+        ),
+      },
+    })
+  ).body;
+  assert.equal(removed.desk.players.length, 20);
+  assert.equal((await call(`/api/players/${p.id}`)).body.status, "inactive");
+  const newProfile = (
+    await call("/api/players", "POST", { name: "旧页面未见的新球员" })
+  ).body;
+  assert.equal((await call("/api/coaching-desk", "PUT", removed)).status, 409);
+  assert.equal(
+    (await call(`/api/players/${newProfile.id}`)).body.status,
+    "active",
+  );
+  assert.equal((await call("/api/coaching-desk")).body.desk.players.length, 21);
+});

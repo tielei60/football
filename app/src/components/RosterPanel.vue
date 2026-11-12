@@ -143,7 +143,7 @@
             </label>
             <div class="detail-status">{{ onPitch(p) ? "状态：在场上" : "状态：替补席" }}</div>
             <SubstitutionControl v-if="!onPitch(p) && (!p.status || p.status === 'ok')" :incoming-id="p.id" />
-            <button class="detail-delete" @click="onRemove(p.id, p.name)">删除该队员</button>
+            <button class="detail-delete" @click="onRemove(p.id, p.name)">归档该队员</button>
           </div>
         </div>
       </li>
@@ -226,7 +226,9 @@ const onAdd = () => {
 };
 
 const onRemove = (id: string, name: string) => {
-  if (confirm(`删除队员 ${name}？（场上棋子一并清除）`)) {
+  if (
+    confirm(`归档队员 ${name}？场上棋子将移除，球员账号将停用，历史比赛记录保留。可在俱乐部球员管理中重新设为在队。`)
+  ) {
     roster.removePlayer(id);
     if (detailId.value === id) detailId.value = null;
   }

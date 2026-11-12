@@ -1,9 +1,10 @@
 <template>
   <div class="wrapper" :class="[`device-${deviceType}`, `orientation-${orientation}`, { 'club-wrapper': !isBoard }]">
     <Debug v-if="isDev && showDebug" />
-    <RouterLink v-if="isBoard" class="club-board-back" to="/club">← 俱乐部</RouterLink>
     <RouterView v-if="!isBoard || desk.ready" />
     <main v-else class="coaching-startup" aria-live="polite">
+      <RouterLink class="club-board-back" to="/club">← 俱乐部</RouterLink>
+      <br />
       <img src="/team-badge.png" alt="柏林花园 FC" width="64" height="64" />
       <h1>教练工作台</h1>
       <p>{{ desk.status === "loading" ? "正在载入战术与球队名单" : desk.message }}</p>
@@ -53,10 +54,8 @@ onUnmounted(() => {
   align-items: stretch;
 }
 .club-board-back {
-  position: fixed;
-  bottom: 8px;
-  left: 10px;
-  z-index: 150;
+  display: inline-block;
+  margin-bottom: 12px;
   padding: 5px 10px;
   background: #e9f2e9;
   color: #1b4934;

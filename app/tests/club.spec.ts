@@ -74,6 +74,10 @@ test("player logs in, registers independently of appearance, and cannot access b
 });
 
 test("leaving a loading board settles and suspends it before club profile edits", async ({ page, request }) => {
+  await page.goto("/board");
+  await expect(page.locator(".roster-item").first()).toBeVisible();
+  await page.getByRole("link", { name: "← 俱乐部" }).click();
+  await expect(page).toHaveURL(/\/club$/);
   const players = await (await request.get("/api/players")).json();
   const player = players.find((entry: { status: string }) => entry.status === "active");
   expect(player).toBeTruthy();
@@ -133,4 +137,56 @@ test("statistics disclose completed matches with no roster and missing individua
   await expect(row.getByRole("cell").nth(3)).toHaveText(/[1-9]\d*/);
   await expect(row.getByRole("cell").nth(4)).toHaveText("未知");
   await expect(page.getByText(/未录入个人明细不等于确认未出场/)).toBeVisible();
+});
+
+for (const width of [320, 390]) {
+  test(`club return link leaves mobile roster navigation clickable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/board");
+    await expect(page.getByRole("link", { name: "← 俱乐部" })).toBeVisible();
+    const rosterTab = page
+      .getByRole("navigation", { name: "操作分区" })
+      .getByRole("button", { name: "阵容", exact: true });
+    await rosterTab.click();
+    await expect(rosterTab).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#mobile-roster-panel")).toBeVisible();
+  });
+}
+
+test("first board save adopts club-only players immediately and persists them on reopening", async ({
+  page,
+  request,
+}) => {
+  const name = `首次载入俱乐部球员${Date.now()}`;
+  const response = await request.post("/api/players", { data: { name, positions: ["中场"] } });
+  expect(response.ok()).toBeTruthy();
+  const player = await response.json();
+  const before = await (await request.get("/api/coaching-desk")).json();
+  expect(before.desk).toBeNull();
+  await page.goto("/board");
+  await expect(page.locator(".roster-item").filter({ hasText: name })).toBeVisible();
+  await page.getByRole("link", { name: "← 俱乐部" }).click();
+  await expect(page).toHaveURL(/\/club$/);
+  const saved = await (await request.get("/api/coaching-desk")).json();
+  expect(saved.desk.players.some((p: { playerId: string }) => p.playerId === player.id)).toBeTruthy();
+  await page.getByRole("link", { name: "战术板 ↗" }).click();
+  await expect(page.locator(".roster-item").filter({ hasText: name })).toBeVisible();
+});
+
+test("autosave preserves board undo and redo history", async ({ page }) => {
+  await page.goto("/board");
+  const row = page.locator(".roster-item").first();
+  await row.getByRole("button", { name: /队员详情/ }).click();
+  const status = row.getByRole("combobox", { name: "状态", exact: true });
+  const saved = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/coaching-desk") && response.request().method() === "PUT" && response.ok()
+  );
+  await status.selectOption("injured");
+  await saved;
+  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await page.getByRole("button", { name: "撤销", exact: true }).click();
+  await expect(status).toHaveValue("ok");
+  await page.getByRole("button", { name: "重做", exact: true }).click();
+  await expect(status).toHaveValue("injured");
 });

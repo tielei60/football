@@ -152,7 +152,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-management-v1',unixepoch()*1000);
   `),
   );
-  function syncLegacy({ overwrite = false } = {}) {
+  function syncLegacy({ overwrite = false, reactivate = false } = {}) {
     for (const p of legacy.getDesk().desk?.players ?? []) {
       const previous = q("SELECT id,number FROM club_players WHERE id=?").get(
         p.playerId,
@@ -181,6 +181,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           p.avatar ?? null,
           p.playerId,
         );
+      if (reactivate)
+        q(
+          "UPDATE club_players SET status='active' WHERE id=? AND team_id=1",
+        ).run(p.playerId);
     }
   }
   tx(() =>
@@ -629,24 +633,59 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       players,
     };
   }
+  function saveTacticalDesk(request) {
+    const previousIds = (tacticalDesk().desk?.players ?? []).map(
+      (p) => p.playerId,
+    );
+    legacy.saveDesk(request, () => {
+      syncLegacy({ overwrite: true, reactivate: true });
+      // A null desk resets the board, not club membership. A non-null roster
+      // removes members from the previous canonical roster. Profile edits bump
+      // the desk edition, so clients unaware of appended profiles cannot remove them.
+      // Before initial board creation the previous roster is empty.
+      if (request.desk !== null) {
+        const supplied = new Set(request.desk.players.map((p) => p.playerId));
+        for (const id of previousIds) {
+          if (supplied.has(id)) continue;
+          q(
+            "UPDATE club_players SET status='inactive' WHERE id=? AND team_id=1",
+          ).run(id);
+          q(
+            "DELETE FROM club_sessions WHERE user_id IN (SELECT id FROM club_users WHERE player_id=? AND team_id=1)",
+          ).run(id);
+        }
+      }
+    });
+    return tacticalDesk();
+  }
   function tacticalDesk() {
     const result = legacy.getDesk();
     if (!result.desk) return result;
     const existing = new Map(result.desk.players.map((p) => [p.playerId, p]));
-    result.desk.players = listPlayers(1)
-      .filter((p) => p.status === "active")
-      .map((p) => ({
-        ...existing.get(p.id),
-        playerId: p.id,
-        name: p.name,
-        number: p.number ?? 0,
-        positions: p.positions,
-        preferredFoot: p.preferredFoot,
-        status: existing.get(p.id)?.status ?? "ok",
-        note: p.note,
-        avatar: p.avatar,
-        fieldPieceId: existing.get(p.id)?.fieldPieceId ?? null,
-      }));
+    const active = new Map(
+      listPlayers(1)
+        .filter((p) => p.status === "active")
+        .map((p) => [p.id, p]),
+    );
+    const ordered = [];
+    for (const id of existing.keys()) {
+      if (!active.has(id)) continue;
+      ordered.push(active.get(id));
+      active.delete(id);
+    }
+    ordered.push(...active.values());
+    result.desk.players = ordered.map((p) => ({
+      ...existing.get(p.id),
+      playerId: p.id,
+      name: p.name,
+      number: p.number ?? 0,
+      positions: p.positions,
+      preferredFoot: p.preferredFoot,
+      status: existing.get(p.id)?.status ?? "ok",
+      note: p.note,
+      avatar: p.avatar,
+      fieldPieceId: existing.get(p.id)?.fieldPieceId ?? null,
+    }));
     return result;
   }
   return {
@@ -668,6 +707,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     statistics,
     syncLegacy,
     tacticalDesk,
+    saveTacticalDesk,
     logout: (token) => {
       if (token)
         q("DELETE FROM club_sessions WHERE token_hash=?").run(tokenHash(token));

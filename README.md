@@ -39,7 +39,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-所有服务端与浏览器测试使用临时 SQLite，不使用业务数据库。`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` 可使用本机 Chromium。CI 在每次推送和 PR 运行同样的构建、服务端与浏览器回归。
+所有服务端与浏览器测试使用临时 SQLite，不使用业务数据库。`PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium` 可使用本机 Chromium。CI 在每次代码推送运行同样的构建、服务端、容器与浏览器回归，PR 引用对应提交的检查结果。
 
 ## 升级和部署
 

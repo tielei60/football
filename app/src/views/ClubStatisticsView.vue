@@ -43,7 +43,7 @@
       </label>
       <label v-else>
         赛季
-        <select v-model="seasonId" @change="loadStats">
+        <select v-model="seasonId" aria-label="赛季" @change="loadStats">
           <option value="" disabled>请选择赛季</option>
           <option v-for="s in seasons" :key="s.id" :value="s.id">
             {{ s.name }}（{{ s.startDate }} 至 {{ s.endDate }}）

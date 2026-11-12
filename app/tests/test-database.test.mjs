@@ -66,7 +66,7 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
   linked.close();
   assert.equal((await (await request("/api/players")).json()).length, 1);
 
-  resetClubTestData(databasePath);
+  await resetClubTestData(databasePath);
   assert.equal((await request("/api/players")).status, 401, "previous admin session is invalidated too");
   await login();
   for (const path of ["/api/players", "/api/matches", "/api/seasons"]) {
@@ -110,21 +110,69 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
   }
 });
 
-test("cleanup refuses non-test paths, missing ownership markers and symlinked databases", () => {
-  assert.throws(() => resetClubTestData(undefined));
-  assert.throws(() => resetClubTestData(join(process.cwd(), "data", "football.sqlite")));
+test("cleanup refuses non-test paths, missing ownership markers and symlinked databases", async () => {
+  await assert.rejects(() => resetClubTestData(undefined));
+  await assert.rejects(() => resetClubTestData(join(process.cwd(), "data", "football.sqlite")));
   const unowned = mkdtempSync(join(tmpdir(), "football-playwright-"));
   const owned = createTestDatabase();
   const sentinel = join(unowned, "production.sqlite");
   writeFileSync(sentinel, "DO NOT ALTER");
   try {
-    assert.throws(() => resetClubTestData(join(unowned, "test.sqlite")));
+    await assert.rejects(() => resetClubTestData(join(unowned, "test.sqlite")));
     symlinkSync(sentinel, owned);
-    assert.throws(() => resetClubTestData(owned), /non-regular/);
+    await assert.rejects(() => resetClubTestData(owned), /non-regular/);
     assert.equal(readFileSync(sentinel, "utf8"), "DO NOT ALTER");
     unlinkSync(owned);
   } finally {
     removeTestDatabase(owned);
     rmSync(unowned, { recursive: true, force: true });
   }
+});
+
+test("cleanup yields to a concurrent HTTP writer and leaves no transaction open", async (t) => {
+  const { createServer } = await import("node:http");
+  const { setTimeout: delay } = await import("node:timers/promises");
+  const databasePath = createTestDatabase();
+  const initializer = createFootballServer({ databasePath, bootstrapAdmin: credentials });
+  initializer.listen(0, "127.0.0.1");
+  await once(initializer, "listening");
+  await new Promise((resolve) => initializer.close(resolve));
+  const writer = new DatabaseSync(databasePath);
+  let signalStarted;
+  const started = new Promise((resolve) => {
+    signalStarted = resolve;
+  });
+  const server = createServer(async (_request, response) => {
+    writer.exec("BEGIN IMMEDIATE");
+    writer.exec("INSERT INTO club_players(id,team_id,name,positions) VALUES ('inflight',1,'In-flight request','[]')");
+    signalStarted();
+    await delay(100);
+    writer.exec("COMMIT");
+    response.end("committed");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+    writer.close();
+    removeTestDatabase(databasePath);
+  });
+  const pendingRequest = fetch(`http://127.0.0.1:${server.address().port}/save`);
+  await started;
+  await resetClubTestData(databasePath);
+  assert.equal(await (await pendingRequest).text(), "committed");
+  assert.equal(writer.isTransaction, false);
+  assert.equal(writer.prepare("SELECT count(*) AS n FROM club_players").get().n, 0);
+  writer.exec("BEGIN IMMEDIATE; COMMIT;");
+  assert.equal(writer.isTransaction, false, "cleanup released its own connection and write transaction");
+
+  writer.exec("BEGIN IMMEDIATE");
+  try {
+    await assert.rejects(resetClubTestData(databasePath, { timeoutMs: 100 }), /stayed locked/);
+  } finally {
+    writer.exec("ROLLBACK");
+  }
+  await resetClubTestData(databasePath);
+  assert.equal(writer.isTransaction, false);
 });

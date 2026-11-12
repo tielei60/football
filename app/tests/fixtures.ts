@@ -17,10 +17,10 @@ export const test = base.extend<{ isolatedDatabase: void }>({
     await use(context.request);
   },
   isolatedDatabase: [
-    async ({ request, baseURL }, use, testInfo) => {
+    async ({ request, context, playwright, baseURL }, use, testInfo) => {
       if (testInfo.config.workers !== 1)
         throw new Error("Shared temporary database fixtures require exactly one worker.");
-      resetClubTestData(process.env.FOOTBALL_E2E_DB_PATH);
+      await resetClubTestData(process.env.FOOTBALL_E2E_DB_PATH);
       await authenticateAdmin(request, baseURL!);
       const tactics = await request.get("/api/tactics");
       expect(tactics.ok()).toBe(true);
@@ -33,7 +33,20 @@ export const test = base.extend<{ isolatedDatabase: void }>({
       const { edition } = await response.json();
       const reset = await request.put("/api/coaching-desk", { data: { desk: null, edition } });
       expect(reset.ok()).toBe(true);
-      await use();
+      try {
+        await use();
+      } finally {
+        // Stop page timers/autosaves and cancel outstanding context requests before
+        // the next test can open the shared temporary database for cleanup.
+        await context.close();
+        const probe = await playwright.request.newContext({ baseURL });
+        try {
+          const health = await probe.get("/api/health", { timeout: 5000 });
+          expect(health.ok()).toBe(true);
+        } finally {
+          await probe.dispose();
+        }
+      }
     },
     { auto: true },
   ],

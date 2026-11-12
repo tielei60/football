@@ -334,9 +334,13 @@ export function createFootballServer({
       } else if (pathname === "/api/coaching-desk") {
         if (method === "GET") return send(response, 200, club.tacticalDesk());
         if (method === "PUT") {
-          store.saveDesk(await readRequest(request, maximumRequestBytes));
-          club.syncLegacy({ overwrite: true });
-          return send(response, 200, club.tacticalDesk());
+          return send(
+            response,
+            200,
+            club.saveTacticalDesk(
+              await readRequest(request, maximumRequestBytes),
+            ),
+          );
         }
       } else if (pathname === "/api/tactic-collections") {
         if (method === "GET")

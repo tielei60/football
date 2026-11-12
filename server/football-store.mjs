@@ -843,7 +843,7 @@ export function openFootballStore(databasePath) {
         return addVersion(tacticId, note, request.board);
       });
     },
-    saveDesk(request) {
+    saveDesk(request, afterSave) {
       if (
         !isObject(request) ||
         !Number.isSafeInteger(request.edition) ||
@@ -906,6 +906,8 @@ export function openFootballStore(databasePath) {
               : JSON.stringify(player.fieldPieceId),
           ),
         );
+        // Keep club reconciliation in the same transaction as the legacy desk.
+        afterSave?.();
         return getDesk();
       });
     },

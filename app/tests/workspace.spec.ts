@@ -43,6 +43,7 @@ test("roster loads CSV positions and supports selecting multiple enumerated posi
 
 test("default formation assigns starters to position-matched slots", async ({ page }) => {
   await page.goto("/board");
+  await expect(page.locator("#players > g:visible")).toHaveCount(8);
   const lineup = await page.locator("#players > g").evaluateAll((groups) =>
     groups
       .map((group) => ({

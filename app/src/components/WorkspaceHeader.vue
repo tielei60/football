@@ -56,7 +56,9 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
   <header class="workspace-header" :class="{ compact, 'settings-open': settingsOpen }">
     <div class="workspace-topline">
       <div class="club-identity">
-        <img :src="TEAM.badge" alt="柏林花园 FC 队徽" class="club-badge" />
+        <RouterLink to="/club" class="club-home-link" aria-label="← 俱乐部" title="返回俱乐部">
+          <img :src="TEAM.badge" alt="柏林花园 FC 队徽" class="club-badge" />
+        </RouterLink>
         <div>
           <h1>
             柏林花园
@@ -257,6 +259,15 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
 </template>
 
 <style scoped>
+.club-home-link {
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+.club-home-link:focus-visible {
+  outline: 3px solid #a9d667;
+  outline-offset: 3px;
+}
 .workspace-header {
   flex-shrink: 0;
   background: var(--surface);

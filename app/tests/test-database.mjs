@@ -2,6 +2,7 @@ import { lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { setTimeout as delay } from "node:timers/promises";
 
 const markerName = ".football-playwright-owned";
 const markerContent = "Disposable football Playwright database\n";
@@ -30,14 +31,14 @@ export function testDatabaseDirectory(databasePath) {
   return directory;
 }
 
-export function resetClubTestData(databasePath) {
+function resetClubTestDataAttempt(databasePath) {
   testDatabaseDirectory(databasePath);
   if (!lstatSync(databasePath).isFile() || lstatSync(databasePath).isSymbolicLink()) {
     throw new Error("Refusing to open a non-regular Playwright database.");
   }
   const database = new DatabaseSync(databasePath);
   try {
-    database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; BEGIN IMMEDIATE;");
+    database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 0; BEGIN IMMEDIATE;");
     try {
       database.exec(`
         DELETE FROM club_match_tactics;
@@ -57,6 +58,27 @@ export function resetClubTestData(databasePath) {
     }
   } finally {
     database.close();
+  }
+}
+
+// Never block Playwright's event loop while a preceding HTTP request is finishing.
+// Each attempt closes its connection; permanent errors and persistent locks fail visibly.
+export async function resetClubTestData(databasePath, { timeoutMs = 3000 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      resetClubTestDataAttempt(databasePath);
+      return;
+    } catch (error) {
+      if (error.errcode !== 5 && error.errcode !== 6) throw error;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          "Playwright database stayed locked after prior contexts closed; investigate an outstanding server transaction.",
+          { cause: error }
+        );
+      }
+      await delay(Math.min(50, Math.max(1, deadline - Date.now())));
+    }
   }
 }
 
