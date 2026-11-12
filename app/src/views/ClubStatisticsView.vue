@@ -55,6 +55,9 @@
     <template v-else-if="stats">
       <h2>{{ stats.filter.label }} · {{ stats.matches }} 场已完赛</h2>
       <p class="club-muted">{{ stats.filter.startDate }} 至 {{ stats.filter.endDate }}（含首尾日期）</p>
+      <p v-if="stats.matchesWithoutRoster > 0" class="club-error" role="status">
+        有 {{ stats.matchesWithoutRoster }} 场已完赛比赛尚未录入名单，当前统计可能不完整。
+      </p>
       <div class="club-table-wrap">
         <table>
           <thead>
@@ -62,6 +65,7 @@
               <th>球员</th>
               <th>确认出场</th>
               <th>出场待确认</th>
+              <th>未录入个人明细</th>
               <th>已知进球</th>
               <th>进球记录覆盖</th>
               <th>已知助攻</th>
@@ -73,6 +77,7 @@
               <td>{{ p.name }}</td>
               <td>{{ p.appearances }}</td>
               <td>{{ p.unknownAppearances }}</td>
+              <td>{{ p.unrecordedMatches }}</td>
               <td>{{ unknown(p.goals) }}</td>
               <td>{{ p.goalsKnownMatches }} / {{ p.appearances }} 场</td>
               <td>{{ unknown(p.assists) }}</td>
@@ -82,7 +87,8 @@
         </table>
       </div>
       <p class="club-muted" style="font-size: 13px; margin-top: 18px">
-        报名不等于出场；空白数据记为未知，不按 0 计算。进球和助攻是已记录数据的合计，请结合覆盖场数阅读。
+        报名不等于出场；未录入个人明细不等于确认未出场。确认出场仅计算明确记录的出场次数，出场待确认指已有名单但出场状态未知。空白数据不按
+        0 计算。进球和助攻是已记录数据的合计，请结合覆盖场数阅读。
       </p>
     </template>
     <p v-else class="club-empty">{{ mode === "season" ? "请先选择或创建赛季" : "暂无统计数据" }}</p>

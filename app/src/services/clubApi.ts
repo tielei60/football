@@ -43,11 +43,13 @@ export interface ClubMatch {
 export interface Statistics {
   filter: { startDate: string; endDate: string; label: string };
   matches: number;
+  matchesWithoutRoster: number;
   players: {
     playerId: string;
     name: string;
     appearances: number;
     unknownAppearances: number;
+    unrecordedMatches: number;
     goals: number | null;
     assists: number | null;
     goalsKnownMatches: number;

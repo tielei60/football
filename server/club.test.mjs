@@ -604,3 +604,63 @@ test("club profile edits invalidate stale tactical desks and known scores bound 
     200,
   );
 });
+
+test("statistics expose missing and partial rosters separately from explicit unknown or nonappearance", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const a = (await call("/api/players", "POST", { name: "有记录球员" })).body;
+  const b = (await call("/api/players", "POST", { name: "缺少记录球员" })).body;
+  const create = async (date, status = "completed") =>
+    (await call("/api/matches", "POST", { opponent: "覆盖测试", date, status }))
+      .body;
+  await create("2025-12-31"); // Complete match, entirely missing roster.
+  const partial = await create("2026-01-01");
+  await call(`/api/matches/${partial.id}/roster`, "PUT", {
+    roster: [{ playerId: a.id, appeared: null }],
+  });
+  const explicit = await create("2026-01-02");
+  await call(`/api/matches/${explicit.id}/roster`, "PUT", {
+    roster: [
+      { playerId: a.id, appeared: false },
+      { playerId: b.id, appeared: true, goals: 0 },
+    ],
+  });
+  await create("2026-01-03", "published"); // Never counted as completed.
+  const season = (
+    await call("/api/seasons", "POST", {
+      name: "边界覆盖",
+      startDate: "2025-12-31",
+      endDate: "2026-01-01",
+    })
+  ).body;
+  const scoped = (await call(`/api/statistics?seasonId=${season.id}`)).body;
+  assert.equal(scoped.matches, 2);
+  assert.equal(scoped.matchesWithoutRoster, 1);
+  const sa = scoped.players.find((p) => p.playerId === a.id),
+    sb = scoped.players.find((p) => p.playerId === b.id);
+  assert.equal(sa.appearances, 0);
+  assert.equal(sa.unknownAppearances, 1);
+  assert.equal(sa.unrecordedMatches, 1);
+  assert.equal(sa.goals, null);
+  assert.equal(sb.appearances, 0);
+  assert.equal(sb.unknownAppearances, 0);
+  assert.equal(sb.unrecordedMatches, 2);
+  assert.equal(sb.goals, null);
+  const year = (await call("/api/statistics?year=2026")).body;
+  assert.equal(year.matches, 2);
+  assert.equal(year.matchesWithoutRoster, 0);
+  const ya = year.players.find((p) => p.playerId === a.id),
+    yb = year.players.find((p) => p.playerId === b.id);
+  assert.equal(ya.unrecordedMatches, 0);
+  assert.equal(ya.unknownAppearances, 1);
+  assert.equal(ya.appearances, 0);
+  assert.equal(yb.unrecordedMatches, 1);
+  assert.equal(yb.unknownAppearances, 0);
+  assert.equal(yb.appearances, 1);
+  assert.equal(yb.goals, 0);
+  const previous = (await call("/api/statistics?year=2025")).body;
+  assert.equal(previous.matchesWithoutRoster, 1);
+  assert.ok(previous.players.every((p) => p.unrecordedMatches === 1));
+});

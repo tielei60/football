@@ -111,3 +111,26 @@ test("leaving a loading board settles and suspends it before club profile edits"
     await request.put(`/api/players/${player.id}`, { data: { name: player.name } });
   }
 });
+
+test("statistics disclose completed matches with no roster and missing individual details", async ({
+  page,
+  request,
+}) => {
+  const suffix = Date.now().toString();
+  const player = await (await request.post("/api/players", { data: { name: `缺失明细${suffix}` } })).json();
+  const response = await request.post("/api/matches", {
+    data: { opponent: `无名单${suffix}`, date: "2091-01-15", status: "completed" },
+  });
+  expect(response.ok()).toBeTruthy();
+  await page.goto("/club/statistics");
+  await page.getByLabel("年份").fill("2091");
+  await page.getByLabel("年份").blur();
+  await expect(page.getByText(/有 \d+ 场已完赛比赛尚未录入名单/)).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "未录入个人明细" })).toBeVisible();
+  const row = page.getByRole("row").filter({ hasText: player.name });
+  await expect(row.getByRole("cell").nth(1)).toHaveText("0");
+  await expect(row.getByRole("cell").nth(2)).toHaveText("0");
+  await expect(row.getByRole("cell").nth(3)).toHaveText(/[1-9]\d*/);
+  await expect(row.getByRole("cell").nth(4)).toHaveText("未知");
+  await expect(page.getByText(/未录入个人明细不等于确认未出场/)).toBeVisible();
+});

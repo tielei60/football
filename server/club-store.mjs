@@ -598,6 +598,11 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     const rows = q(
       `SELECT r.* FROM club_roster r JOIN club_matches m ON m.id=r.match_id WHERE m.team_id=? AND m.status='completed' AND m.match_date BETWEEN ? AND ?`,
     ).all(u.team_id, startDate, endDate);
+    const matches = q(
+      "SELECT count(*) AS n FROM club_matches WHERE team_id=? AND status='completed' AND match_date BETWEEN ? AND ?",
+    ).get(u.team_id, startDate, endDate).n;
+    const matchesWithoutRoster =
+      matches - new Set(rows.map((r) => r.match_id)).size;
     const players = listPlayers(u.team_id).map((p) => {
       const records = rows.filter((r) => r.player_id === p.id),
         played = records.filter((r) => r.appeared === 1),
@@ -608,6 +613,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         name: p.name,
         appearances: played.length,
         unknownAppearances: records.filter((r) => r.appeared === null).length,
+        unrecordedMatches: matches - records.length,
         goals: goals.length ? goals.reduce((n, r) => n + r.goals, 0) : null,
         assists: assists.length
           ? assists.reduce((n, r) => n + r.assists, 0)
@@ -618,9 +624,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     });
     return {
       filter: { startDate, endDate, label },
-      matches: q(
-        "SELECT count(*) AS n FROM club_matches WHERE team_id=? AND status='completed' AND match_date BETWEEN ? AND ?",
-      ).get(u.team_id, startDate, endDate).n,
+      matches,
+      matchesWithoutRoster,
       players,
     };
   }
