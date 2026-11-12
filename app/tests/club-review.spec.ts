@@ -458,7 +458,7 @@ test("team name and crest save immediately updates the header without clearing p
   await page.getByRole("button", { name: "保存球队资料", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("球队资料已保存");
   expect((await (await request.get("/api/team")).json()).crest).toBeNull();
-  await expect(page.locator(".club-brand img")).toHaveAttribute("src", "/team-badge.png");
+  await expect(page.locator(".club-brand img")).toHaveAttribute("src", /default-club-badge/);
 });
 test("team failed save and revision conflict preserve draft, explicit reload preserves password fields", async ({
   page,
@@ -550,7 +550,7 @@ test("crest rejects unsupported and oversized files and ignores superseded file 
     .toBe(3);
   await page.getByRole("button", { name: "移除自定义队徽" }).click();
   await page.evaluate(() => (window as unknown as { finishCrestReads: (() => void)[] }).finishCrestReads[2]());
-  await expect(page.getByAltText("球队队徽预览")).toHaveAttribute("src", "/team-badge.png");
+  await expect(page.getByAltText("球队队徽预览")).toHaveAttribute("src", /default-club-badge/);
 });
 test("player sees team details and custom crest without editing controls", async ({ page, request }) => {
   const player = await seedPlayer(request);

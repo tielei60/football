@@ -5,7 +5,7 @@
     <main v-else class="coaching-startup" aria-live="polite">
       <RouterLink class="club-board-back" to="/club">← 俱乐部</RouterLink>
       <br />
-      <img src="/team-badge.png" alt="柏林花园 FC" width="64" height="64" />
+      <img :src="teamBadge" :alt="teamName" width="64" height="64" />
       <h1>教练工作台</h1>
       <p>{{ desk.status === "loading" ? "正在载入战术与球队名单" : desk.message }}</p>
       <button v-if="desk.status !== 'loading'" @click="desk.initialize">重新连接</button>
@@ -14,6 +14,8 @@
 </template>
 
 <script setup lang="ts">
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
 import { storeToRefs } from "pinia";
 import { computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -45,6 +47,8 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", globalStore.updateOrientation);
 });
+
+const { teamName, teamBadge } = useTeamIdentity();
 </script>
 
 <style lang="scss">

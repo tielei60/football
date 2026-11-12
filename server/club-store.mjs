@@ -330,8 +330,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       else if (
         overwrite &&
         (previous.name !== p.name ||
-          previous.number !==
-            (previous.number === null && p.number === 0 ? null : p.number) ||
+          previous.number !== p.number ||
           previous.positions !== JSON.stringify(p.positions) ||
           previous.preferred_foot !== p.preferredFoot ||
           previous.note !== p.note ||
@@ -341,7 +340,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           "UPDATE club_players SET name=?,number=?,positions=?,preferred_foot=?,note=?,avatar=?,revision=revision+1 WHERE id=? AND team_id=1",
         ).run(
           p.name,
-          previous.number === null && p.number === 0 ? null : p.number,
+          p.number,
           JSON.stringify(p.positions),
           p.preferredFoot,
           p.note,
@@ -456,7 +455,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           "UPDATE team_players SET name=?,shirt_number=?,position=?,preferred_foot=?,note=?,portrait=? WHERE player_id=?",
         ).run(
           p.name,
-          p.number ?? 0,
+          p.number,
           JSON.stringify(p.positions),
           p.preferredFoot,
           p.note,
@@ -1213,8 +1212,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   }
   function tacticalDesk() {
     const result = legacy.getDesk();
-    if (!result.desk) return result;
-    const existing = new Map(result.desk.players.map((p) => [p.playerId, p]));
+    // Uninitialized/reset boards use only actual club profiles, never demo seeds.
+    const existing = new Map(
+      (result.desk?.players ?? []).map((p) => [p.playerId, p]),
+    );
     const active = new Map(
       listPlayers(1)
         .filter((p) => p.status === "active")
@@ -1227,11 +1228,11 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       active.delete(id);
     }
     ordered.push(...active.values());
-    result.desk.players = ordered.map((p) => ({
+    const players = ordered.map((p) => ({
       ...existing.get(p.id),
       playerId: p.id,
       name: p.name,
-      number: p.number ?? 0,
+      number: p.number,
       positions: p.positions,
       preferredFoot: p.preferredFoot,
       status: existing.get(p.id)?.status ?? "ok",
@@ -1239,6 +1240,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       avatar: p.avatar,
       fieldPieceId: existing.get(p.id)?.fieldPieceId ?? null,
     }));
+    if (!result.desk) return { ...result, initialPlayers: players };
+    result.desk.players = players;
     return result;
   }
   function assertTacticDeletable(tacticId) {

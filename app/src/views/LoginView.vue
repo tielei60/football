@@ -1,7 +1,7 @@
 <template>
   <main class="club-app club-login-wrap">
     <form class="club-card club-login" @submit.prevent="login">
-      <img src="/team-badge.png" alt="球队徽章" />
+      <img :src="defaultBadge" alt="球队徽章" />
       <h1>回到球队</h1>
       <p class="club-muted">比赛、队友与每一次进步。</p>
       <p v-if="error" class="club-error" role="alert">{{ error }}</p>
@@ -23,6 +23,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import defaultBadge from "@/assets/default-club-badge.svg";
 import { useAuthStore } from "@/stores/authStore";
 
 const auth = useAuthStore();

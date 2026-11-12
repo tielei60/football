@@ -185,7 +185,7 @@ export const useAnimationStore = defineStore(
       }
       openAnimation();
     };
-    const loadDemoAnimation = (squad: { id?: string; name: string; number: number }[], scenario = "cross") => {
+    const loadDemoAnimation = (squad: { id?: string; name: string; number: number | null }[], scenario = "cross") => {
       activate(buildScenario(scenario, squad));
       openAnimation();
     };

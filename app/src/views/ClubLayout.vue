@@ -2,7 +2,7 @@
   <div class="club-app">
     <header class="club-nav">
       <div class="club-brand">
-        <img :src="auth.session?.team.crest || '/team-badge.png'" alt="球队队徽" />
+        <img :src="auth.session?.team.crest || defaultBadge" alt="球队队徽" />
         {{ auth.session?.team.name || "球队俱乐部" }}
       </div>
       <RouterLink to="/club" active-class="" exact-active-class="router-link-active">比赛</RouterLink>
@@ -15,6 +15,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import defaultBadge from "@/assets/default-club-badge.svg";
 import { useAuthStore } from "@/stores/authStore";
 
 const auth = useAuthStore();

@@ -26,7 +26,7 @@
         </div>
         <p class="club-muted">支持 PNG、JPEG、WebP、GIF，最大 2 MiB。选择后预览，保存才会更新球队资料。</p>
         <img
-          :src="draft.crest || '/team-badge.png'"
+          :src="draft.crest || defaultBadge"
           alt="球队队徽预览"
           style="width: 96px; height: 96px; object-fit: contain; margin-bottom: 12px"
         />
@@ -40,7 +40,7 @@
     </form>
     <div v-else-if="draft">
       <img
-        :src="draft.crest || '/team-badge.png'"
+        :src="draft.crest || defaultBadge"
         alt="球队队徽预览"
         style="width: 96px; height: 96px; object-fit: contain"
       />
@@ -53,6 +53,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from "vue";
+import defaultBadge from "@/assets/default-club-badge.svg";
 import { useAuthStore } from "@/stores/authStore";
 import { clubApi, ClubApiError, type Team } from "@/services/clubApi";
 

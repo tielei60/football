@@ -142,7 +142,10 @@ export function useFormation() {
     // 替补按位置补剩余站位（保持模板站位顺序）
     const remaining = spots.filter((s) => free.has(s.index));
     const fillins = squad.filter((p) => !assigned.has(p.id));
-    assignPlayersToFormation(fillins, remaining.map((s) => s.spot)).forEach((player, i) => {
+    assignPlayersToFormation(
+      fillins,
+      remaining.map((s) => s.spot)
+    ).forEach((player, i) => {
       const slot = remaining[i];
       if (slot) {
         assigned.set(player.id, slot);
@@ -176,7 +179,7 @@ export function useFormation() {
         x: slot.x,
         y: slot.y,
         color: posColor(slot.spot.role),
-        number: player.number,
+        number: player.number ?? undefined,
         text: player.name,
         playerPosition: slot.spot.role,
         elementType: "player",

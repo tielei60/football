@@ -3,9 +3,9 @@
 <template>
   <section v-if="tactic" class="print-sheet">
     <header class="ps-head">
-      <img v-if="badgeOk" :src="teamBadge" class="ps-badge" alt="" @error="badgeOk = false" />
+      <img v-if="badgeOk" :src="teamBadge" class="ps-badge" :alt="`${teamName}队徽`" @error="badgeOk = false" />
       <div class="ps-titles">
-        <h1>{{ TEAM.name }} · {{ tactic.title }}</h1>
+        <h1>{{ teamName }} · {{ tactic.title }}</h1>
         <p>
           {{ dateStr }} ｜ {{ (tactic.tags || []).join(" / ") || "无标签" }} ｜
           {{ tactic.snapshot.playerCount ?? 8 }}人制
@@ -20,29 +20,13 @@
           <Drawing v-for="d in drawings" :key="d.id" :drawing="d" />
         </g>
         <g v-for="p in players" :key="p.id">
-          <defs>
-            <clipPath :id="`ps-clip-${p.id}`">
-              <circle :cx="p.x" :cy="p.y" :r="22" />
-            </clipPath>
-          </defs>
           <circle :cx="p.x" :cy="p.y" :r="24" :fill="p.color" stroke="#fff" stroke-width="3" />
-          <image
-            v-if="showAvatar(p)"
-            :href="avatarOf(p)"
-            :x="p.x - 24"
-            :y="p.y - 24"
-            :width="48"
-            :height="48"
-            :clip-path="`url(#ps-clip-${p.id})`"
-            preserveAspectRatio="xMidYMid slice"
-            @error="onAvatarError(p)"
-          />
           <circle :cx="p.x" :cy="p.y" :r="24" fill="none" :stroke="p.color" stroke-width="3" />
           <text :x="p.x" :y="p.y - 32" text-anchor="middle" class="ps-name">{{ p.text }}</text>
           <text :x="p.x" :y="p.y + 40" text-anchor="middle" class="ps-pos">{{ positionOf(p) }}</text>
           <circle :cx="p.x + 17" :cy="p.y + 17" r="11" fill="#101828" stroke="#fff" stroke-width="2" />
           <text :x="p.x + 17" :y="p.y + 17" text-anchor="middle" dominant-baseline="central" class="ps-num">
-            {{ p.number }}
+            {{ p.number ?? "—" }}
           </text>
         </g>
       </EightField>
@@ -50,15 +34,15 @@
 
     <div class="ps-lineups">
       <div class="ps-team">
-        <h2>主队 · {{ TEAM.name }}</h2>
+        <h2>主队 · {{ teamName }}</h2>
         <ol>
-          <li v-for="p in homeLineup" :key="p.id">{{ p.number }}号 {{ p.text }}（{{ positionOf(p) }}）</li>
+          <li v-for="p in homeLineup" :key="p.id">{{ numberLabel(p) }} {{ p.text }}（{{ positionOf(p) }}）</li>
         </ol>
       </div>
       <div class="ps-team" v-if="awayLineup.length">
         <h2>对手</h2>
         <ol>
-          <li v-for="p in awayLineup" :key="p.id">{{ p.number }}号（{{ posLabel(p.playerPosition) }}）</li>
+          <li v-for="p in awayLineup" :key="p.id">{{ numberLabel(p) }}（{{ posLabel(p.playerPosition) }}）</li>
         </ol>
       </div>
     </div>
@@ -75,33 +59,33 @@
       </p>
     </section>
     <footer class="ps-foot" v-if="note">备注：{{ note }}</footer>
-    <div class="ps-unfit" v-if="unfitList.length">伤停：{{ unfitList }}</div>
+    <p class="ps-snapshot-note">姓名、号码及位置以此战术存档为准。存档未保存球员头像与伤停状态，不使用当前档案补填。</p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import EightField from "@/components/fields/EightField.vue";
 import Drawing from "@/components/drawings/Drawing.vue";
 import { Drawing as DrawingModel } from "@/types/drawing";
-import { TEAM } from "@/data/berlinGarden";
-import { posLabel, STATUS_META, resolveAvatar, resolveRosterPlayer } from "@/data/berlinGarden";
+import { posLabel } from "@/data/berlinGarden";
 import type { TacticRecord } from "@/db";
-import { useRosterStore } from "@/stores/rosterStore";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
 
 const props = defineProps<{ tactic: TacticRecord | null; note?: string }>();
 
-const teamBadge = TEAM.badge;
-const rosterStore = useRosterStore();
+const { teamName, teamBadge } = useTeamIdentity();
 const badgeOk = ref(true);
-const avatarOk = reactive<Record<string, boolean>>({});
+watch(teamBadge, () => {
+  badgeOk.value = true;
+});
 
 interface SnapPlayer {
   id: string | number;
   x: number;
   y: number;
   color: string;
-  number?: number;
+  number?: number | null;
   text?: string;
   playerPosition?: string;
   team?: string;
@@ -119,18 +103,9 @@ const drawings = computed(() =>
 const homeLineup = computed(() => players.value.filter((p) => p.team !== "away"));
 const awayLineup = computed(() => players.value.filter((p) => p.team === "away"));
 
-const positionOf = (player: SnapPlayer) => {
-  if (player.team !== "away") {
-    const entry = resolveRosterPlayer(rosterStore.players, {
-      rosterId: player.rosterId,
-      text: player.text,
-      number: player.number,
-      team: player.team,
-    });
-    if (entry?.positions?.length) return entry.positions.join("、");
-  }
-  return posLabel(player.playerPosition);
-};
+// Print only the position serialized in the archived board, not a later player profile.
+const positionOf = (player: SnapPlayer) => (player.playerPosition ? posLabel(player.playerPosition) : "位置未知");
+const numberLabel = (player: SnapPlayer) => (player.number == null ? "号码未知" : `${player.number}号`);
 
 const dateStr = computed(() => (props.tactic ? new Date(props.tactic.updatedAt).toLocaleDateString("zh-CN") : ""));
 
@@ -141,40 +116,6 @@ const matchLine = computed(() => {
     .filter(Boolean)
     .join(" ｜ ");
 });
-
-// 伤停名单读实时 roster（永远最新，不随快照）
-const unfitList = computed(() => {
-  try {
-    const rosterStore = useRosterStore();
-    return rosterStore.players
-      .filter((r) => r.status && r.status !== "ok")
-      .map((r) => `${r.name}(${STATUS_META[r.status ?? "ok"].label})`)
-      .join("、");
-  } catch {
-    return "";
-  }
-});
-
-// 主队按 id→姓名→号码三级关联头像；对手无头像
-const avatarOf = (p: SnapPlayer): string | undefined => {
-  if (p.team === "away") return undefined;
-  try {
-    return resolveAvatar(rosterStore.players, {
-      rosterId: p.rosterId,
-      text: p.text,
-      number: p.number,
-      team: p.team,
-    });
-  } catch {
-    return undefined;
-  }
-};
-
-const avatarKey = (p: SnapPlayer) => String(p.id);
-const showAvatar = (p: SnapPlayer) => !!avatarOf(p) && avatarOk[avatarKey(p)] !== false;
-const onAvatarError = (p: SnapPlayer) => {
-  avatarOk[avatarKey(p)] = false;
-};
 </script>
 
 <style scoped>
@@ -249,7 +190,7 @@ const onAvatarError = (p: SnapPlayer) => {
   padding-top: 6px;
 }
 
-.ps-unfit {
+.ps-snapshot-note {
   margin-top: 6px;
   font-size: 13px;
   color: #c0392b;

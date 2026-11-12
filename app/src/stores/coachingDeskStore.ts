@@ -4,7 +4,6 @@ import { useTacticsStore } from "./tacticsStore";
 import { useRosterStore, type RosterEntry } from "./rosterStore";
 import { useHistoryStore } from "./historyStore";
 import { useFormation } from "@/composables/useFormation";
-import { migrateBoardIfNeeded } from "@/utils/migrateBoard";
 import { apiRequest, TacticsApiError } from "@/services/tacticsApi";
 import { toBoard, fromBoard, type Board } from "@/services/tacticLanguage";
 import { normalizePlayerPositions, type PlayerPosition } from "@/data/berlinGarden";
@@ -17,7 +16,7 @@ import { useMatchStore } from "./matchStore";
 interface TeamPlayer {
   playerId: string;
   name: string;
-  number: number;
+  number: number | null;
   positions?: PlayerPosition[];
   position?: string;
   preferredFoot: string;
@@ -33,6 +32,7 @@ interface CoachingDesk {
 }
 interface SavedDesk {
   desk: CoachingDesk | null;
+  initialPlayers?: TeamPlayer[];
   edition: number;
   savedAt: number | null;
 }
@@ -250,7 +250,22 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
       }
       await apply(saved);
       if (!saved.desk) {
-        migrateBoardIfNeeded();
+        // Server-empty desks must never publish unrelated browser caches or demonstration players.
+        // Existing server desks remain intact; the old local draft is backed up above.
+        if (!Array.isArray(saved.initialPlayers)) throw new Error("服务器未提供球队初始名单，请更新服务后重试。");
+        roster.players = saved.initialPlayers.map((p) => ({
+          id: p.playerId,
+          name: p.name,
+          number: p.number,
+          positions: normalizePlayerPositions(p.positions ?? p.position),
+          foot: p.preferredFoot,
+          status: p.status,
+          note: p.note,
+          avatar: p.avatar ?? undefined,
+          fieldId: null,
+        }));
+        tactics.restoreSnapshot(fromBoard({ playerCount: useMatchStore().playerCount, pieces: [], markings: [] }));
+        tactics.currentId = null;
         const formation = useFormation();
         formation.seedDefaultFormation();
         formation.tidyCurrentBoard();

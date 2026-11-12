@@ -16,8 +16,11 @@ import {
 import { useGlobalStore } from "@/stores/globalStore";
 import { useAnimationStore } from "@/stores/animationStore";
 import { MATCH_FORMATIONS, MATCH_PLAYER_COUNTS, type MatchPlayerCount } from "@/data/matchFormats";
-import { TEAM } from "@/data/berlinGarden";
+
 import CoachingSaveStatus from "./CoachingSaveStatus.vue";
+import { useTeamIdentity } from "@/composables/useTeamIdentity";
+
+const { teamName, teamBadge } = useTeamIdentity();
 
 const props = defineProps<{
   compact?: boolean;
@@ -57,12 +60,11 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
     <div class="workspace-topline">
       <div class="club-identity">
         <RouterLink to="/club" class="club-home-link" aria-label="← 俱乐部" title="返回俱乐部">
-          <img :src="TEAM.badge" alt="柏林花园 FC 队徽" class="club-badge" />
+          <img :src="teamBadge" :alt="`${teamName}队徽`" class="club-badge" />
         </RouterLink>
         <div>
-          <h1>
-            柏林花园
-            <span>FC</span>
+          <h1 :title="teamName">
+            {{ teamName }}
           </h1>
           <p>
             教练工作台
@@ -245,7 +247,8 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         <button
           class="workspace-icon"
           aria-label="动态演示"
-          title="动态演示"
+          :title="playerCount === 8 ? '动态演示' : '预置动态演示仅限 8 人制'"
+          :disabled="playerCount !== 8"
           @click="
             emit('demo');
             settingsOpen = false;
@@ -286,6 +289,15 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  max-width: min(38vw, 420px);
+}
+.club-identity > div {
+  min-width: 0;
+}
+.club-identity h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .club-badge {
   width: 46px;

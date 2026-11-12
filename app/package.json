@@ -22,7 +22,10 @@
     "backup": "node ../scripts/backup.mjs",
     "bootstrap-admin": "node ../server/bootstrap-admin.mjs",
     "check": "npm run build && npm run test:unit && npm run test:server && npm run test:bundle",
-    "test:unit": "node --test tests/*.test.mjs"
+    "test:unit": "node --test tests/*.test.mjs",
+    "demo": "node ../scripts/start-demo.mjs",
+    "demo:seed": "node ../scripts/create-demo.mjs",
+    "demo:check": "node ../scripts/audit-business-flow.mjs"
   },
   "dependencies": {
     "@vueuse/core": "^10.11.0",

@@ -8,7 +8,10 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const adminCredentials = { username: "testadmin", password: "test-password-123" };
+const adminCredentials = {
+  username: "testadmin",
+  password: "test-password-123",
+};
 
 async function login(origin) {
   const response = await fetch(origin + "/api/auth/login", {
@@ -55,7 +58,11 @@ async function fixture(t, options = {}) {
   let origin;
   let cookie;
   async function start() {
-    server = createFootballServer({ databasePath, bootstrapAdmin: adminCredentials, ...options });
+    server = createFootballServer({
+      databasePath,
+      bootstrapAdmin: adminCredentials,
+      ...options,
+    });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -80,7 +87,11 @@ async function fixture(t, options = {}) {
     async request(path, method = "GET", body) {
       const response = await fetch(origin + path, {
         method,
-        headers: { cookie, origin, ...(body === undefined ? {} : { "content-type": "application/json" }) },
+        headers: {
+          cookie,
+          origin,
+          ...(body === undefined ? {} : { "content-type": "application/json" }),
+        },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       const text = await response.text();
@@ -212,6 +223,7 @@ test("stale desk edits and invalid players never replace the saved board or rost
     desk: null,
     edition: 0,
     savedAt: null,
+    initialPlayers: [],
   });
   const desk = { board, players: [player], selectedTacticId: null };
   const saved = await app.request("/api/coaching-desk", "PUT", {
@@ -534,7 +546,11 @@ test("malformed requests and unknown API paths return bounded uncached errors", 
   const app = await fixture(t, { maximumRequestBytes: 1024 });
   const malformed = await fetch(app.origin + "/api/tactics", {
     method: "POST",
-    headers: { "content-type": "application/json", cookie: app.cookie, origin: app.origin },
+    headers: {
+      "content-type": "application/json",
+      cookie: app.cookie,
+      origin: app.origin,
+    },
     body: "{",
   });
   assert.equal(malformed.status, 400);
@@ -652,7 +668,9 @@ test("a committed tactic survives stopping and restarting the Node server proces
   origin = await start();
   cookie = await login(origin);
   const restored = await (
-    await fetch(origin + `/api/tactics/${saved.tacticId}`, { headers: { cookie } })
+    await fetch(origin + `/api/tactics/${saved.tacticId}`, {
+      headers: { cookie },
+    })
   ).json();
   assert.deepEqual(restored, saved);
 });

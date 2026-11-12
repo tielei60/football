@@ -17,3 +17,7 @@ playwright-report/
 .env
 .env.*
 !.env.example
+
+# Fictional local demo manifests contain per-run credentials.
+demo-manifest.json
+.football-demo-owned

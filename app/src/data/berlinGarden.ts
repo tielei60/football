@@ -21,7 +21,7 @@ export type PlayerRole = "GK" | "DF" | "MF" | "FW" | "待定";
 export interface TeamPlayer {
   id: string;
   name: string;
-  number: number;
+  number: number | null;
   positions: PlayerPosition[];
   foot: string;
   status?: PlayerStatus;

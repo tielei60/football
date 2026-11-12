@@ -431,11 +431,12 @@ function validatePlayer(player) {
   if (!string(player.playerId, "球员编号", 200)) reject("请填写球员编号。");
   if (!string(player.name, "球员姓名", 200).trim()) reject("请填写球员姓名。");
   if (
-    !Number.isInteger(player.number) ||
-    player.number < 0 ||
-    player.number > 9999
+    player.number !== null &&
+    (!Number.isInteger(player.number) ||
+      player.number < 0 ||
+      player.number > 9999)
   )
-    reject("球衣号码须在 0 到 9999 之间。");
+    reject("球衣号码须在 0 到 9999 之间，未记录时请留空。");
   for (const name of ["preferredFoot", "status", "note"])
     string(player[name], "球员资料");
   player.positions = normalizePlayerPositions(player);
@@ -481,7 +482,7 @@ export function openFootballStore(databasePath) {
     ) STRICT;
     CREATE TABLE IF NOT EXISTS team_players (
       player_id TEXT PRIMARY KEY, desk_id INTEGER NOT NULL REFERENCES coaching_desks(desk_id) ON DELETE CASCADE,
-      team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER NOT NULL,
+      team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER,
       position TEXT NOT NULL, preferred_foot TEXT NOT NULL, availability TEXT NOT NULL,
       note TEXT NOT NULL, portrait TEXT, field_piece_id TEXT
     ) STRICT;
@@ -492,6 +493,36 @@ export function openFootballStore(databasePath) {
       migration_name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL
     ) STRICT;
   `);
+  // Existing SQLite tables cannot drop NOT NULL in place. Copy every legacy
+  // field in one transaction before swapping tables; history and IDs stay intact.
+  if (
+    database
+      .prepare("PRAGMA table_info(team_players)")
+      .all()
+      .find((column) => column.name === "shirt_number")?.notnull
+  ) {
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      database.exec(`CREATE TABLE team_players_nullable_v7 (
+        player_id TEXT PRIMARY KEY, desk_id INTEGER NOT NULL REFERENCES coaching_desks(desk_id) ON DELETE CASCADE,
+        team_order INTEGER NOT NULL, name TEXT NOT NULL, shirt_number INTEGER,
+        position TEXT NOT NULL, preferred_foot TEXT NOT NULL, availability TEXT NOT NULL,
+        note TEXT NOT NULL, portrait TEXT, field_piece_id TEXT
+      ) STRICT;
+      INSERT INTO team_players_nullable_v7 SELECT * FROM team_players;
+      DROP TABLE team_players;
+      ALTER TABLE team_players_nullable_v7 RENAME TO team_players;`);
+      database
+        .prepare(
+          "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES (?,?)",
+        )
+        .run("team-player-unknown-number-v7", Date.now());
+      database.exec("COMMIT");
+    } catch (error) {
+      database.exec("ROLLBACK");
+      throw error;
+    }
+  }
   const rosterMigration = "berlin-garden-roster-csv-positions-v2";
   const migrationApplied = database
     .prepare("SELECT 1 FROM app_migrations WHERE migration_name = ?")

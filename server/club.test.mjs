@@ -2034,3 +2034,176 @@ test("match metadata migration leaves old season membership and side explicitly 
   assert.equal(year.matches, 1);
   assert.equal(year.unassignedMatches, 1);
 });
+
+test("fresh-team desk initializes only four actual profiles and preserves unknown numbers as null", async (t) => {
+  const f = await fixture(t),
+    cookie = await f.login();
+  const call = (route, method = "GET", body) =>
+    f.request(route, { cookie, method, body });
+  const empty = (await call("/api/coaching-desk")).body;
+  assert.equal(empty.desk, null);
+  assert.deepEqual(empty.initialPlayers, []);
+  assert.deepEqual((await call("/api/players")).body, []);
+  assert.deepEqual((await call("/api/tactics")).body, []);
+  const players = [];
+  for (const name of ["演练甲", "演练乙", "演练丙", "演练丁"])
+    players.push(
+      (await call("/api/players", "POST", { name, positions: ["中场"] })).body,
+    );
+  const fresh = (await call("/api/coaching-desk")).body;
+  assert.equal(fresh.desk, null);
+  assert.equal(fresh.initialPlayers.length, 4);
+  assert.deepEqual(
+    new Set(fresh.initialPlayers.map((p) => p.playerId)),
+    new Set(players.map((p) => p.id)),
+  );
+  assert.ok(
+    fresh.initialPlayers.every(
+      (p) => p.number === null && !p.playerId.startsWith("bg-"),
+    ),
+  );
+  const db = new DatabaseSync(f.path);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM team_players").get().n, 0);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM club_players").get().n, 4);
+  db.close();
+  const initialized = (
+    await call("/api/coaching-desk", "PUT", {
+      edition: fresh.edition,
+      desk: {
+        board: { pieces: [], markings: [] },
+        players: fresh.initialPlayers,
+        selectedTacticId: null,
+      },
+    })
+  ).body;
+  assert.equal(initialized.desk.players.length, 4);
+  assert.ok(initialized.desk.players.every((p) => p.number === null));
+  assert.ok((await call("/api/players")).body.every((p) => p.number === null));
+  const stored = new DatabaseSync(f.path);
+  assert.equal(
+    stored
+      .prepare(
+        "SELECT count(*) AS n FROM team_players WHERE shirt_number IS NULL",
+      )
+      .get().n,
+    4,
+  );
+  stored.close();
+  await f.restart();
+  const next = await f.login();
+  const reopened = (await f.request("/api/coaching-desk", { cookie: next }))
+    .body;
+  assert.deepEqual(reopened.desk.players, initialized.desk.players);
+  assert.equal(
+    (await f.request("/api/players", { cookie: next })).body.length,
+    4,
+  );
+  // Explicit zero is a real recorded number, distinct from an absent number.
+  reopened.desk.players[0].number = 0;
+  const known = (
+    await f.request("/api/coaching-desk", {
+      cookie: next,
+      method: "PUT",
+      body: reopened,
+    })
+  ).body;
+  assert.equal(known.desk.players[0].number, 0);
+  const current = (await f.request("/api/players", { cookie: next })).body;
+  assert.equal(
+    current.find((p) => p.id === known.desk.players[0].playerId).number,
+    0,
+  );
+  assert.equal(current.filter((p) => p.number === null).length, 3);
+});
+
+test("legacy non-null shirt-number migration preserves historical desk and accepts unknown numbers", async (t) => {
+  const historical = {
+    playerId: "historic-player",
+    name: "已有历史球员",
+    number: 8,
+    positions: ["后卫"],
+    preferredFoot: "右",
+    status: "injured",
+    note: "已有档案",
+    avatar: "/historic.png",
+    fieldPieceId: null,
+  };
+  const f = await fixture(t, (path) => {
+    const legacy = openFootballStore(path);
+    legacy.saveDesk({
+      edition: 0,
+      desk: {
+        board: { pieces: [], markings: [] },
+        selectedTacticId: null,
+        players: [historical],
+      },
+    });
+    legacy.database.exec(`BEGIN IMMEDIATE;
+    ALTER TABLE team_players RENAME TO fixture_nullable_players;
+    CREATE TABLE team_players (
+      player_id TEXT PRIMARY KEY,desk_id INTEGER NOT NULL REFERENCES coaching_desks(desk_id) ON DELETE CASCADE,
+      team_order INTEGER NOT NULL,name TEXT NOT NULL,shirt_number INTEGER NOT NULL,
+      position TEXT NOT NULL,preferred_foot TEXT NOT NULL,availability TEXT NOT NULL,
+      note TEXT NOT NULL,portrait TEXT,field_piece_id TEXT
+    ) STRICT;
+    INSERT INTO team_players SELECT * FROM fixture_nullable_players;
+    DROP TABLE fixture_nullable_players;
+    COMMIT;`);
+    assert.equal(
+      legacy.database
+        .prepare("PRAGMA table_info(team_players)")
+        .all()
+        .find((c) => c.name === "shirt_number").notnull,
+      1,
+    );
+    legacy.close();
+  });
+  const cookie = await f.login();
+  const before = (await f.request("/api/coaching-desk", { cookie })).body;
+  assert.deepEqual(before.desk.players, [historical]);
+  assert.equal(before.initialPlayers, undefined);
+  const db = new DatabaseSync(f.path);
+  assert.equal(
+    db
+      .prepare("PRAGMA table_info(team_players)")
+      .all()
+      .find((c) => c.name === "shirt_number").notnull,
+    0,
+  );
+  assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  db.close();
+  const changed = await f.request("/api/players/historic-player", {
+    cookie,
+    method: "PUT",
+    body: { number: null },
+  });
+  assert.equal(changed.status, 200);
+  const unknown = (await f.request("/api/coaching-desk", { cookie })).body;
+  assert.equal(unknown.desk.players[0].number, null);
+  assert.equal(unknown.desk.players[0].status, "injured");
+  assert.equal(unknown.desk.players[0].note, "已有档案");
+  assert.equal(
+    (
+      await f.request("/api/coaching-desk", {
+        cookie,
+        method: "PUT",
+        body: unknown,
+      })
+    ).status,
+    200,
+  );
+  await f.restart();
+  const next = await f.login();
+  const reopened = (await f.request("/api/coaching-desk", { cookie: next }))
+    .body;
+  assert.deepEqual(reopened.desk.players, [{ ...historical, number: null }]);
+  const checked = new DatabaseSync(f.path);
+  assert.equal(
+    checked
+      .prepare("SELECT shirt_number FROM team_players WHERE player_id=?")
+      .get(historical.playerId).shirt_number,
+    null,
+  );
+  assert.deepEqual(checked.prepare("PRAGMA foreign_key_check").all(), []);
+  checked.close();
+});

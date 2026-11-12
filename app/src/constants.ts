@@ -2,7 +2,7 @@ import type { ElementType } from "@/types/fieldElement";
 
 export const GAME_CONSTANTS = {
   showWatermark: true, // 是否显示水印
-  showWatermarkText: "柏林花园FC · 8人制战术板", // 水印文本
+  showWatermarkText: "足球俱乐部 · 战术板", // 水印文本
 };
 
 export const ELEMENT_RADIUS_OBJECT: Record<ElementType, number> = {
