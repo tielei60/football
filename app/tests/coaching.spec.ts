@@ -1,6 +1,6 @@
-import { type Page } from "@playwright/test";
-import { test, expect } from "./fixtures";
 import { readFile } from "node:fs/promises";
+import { type Page } from "@playwright/test";
+import { test, expect } from "./tactical-fixtures";
 
 const row = (page: Page, index: number) => page.locator(".roster-item").nth(index);
 const boardPlayers = (page: Page) =>
@@ -12,7 +12,11 @@ const boardPlayers = (page: Page) =>
       .map((p) => ({ id: p.id, rosterId: p.rosterId, x: p.x, y: p.y, role: p.playerPosition }));
   });
 
-test("substitution keeps the outgoing position and can be undone and redone with the roster", async ({ page }) => {
+test("substitution keeps the outgoing position and can be undone and redone with the roster", async ({
+  page,
+  request,
+}) => {
+  const profiles = await (await request.get("/api/players")).json();
   await page.goto("/board");
   await expect(row(page, 0)).toBeVisible();
   const before = await boardPlayers(page);
@@ -25,8 +29,12 @@ test("substitution keeps the outgoing position and can be undone and redone with
   await expect(row(page, 0).getByRole("button", { name: "上场", exact: true })).toBeVisible();
   const after = await boardPlayers(page);
   expect(after).toHaveLength(8);
-  const incoming = after.find((p) => p.rosterId === "bg-9")!;
-  const outgoing = before.find((p) => p.rosterId === "bg-1")!;
+  const incoming = after.find(
+    (p) => p.rosterId === profiles.find((player: { number: number }) => player.number === 9).id
+  )!;
+  const outgoing = before.find(
+    (p) => p.rosterId === profiles.find((player: { number: number }) => player.number === 1).id
+  )!;
   expect({ x: incoming.x, y: incoming.y, role: incoming.role }).toEqual({
     x: outgoing.x,
     y: outgoing.y,

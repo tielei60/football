@@ -86,6 +86,7 @@ test("player logs in, registers independently of appearance, and cannot access b
 });
 
 test("leaving a loading board settles and suspends it before club profile edits", async ({ page, request }) => {
+  expect((await request.post("/api/players", { data: { name: "加载竞态虚构球员" } })).ok()).toBe(true);
   await page.goto("/board");
   await expect(page.locator(".roster-item").first()).toBeVisible();
   await page.getByRole("link", { name: "← 俱乐部" }).click();
@@ -186,7 +187,8 @@ test("first board save adopts club-only players immediately and persists them on
   await expect(page.locator(".roster-item").filter({ hasText: name })).toBeVisible();
 });
 
-test("autosave preserves board undo and redo history", async ({ page }) => {
+test("autosave preserves board undo and redo history", async ({ page, request }) => {
+  expect((await request.post("/api/players", { data: { name: "撤销历史虚构球员" } })).ok()).toBe(true);
   await page.goto("/board");
   const row = page.locator(".roster-item").first();
   await row.getByRole("button", { name: /队员详情/ }).click();

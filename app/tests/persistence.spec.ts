@@ -1,4 +1,4 @@
-import { test, expect, authenticateAdmin } from "./fixtures";
+import { test, expect, authenticateAdmin } from "./tactical-fixtures";
 
 test("legacy browser tactics import into the server once with their version history", async ({ page, request }) => {
   await page.goto("/board");

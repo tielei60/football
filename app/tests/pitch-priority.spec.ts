@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 for (const viewport of [
   { width: 390, height: 844 },
@@ -20,12 +20,12 @@ for (const viewport of [
     const roster = page.getByRole("button", { name: "阵容", exact: true });
     await roster.click();
     await expect(roster).toHaveAttribute("aria-expanded", "true");
-    await page.getByRole("searchbox", { name: "搜索队员" }).fill("刘");
+    await page.getByRole("searchbox", { name: "搜索队员" }).fill("虚构战术队员01");
     await page.getByRole("button", { name: "收起操作面板", exact: true }).click();
     await expect(page.getByRole("searchbox", { name: "搜索队员" })).toBeHidden();
     expect(await pitch.boundingBox()).toEqual(before);
     await roster.click();
-    await expect(page.getByRole("searchbox", { name: "搜索队员" })).toHaveValue("刘");
+    await expect(page.getByRole("searchbox", { name: "搜索队员" })).toHaveValue("虚构战术队员01");
     await page.screenshot({ path: `test-results/pitch-roster-sheet-${viewport.width}.png` });
     await roster.click();
     await expect(roster).toHaveAttribute("aria-expanded", "false");

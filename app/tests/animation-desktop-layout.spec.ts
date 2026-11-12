@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("1180 by 757 desktop animation retains a usable pitch and exposes eight-a-side preset restriction", async ({
   page,

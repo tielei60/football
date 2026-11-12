@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("opening and importing a tactic restores its exact formation metadata", async ({ page }) => {
   await page.goto("/board");

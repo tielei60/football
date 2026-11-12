@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 
 test("desktop roster scrolls independently and expanded mode exposes more players", async ({ page }) => {
   await page.goto("/board");

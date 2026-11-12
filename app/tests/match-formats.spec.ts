@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "./tactical-fixtures";
 import { MATCH_FORMATIONS, MATCH_PLAYER_COUNTS } from "../src/data/matchFormats";
 
 test("every formation has one goalkeeper and the correct number of players", () => {
