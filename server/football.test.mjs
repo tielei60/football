@@ -8,6 +8,20 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+const adminCredentials = { username: "testadmin", password: "test-password-123" };
+
+async function login(origin) {
+  const response = await fetch(origin + "/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin },
+    body: JSON.stringify(adminCredentials),
+  });
+  assert.equal(response.status, 200);
+  const cookie = response.headers.get("set-cookie")?.split(";")[0];
+  assert.ok(cookie);
+  return cookie;
+}
+
 const board = {
   pieces: [{ pieceId: "player-1", x: 50, y: 100 }],
   markings: [],
@@ -39,11 +53,13 @@ async function fixture(t, options = {}) {
   const databasePath = join(directory, "football.sqlite");
   let server;
   let origin;
+  let cookie;
   async function start() {
-    server = createFootballServer({ databasePath, ...options });
+    server = createFootballServer({ databasePath, bootstrapAdmin: adminCredentials, ...options });
     server.listen(0, "127.0.0.1");
     await once(server, "listening");
     origin = `http://127.0.0.1:${server.address().port}`;
+    cookie = await login(origin);
   }
   async function close() {
     if (server?.listening)
@@ -51,11 +67,11 @@ async function fixture(t, options = {}) {
         server.close((error) => (error ? reject(error) : resolve())),
       );
   }
-  await start();
   t.after(async () => {
     await close();
     await rm(directory, { recursive: true, force: true });
   });
+  await start();
   return {
     databasePath,
     directory,
@@ -64,8 +80,7 @@ async function fixture(t, options = {}) {
     async request(path, method = "GET", body) {
       const response = await fetch(origin + path, {
         method,
-        headers:
-          body === undefined ? {} : { "content-type": "application/json" },
+        headers: { cookie, origin, ...(body === undefined ? {} : { "content-type": "application/json" }) },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       const text = await response.text();
@@ -74,6 +89,9 @@ async function fixture(t, options = {}) {
         body: text ? JSON.parse(text) : null,
         headers: response.headers,
       };
+    },
+    get cookie() {
+      return cookie;
     },
     get origin() {
       return origin;
@@ -516,7 +534,7 @@ test("malformed requests and unknown API paths return bounded uncached errors", 
   const app = await fixture(t, { maximumRequestBytes: 1024 });
   const malformed = await fetch(app.origin + "/api/tactics", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", cookie: app.cookie, origin: app.origin },
     body: "{",
   });
   assert.equal(malformed.status, 400);
@@ -566,7 +584,7 @@ test("production serves static assets and page routes without hiding absent asse
     "application/manifest+json",
   );
   assert.equal((await fetch(app.origin + "/assets/missing.js")).status, 404);
-  assert.equal((await fetch(app.origin + "/api/missing")).status, 404);
+  assert.equal((await app.request("/api/missing")).status, 404);
 });
 
 test("a committed tactic survives stopping and restarting the Node server process", async (t) => {
@@ -582,6 +600,9 @@ test("a committed tactic survives stopping and restarting the Node server proces
           PORT: "0",
           HOST: "127.0.0.1",
           FOOTBALL_DB_PATH: join(directory, "football.sqlite"),
+          FOOTBALL_ADMIN_USERNAME: adminCredentials.username,
+          FOOTBALL_ADMIN_PASSWORD: adminCredentials.password,
+          FOOTBALL_PUBLIC_ORIGIN: "",
         },
         stdio: ["ignore", "pipe", "pipe"],
       },
@@ -618,18 +639,20 @@ test("a committed tactic survives stopping and restarting the Node server proces
     await rm(directory, { recursive: true, force: true });
   });
   let origin = await start();
+  let cookie = await login(origin);
   const saved = await (
     await fetch(origin + "/api/tactics", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", cookie, origin },
       body: JSON.stringify({ tactic, note: "Persist through restart" }),
     })
   ).json();
   assert.ok(saved.tacticId > 0);
   await stop();
   origin = await start();
+  cookie = await login(origin);
   const restored = await (
-    await fetch(origin + `/api/tactics/${saved.tacticId}`)
+    await fetch(origin + `/api/tactics/${saved.tacticId}`, { headers: { cookie } })
   ).json();
   assert.deepEqual(restored, saved);
 });

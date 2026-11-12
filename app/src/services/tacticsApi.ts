@@ -21,6 +21,7 @@ export async function apiRequest<T>(path: string, options: { method?: string; bo
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
     if (!response.ok) {
+      if (response.status === 401) window.location.assign("/login");
       const detail = await response.json().catch(() => null);
       throw new TacticsApiError(detail?.message || "战术服务暂时不可用，请稍后重试", response.status);
     }

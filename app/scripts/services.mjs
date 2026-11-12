@@ -107,7 +107,7 @@ async function start(name) {
   for (let attempt = 0; attempt < 150; attempt++) {
     if (!(await state(name))) break;
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/${name === "backend" ? "api/tactics" : ""}`, {
+      const response = await fetch(`http://127.0.0.1:${port}/${name === "backend" ? "api/health" : ""}`, {
         signal: AbortSignal.timeout(1000),
       });
       await response.arrayBuffer();

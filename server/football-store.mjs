@@ -449,6 +449,7 @@ export function openFootballStore(databasePath) {
   if (databasePath !== ":memory:")
     mkdirSync(dirname(resolve(databasePath)), { recursive: true });
   const database = new DatabaseSync(databasePath);
+  const appliedMigrations = [];
   database.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -540,6 +541,7 @@ export function openFootballStore(databasePath) {
           "INSERT INTO app_migrations (migration_name, applied_at) VALUES (?, ?)",
         )
         .run(rosterMigration, Date.now());
+      appliedMigrations.push(rosterMigration);
       database.exec("COMMIT");
     } catch (error) {
       database.exec("ROLLBACK");
@@ -747,6 +749,8 @@ export function openFootballStore(databasePath) {
     };
   };
   return {
+    database,
+    appliedMigrations,
     close: () => database.close(),
     listTactics,
     getTactic,

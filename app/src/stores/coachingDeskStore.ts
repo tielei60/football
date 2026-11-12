@@ -238,6 +238,15 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
     await initializing;
   }
 
+  async function settleInitialization() {
+    if (initializing) await initializing;
+  }
+
+  function suspend() {
+    clearTimeout(timer);
+    ready.value = false;
+  }
+
   function downloadDraft() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([JSON.stringify(capture(), null, 2)], { type: "application/json" }));
@@ -247,5 +256,17 @@ export const useCoachingDeskStore = defineStore("coachingDesk", () => {
     URL.revokeObjectURL(url);
   }
 
-  return { ready, status, message, savedAt, edition, hasUnsavedChanges, initialize, flush, downloadDraft };
+  return {
+    ready,
+    status,
+    message,
+    savedAt,
+    edition,
+    hasUnsavedChanges,
+    initialize,
+    flush,
+    settleInitialization,
+    suspend,
+    downloadDraft,
+  };
 });

@@ -10,7 +10,7 @@
 
 ```sh
 cd app
-yarn install             # 按锁文件安装依赖
+npm ci                   # 按 package-lock.json 安装依赖
 npm run dev              # 启动 Vite（15173）和 API（13001）
 npm run build            # 执行类型检查并生成 app/dist
 npm run test:server      # 运行 Node/SQLite 集成测试

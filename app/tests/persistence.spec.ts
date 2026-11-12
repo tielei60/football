@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, authenticateAdmin } from "./fixtures";
 
 test("legacy browser tactics import into the server once with their version history", async ({ page, request }) => {
   await page.goto("/board");
@@ -58,6 +58,7 @@ test("saved tactics are available in a fresh browser without browser storage", a
 
   const freshContext = await browser.newContext();
   try {
+    await authenticateAdmin(freshContext.request, page.url());
     expect((await freshContext.storageState()).origins).toEqual([]);
     const freshPage = await freshContext.newPage();
     await freshPage.goto(new URL("/board", page.url()).href);
@@ -100,6 +101,7 @@ test("a fresh browser restores the roster, board, training plan and animation fr
 
   const freshContext = await browser.newContext();
   try {
+    await authenticateAdmin(freshContext.request, page.url());
     const fresh = await freshContext.newPage();
     await fresh.goto(new URL("/board", page.url()).href);
     await expect(fresh.locator(".roster-name", { hasText: "持久化新队员" })).toBeVisible();
@@ -192,6 +194,7 @@ test("concurrent desks report conflicts without overwriting another browser's ch
   await expect(page.getByLabel("保存状态")).toContainText("已保存");
   const otherContext = await browser.newContext();
   try {
+    await authenticateAdmin(otherContext.request, page.url());
     const other = await otherContext.newPage();
     await other.goto(new URL("/board", page.url()).href);
     await expect(other.getByLabel("保存状态")).toContainText("已保存");

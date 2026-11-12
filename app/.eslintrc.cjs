@@ -9,7 +9,7 @@ module.exports = {
     parser: "@typescript-eslint/parser",
     sourceType: "module",
   },
-  extends: ["airbnb-base", "prettier", "plugin:vue/essential", "plugin:@typescript-eslint/eslint-recommended"],
+  extends: ["airbnb-base", "prettier", "plugin:vue/vue3-essential", "plugin:@typescript-eslint/eslint-recommended"],
   plugins: ["vue", "@typescript-eslint", "prettier"],
   rules: {
     "no-console": "warn",

@@ -34,7 +34,6 @@ playwright-report/
 *.sw?
 
 *.tsbuildinfo
-package-lock.json
 /data/
 .run/
 *.sqlite

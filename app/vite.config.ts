@@ -28,9 +28,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon/**/*", "logo.png", "pwa-512.png"],
       manifest: {
-        name: "柏林花园FC · 8人制战术板",
-        short_name: "柏林花园战术板",
-        start_url: "/board",
+        name: "柏林花园 FC · 俱乐部",
+        short_name: "柏林花园 FC",
+        start_url: "/club",
         display: "standalone",
         background_color: "#0b2a1d",
         theme_color: "#0b2a1d",
@@ -81,7 +81,8 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: process.env.FOOTBALL_API_URL || "http://127.0.0.1:13001",
-        changeOrigin: true,
+        // Preserve the browser host so same-origin CSRF validation also works through Vite.
+        changeOrigin: false,
       },
     },
   },

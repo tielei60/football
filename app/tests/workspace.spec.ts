@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures";
 
 test("opens the workspace directly and keeps drawing controls usable after zoom", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/board");
   await expect(page.locator("#field")).toBeVisible();
   const select = page.getByRole("button", { name: "选择 (V)", exact: true });
   const before = await select.boundingBox();

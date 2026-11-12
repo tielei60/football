@@ -1,0 +1,113 @@
+import { test, expect } from "./fixtures";
+
+test("club admin records unknown statistics separately from zero and creates cross-year seasons", async ({
+  page,
+  request,
+}) => {
+  const suffix = Date.now().toString();
+  const playerResponse = await request.post("/api/players", { data: { name: `新球员${suffix}`, positions: ["中场"] } });
+  expect(playerResponse.ok()).toBeTruthy();
+  const player = await playerResponse.json();
+  await page.goto("/club");
+  await expect(page.getByRole("heading", { name: "球队比赛" })).toBeVisible();
+  await page.getByRole("button", { name: "新建比赛" }).click();
+  await page.getByLabel("对手", { exact: true }).fill(`对手${suffix}`);
+  await page.getByLabel("比赛日期").fill("2027-01-15");
+  await page.getByRole("button", { name: "创建草稿" }).click();
+  await expect(page.getByRole("heading", { name: /比赛信息与分析/ })).toBeVisible();
+  await page.getByLabel("发布状态").selectOption("completed");
+  await page.getByLabel("本队比分").fill("0");
+  await page.getByLabel("对手比分").fill("1");
+  await page.getByRole("button", { name: "保存比赛信息" }).click();
+  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await page.getByLabel("添加至名单").selectOption(player.id);
+  await page.getByRole("button", { name: "添加球员", exact: true }).click();
+  await page.getByLabel(`${player.name}实际出场`).selectOption({ label: "已出场" });
+  await page.getByLabel(`${player.name}进球`).fill("0");
+  await page.getByRole("button", { name: "保存名单与出场数据" }).click();
+  await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+  await page.reload();
+  await expect(page.getByLabel(`${player.name}进球`)).toHaveValue("0");
+  await expect(page.getByLabel(`${player.name}助攻`)).toHaveValue("");
+  await page.getByRole("link", { name: "统计与赛季" }).click();
+  await page.getByRole("button", { name: "新建赛季" }).click();
+  await page.getByLabel("赛季名称").fill(`跨年赛季${suffix}`);
+  await page.getByLabel("开始日期").fill("2026-08-01");
+  await page.getByLabel("结束日期").fill("2027-07-31");
+  await page.getByRole("button", { name: "保存赛季" }).click();
+  await expect(page.getByRole("heading", { name: "新建赛季", exact: true })).not.toBeVisible();
+  await page.getByLabel("统计周期").selectOption("season");
+  await page
+    .getByLabel("赛季", { exact: true })
+    .selectOption({ label: `跨年赛季${suffix}（2026-08-01 至 2027-07-31）` });
+  const row = page.getByRole("row").filter({ hasText: player.name });
+  await expect(row).toContainText("未知");
+  await expect(row).toContainText("1 / 1 场");
+  await expect(row).toContainText("0 / 1 场");
+});
+
+test("player logs in, registers independently of appearance, and cannot access board", async ({ page, request }) => {
+  const suffix = Date.now().toString();
+  const player = await (await request.post("/api/players", { data: { name: `报名球员${suffix}` } })).json();
+  const account = await request.post(`/api/players/${player.id}/account`, {
+    data: { username: `player${suffix}`, password: "player-password-123" },
+  });
+  expect(account.ok()).toBeTruthy();
+  const match = await (
+    await request.post("/api/matches", {
+      data: { opponent: `报名测试${suffix}`, date: "2027-02-03", status: "published" },
+    })
+  ).json();
+  await request.post("/api/auth/logout", { data: {} });
+  await page.goto("/login");
+  await page.getByLabel("用户名").fill(`player${suffix}`);
+  await page.getByLabel("密码", { exact: true }).fill("player-password-123");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "球队比赛" })).toBeVisible();
+  await page.goto(`/club/matches/${match.id}`);
+  await page.getByRole("button", { name: "参加", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("报名意愿已更新");
+  await expect(page.getByText("尚未录入比赛名单")).toBeVisible();
+  await expect(page.getByRole("button", { name: "保存比赛信息" })).toHaveCount(0);
+  await page.goto("/board");
+  await expect(page).toHaveURL(/\/club$/);
+});
+
+test("leaving a loading board settles and suspends it before club profile edits", async ({ page, request }) => {
+  const players = await (await request.get("/api/players")).json();
+  const player = players.find((entry: { status: string }) => entry.status === "active");
+  expect(player).toBeTruthy();
+  let release!: () => void;
+  let seen!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const intercepted = new Promise<void>((resolve) => {
+    seen = resolve;
+  });
+  await page.route("**/api/coaching-desk", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const response = await route.fetch();
+    seen();
+    await held;
+    await route.fulfill({ response });
+  });
+  await page.goto("/board");
+  await intercepted;
+  await expect(page.getByText("正在载入战术与球队名单")).toBeVisible();
+  await page.getByRole("link", { name: "← 俱乐部" }).click();
+  release();
+  await expect(page).toHaveURL(/\/club$/);
+  await page.unroute("**/api/coaching-desk");
+  const newName = `延迟载入回归${Date.now()}`;
+  const edited = await request.put(`/api/players/${player.id}`, { data: { name: newName } });
+  expect(edited.ok()).toBeTruthy();
+  try {
+    await page.getByRole("link", { name: "战术板 ↗" }).click();
+    await expect(page.locator(".roster-item").filter({ hasText: newName })).toBeVisible();
+  } finally {
+    await page.getByRole("link", { name: "← 俱乐部" }).click();
+    await expect(page).toHaveURL(/\/club$/);
+    await request.put(`/api/players/${player.id}`, { data: { name: player.name } });
+  }
+});
