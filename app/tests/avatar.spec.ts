@@ -45,7 +45,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
     ).ok()
   ).toBe(true);
   await page.reload();
-  await expect(page.getByText("头像球员（我）", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^头像球员\s*（我）$/)).toBeVisible();
   await expect(page.getByAltText("头像球员头像")).toHaveAttribute("src", dataUrl);
   await expect(page.getByLabel("上传球员头像")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "编辑", exact: true })).toHaveCount(0);

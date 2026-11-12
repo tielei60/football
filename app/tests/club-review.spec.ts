@@ -681,11 +681,11 @@ test("season roster and match fields preserve historical identity, number and ta
   await page.getByLabel("比赛日期").fill("2092-01-01");
   await page.getByLabel("赛事名称").fill("业余杯");
   await page.getByLabel("比赛人数制").selectOption("8");
-  await page.getByLabel("主客场", { exact: true }).selectOption("away");
+  await page.getByRole("combobox", { name: "主客场", exact: true }).selectOption("away");
   await page.getByLabel("归属赛季").selectOption(String(season.id));
   await page.getByRole("button", { name: "创建草稿" }).click();
   await expect(page.getByLabel("赛事名称")).toHaveValue("业余杯");
-  await expect(page.getByLabel("主客场", { exact: true })).toHaveValue("away");
+  await expect(page.getByRole("combobox", { name: "主客场", exact: true })).toHaveValue("away");
   await page.getByLabel("快照阵型", { exact: true }).check();
   await page.getByLabel("发布状态").selectOption("completed");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
