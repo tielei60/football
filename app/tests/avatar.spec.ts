@@ -1,11 +1,10 @@
 /* eslint-disable no-restricted-syntax, no-await-in-loop -- Browser steps share one isolated fixture. */
 import { mkdir } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { test, expect } from "./fixtures";
 
-const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
-  "base64"
-);
+// A recognizable repository fixture, not a real player photo or invisible pixel.
+const png = readFileSync(new URL("../public/team-badge.png", import.meta.url));
 const image = { name: "portrait.png", mimeType: "image/png", buffer: png };
 const dataUrl = `data:image/png;base64,${png.toString("base64")}`;
 
@@ -28,6 +27,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
     .click();
   await page.getByLabel("上传球员头像").setInputFiles(image);
   await expect(page.getByAltText("球员头像预览")).toHaveAttribute("src", dataUrl);
+  await expect(page.getByAltText("球员头像预览")).toHaveJSProperty("naturalWidth", 256);
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBeNull();
   await mkdir("test-results/visual-review", { recursive: true });
   for (const width of [390, 1440]) {
@@ -38,6 +38,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
   await expect(page.getByRole("status")).toHaveText("球员资料已保存");
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBe(dataUrl);
   await expect(page.getByAltText("头像球员头像")).toHaveAttribute("src", dataUrl);
+  await expect(page.getByAltText("头像球员头像")).toHaveJSProperty("naturalWidth", 256);
   await request.post("/api/auth/logout");
   expect(
     (
@@ -47,6 +48,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
   await page.reload();
   await expect(page.getByText(/^头像球员\s*（我）$/)).toBeVisible();
   await expect(page.getByAltText("头像球员头像")).toHaveAttribute("src", dataUrl);
+  await expect(page.getByAltText("头像球员头像")).toHaveJSProperty("naturalWidth", 256);
   await expect(page.getByLabel("上传球员头像")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "编辑", exact: true })).toHaveCount(0);
   for (const width of [390, 1440]) {

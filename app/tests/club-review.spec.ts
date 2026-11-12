@@ -333,6 +333,17 @@ for (const width of [320, 390, 1440]) {
           await page.getByText("查看已保存战术：快照阵型").click();
           await expect(page.getByRole("img", { name: "快照阵型已保存战术画布" })).toBeVisible();
           if (width <= 390) {
+            await page.getByRole("button", { name: "放大画布", exact: true }).click();
+            const canvas = page.getByRole("img", { name: "快照阵型已保存战术画布" });
+            expect((await canvas.boundingBox())!.width).toBeGreaterThanOrEqual(920);
+            const viewport = page.getByRole("region", { name: "快照阵型画布滚动区域" });
+            await viewport.focus();
+            await page.keyboard.press("ArrowRight");
+            await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+            await page.getByRole("button", { name: "适应宽度", exact: true }).click();
+            expect((await canvas.boundingBox())!.width).toBeLessThan(width);
+            await page.getByRole("button", { name: "放大画布", exact: true }).click();
+            await viewport.evaluate((el) => el.scrollTo(0, 0));
             const table = page.getByRole("region", { name: "比赛名单表", exact: true });
             await expect(page.getByText("表格还有更多列，请左右滑动或使用方向键查看。")).toBeVisible();
             expect(
