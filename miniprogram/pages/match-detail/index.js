@@ -31,11 +31,11 @@ Page({
         s.api.request("/matches/" + encodeURIComponent(this.id)),
         s.api.request("/players"),
       ]);
-      const match = s.matchView(raw, session.user.playerId);
+      const match = s.matchView(raw, session.user.playerId, true);
       const byId = new Map(players.map((p) => [p.id, p]));
       return {
         match,
-        team: session.team,
+        team: { name: session.team.name },
         admin: session.user.role === "admin",
         canReply:
           session.user.role === "player" &&
@@ -47,7 +47,9 @@ Page({
           label: s.replies[r.response],
         })),
         roster: raw.roster.map((r) => ({
-          ...r,
+          playerId: r.playerId,
+          position: r.position,
+          snapshotSource: r.snapshotSource,
           name: r.playerSnapshot?.name || "历史身份未记录",
           number: s.value(r.playerSnapshot?.number),
           selectionLabel:

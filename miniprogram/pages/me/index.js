@@ -31,14 +31,14 @@ Page({
     return s.load(this, async (session) => {
       const [players, stats] = await Promise.all([
         s.api.request("/players"),
-        s.api.request("/statistics"),
+        s.api.request("/statistics?year=" + new Date().getFullYear()),
       ]);
       const profile = players.find((p) => p.id === session.user.playerId);
       const record = stats.players.find(
         (p) => p.playerId === session.user.playerId,
       );
       return {
-        session,
+        session: s.sessionView(session),
         player: profile ? s.playerView(profile) : null,
         registration: record?.registration || null,
         year: new Date().getFullYear(),
@@ -102,7 +102,13 @@ Page({
           await s.api.logout();
           wx.reLaunch({ url: "/pages/login/index" });
         } catch (e) {
-          wx.showModal({ title: "本机已退出", content: "服务器注销未确认。网络恢复后请重新登录并修改密码，以撤销所有旧会话。", showCancel: false, complete: () => wx.reLaunch({ url: "/pages/login/index" }) });
+          wx.showModal({
+            title: "本机已退出",
+            content:
+              "服务器注销未确认。网络恢复后请重新登录并修改密码，以撤销所有旧会话。",
+            showCancel: false,
+            complete: () => wx.reLaunch({ url: "/pages/login/index" }),
+          });
         } finally {
           this.data.busy = false;
           if (!this._disposed) this.setData({ busy: false });

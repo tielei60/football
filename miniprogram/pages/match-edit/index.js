@@ -1,4 +1,6 @@
 const s = require("../shared");
+// Unconfirmed creation drafts are process-only and bound to the issuing login.
+let pendingCreateDraft = null;
 const formats = [
   { label: "未设置", value: null },
   ...[5, 6, 7, 8, 9, 11].map((value) => ({ label: value + "人制", value })),
@@ -22,6 +24,7 @@ Page({
     busy: false,
     actionError: "",
     conflict: false,
+    uncertain: false,
     revision: null,
     formats,
     sides,
@@ -51,6 +54,24 @@ Page({
     return s.load(this, async (session) => {
       if (session.user.role !== "admin")
         throw new Error("仅管理员可以编辑比赛");
+      const privateSession = s.api.getSession();
+      const draftOwner = JSON.stringify([
+        session.user.id,
+        session.user.teamId,
+        privateSession?.expiresAt,
+      ]);
+      const draft =
+        !this.id &&
+        pendingCreateDraft?.owner === draftOwner &&
+        pendingCreateDraft.token === privateSession?.token
+          ? pendingCreateDraft
+          : null;
+      if (
+        pendingCreateDraft &&
+        (pendingCreateDraft.owner !== draftOwner ||
+          pendingCreateDraft.token !== privateSession?.token)
+      )
+        pendingCreateDraft = null;
       const seasons = [
         { id: null, name: "未分配赛季" },
         ...(await s.api.request("/seasons")),
@@ -59,8 +80,14 @@ Page({
         ? await s.api.request("/matches/" + encodeURIComponent(this.id))
         : null;
       return {
+        draftOwner,
+        uncertain: !!draft,
         revision: m?.revision ?? null,
-        dateLabel: m ? s.dateLabel(m.date) : "",
+        dateLabel: m
+          ? s.dateLabel(m.date)
+          : draft
+            ? s.dateLabel(draft.form.date)
+            : "",
         seasons,
         form: m
           ? {
@@ -73,25 +100,27 @@ Page({
               awayScore: m.awayScore == null ? "" : String(m.awayScore),
               analysis: m.analysis,
             }
-          : this.data.form,
+          : draft
+            ? { ...draft.form }
+            : this.data.form,
         formatIndex: Math.max(
           0,
-          formats.findIndex((f) => f.value === m?.format),
+          formats.findIndex((f) => f.value === (m?.format ?? draft?.format)),
         ),
         sideIndex: Math.max(
           0,
-          sides.findIndex((f) => f.value === m?.side),
+          sides.findIndex((f) => f.value === (m?.side ?? draft?.side)),
         ),
         statusIndex: Math.max(
           0,
-          statuses.findIndex((f) => f.value === m?.status),
+          statuses.findIndex((f) => f.value === (m?.status ?? draft?.status)),
         ),
         seasonIndex: Math.max(
           0,
-          seasons.findIndex((f) => f.id === m?.seasonId),
+          seasons.findIndex((f) => f.id === (m?.seasonId ?? draft?.seasonId)),
         ),
         conflict: false,
-        actionError: "",
+        actionError: draft ? "上次创建结果尚未确认，请先核对赛程。" : "",
       };
     });
   },
@@ -125,8 +154,23 @@ Page({
       },
     });
   },
+  checkSchedule() {
+    wx.switchTab({ url: "/pages/schedule/index" });
+  },
+  confirmAbsent() {
+    wx.showModal({
+      title: "确认未创建比赛",
+      content: "请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。",
+      success: (result) => {
+        if (result.confirm && !this._disposed) {
+          pendingCreateDraft = null;
+          this.setData({ uncertain: false, actionError: "" });
+        }
+      },
+    });
+  },
   async save() {
-    if (this.data.busy || this.data.conflict) return;
+    if (this.data.busy || this.data.conflict || this.data.uncertain) return;
     const f = this.data.form;
     if (!f.opponent.trim() || !f.date) {
       this.setData({ actionError: "请填写对手并选择比赛日期" });
@@ -148,6 +192,7 @@ Page({
       seasonId: this.data.seasons[this.data.seasonIndex].id,
     };
     if (this.id) payload.revision = this.data.revision;
+    const submissionToken = s.api.getSession()?.token;
     this.setData({ busy: true, actionError: "" });
     try {
       const result = await s.api.request(
@@ -155,18 +200,34 @@ Page({
         this.id ? "PUT" : "POST",
         payload,
       );
+      if (!this.id) pendingCreateDraft = null;
       if (!this._disposed) {
         wx.showToast({ title: "比赛已保存", icon: "success" });
         wx.redirectTo({ url: "/pages/match-detail/index?id=" + result.id });
       }
     } catch (error) {
+      const status = error.status || error.statusCode || 0;
+      const uncertain = !this.id && (status === 0 || status >= 500);
+      if (uncertain)
+        pendingCreateDraft = {
+          owner: this.data.draftOwner,
+          token: submissionToken,
+          form: { ...f },
+          format: payload.format,
+          side: payload.side,
+          status: payload.status,
+          seasonId: payload.seasonId,
+        };
       if (!this._disposed) {
-        const conflict = (error.status || error.statusCode) === 409;
+        const conflict = status === 409;
         this.setData({
           conflict,
-          actionError: conflict
-            ? "比赛已被其他人修改。你的输入已保留，请核对后重新载入再编辑。"
-            : error.message || "保存失败，请重试",
+          uncertain,
+          actionError: uncertain
+            ? "提交结果未确认，比赛可能已创建。请先核对赛程和草稿；确认未创建后，点“已核对，继续编辑”。"
+            : conflict
+              ? "比赛已被其他人修改。你的输入已保留，请核对后重新载入再编辑。"
+              : error.message || "保存失败，请重试",
         });
         if ((error.status || error.statusCode) === 401) s.fail(this, error);
       }

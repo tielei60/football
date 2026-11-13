@@ -1,4 +1,5 @@
 const api = require("../utils/api");
+const { imageSource } = require("../utils/media");
 const statuses = {
   draft: "草稿",
   published: "待比赛",
@@ -15,10 +16,19 @@ function dateLabel(date) {
     return "日期待定";
   return `${parts[1]}月${parts[2]}日 周${"日一二三四五六"[new Date(parts[0], parts[1] - 1, parts[2]).getDay()]}`;
 }
-function matchView(m, playerId) {
+function matchView(m, playerId, detail = false) {
   const mine = (m.rsvps || []).find((r) => r.playerId === playerId);
   return {
-    ...m,
+    id: m.id,
+    date: m.date,
+    kickoff: m.kickoff,
+    status: m.status,
+    opponent: m.opponent,
+    competition: m.competition,
+    format: m.format,
+    side: m.side,
+    location: m.location,
+    analysis: detail ? m.analysis || "" : "",
     dateLabel: dateLabel(m.date),
     statusLabel: statuses[m.status] || m.status,
     scoreLabel: `${value(m.homeScore)} : ${value(m.awayScore)}`,
@@ -43,7 +53,7 @@ async function load(page, work) {
   try {
     const session = await api.ensureSession();
     const result = await work(session);
-    if (epoch === page._epoch && !page._disposed) page.setData(result);
+    if (epoch === page._epoch && !page._disposed) safeSetData(page, result);
   } catch (error) {
     if (epoch === page._epoch) fail(page, error);
   } finally {
@@ -67,15 +77,28 @@ function openPlayer(event) {
   });
 }
 function assetUrl(value) {
-  if (typeof value !== "string") return "";
-  if (
-    /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
-  )
-    return value;
-  if (!/^\/(?!\/)[A-Za-z0-9_./-]+$/.test(value) || value.includes(".."))
-    return "";
-  const base = String(require("../config").apiBaseUrl || "").replace(/\/$/, "");
-  return /^https?:\/\/[^/]+$/.test(base) ? base + value : "";
+  return imageSource(value);
+}
+function teamView(team) {
+  return { id: team.id, name: team.name, crest: assetUrl(team.crest) };
+}
+function sessionView(session) {
+  return {
+    user: {
+      username: session.user.username,
+      role: session.user.role,
+      playerId: session.user.playerId,
+    },
+    team: { id: session.team.id, name: session.team.name },
+  };
+}
+function safeSetData(page, data) {
+  // WeChat limits each setData call to 1 MB. Fail explicitly rather than silently
+  // omit records or pass oversized base64/snapshot bodies to the render bridge.
+  const json = JSON.stringify(data);
+  if (encodeURIComponent(json).replace(/%[A-F\d]{2}/gi, "_").length > 900000)
+    throw new Error("本次记录过多，无法在小程序中完整展示，请在网页端查看。");
+  page.setData(JSON.parse(json));
 }
 function imageError(event) {
   const target = event.currentTarget.dataset.target;
@@ -108,7 +131,12 @@ function hide() {
 }
 function playerView(p) {
   return {
-    ...p,
+    id: p.id,
+    name: p.name,
+    number: p.number,
+    positions: p.positions,
+    preferredFoot: p.preferredFoot,
+    status: p.status,
     avatar: assetUrl(p.avatar),
     numberLabel: value(p.number),
     positionLabel: (p.positions || []).join(" / ") || "位置未设置",
@@ -117,6 +145,9 @@ function playerView(p) {
 }
 module.exports = {
   api,
+  teamView,
+  sessionView,
+  safeSetData,
   value,
   dateLabel,
   matchView,

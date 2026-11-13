@@ -13,6 +13,7 @@ function setup(name, overrides = {}, wxOverrides = {}) {
   let definition;
   const api = {
     ensureSession: async () => session,
+    getSession: () => session,
     request: async () => [],
     clearSession() {
       events.push(["clear"]);
@@ -59,6 +60,18 @@ function setup(name, overrides = {}, wxOverrides = {}) {
     wrapped(
       (reference) => {
         if (reference.endsWith("/utils/api")) return api;
+        if (reference.endsWith("/utils/media"))
+          return {
+            imageSource(value) {
+              events.push(["imageSource", value]);
+              if (
+                typeof value === "string" &&
+                value.startsWith("data:image/png;base64,")
+              )
+                return "wxfile://test/avatar.png";
+              return "";
+            },
+          };
         if (reference.endsWith("/config"))
           return { apiBaseUrl: "https://club.example" };
         return load(path.resolve(path.dirname(file), reference + ".js"));
@@ -118,17 +131,13 @@ test("formatting preserves unknown score, weekday and all RSVP counts", () => {
   assert.equal(view.yesCount, 1);
   assert.equal(view.maybeCount, 1);
 });
-test("assets reject external and traversal paths, allow local raster data", () => {
-  const { shared } = setup("home");
-  assert.equal(shared.assetUrl("//evil.test/a.png"), "");
-  assert.equal(shared.assetUrl("https://evil.test/a.png"), "");
-  assert.equal(shared.assetUrl("/a/../secret"), "");
-  assert.equal(
-    shared.assetUrl("/avatars/a.png"),
-    "https://club.example/avatars/a.png",
-  );
-  assert.equal(shared.assetUrl("data:image/svg+xml;base64,AAAA"), "");
+test("assetUrl delegates to the tested native media resolver", () => {
+  const { shared, events } = setup("home");
+  const source = "data:image/png;base64,AAAA";
+  assert.equal(shared.assetUrl(source), "wxfile://test/avatar.png");
+  assert.equal(events.find((event) => event[0] === "imageSource")[1], source);
 });
+
 test("schedule separates drafts and cancelled, groups months in order", () => {
   const { page } = setup("schedule");
   const rows = [
@@ -148,6 +157,7 @@ test("player search, number and position filter combine", () => {
   const { page } = setup("players");
   page.data.positions = ["全部位置", "前锋"];
   page.data.positionIndex = 1;
+  page.data.selectedPosition = "前锋";
   const rows = [
     { id: "p1", name: "甲", number: 0, positions: ["前锋"], status: "active" },
     { id: "p2", name: "乙", number: 8, positions: ["门将"], status: "active" },
@@ -328,83 +338,327 @@ test("statistics ranking keeps null below explicit zero", () => {
   assert.equal(ranked[1].value, "—");
 });
 
-test('match reload atomically keeps form and revision from newest response', async () => {
-  let release; let reads = 0;
-  const old = new Promise(resolve => { release = resolve; });
-  const { page } = setup('match-edit', {
-    ensureSession: async () => ({ ...session, user: { role: 'admin' } }),
-    request: async url => {
-      if (url === '/seasons') return [];
+test("match reload atomically keeps form and revision from newest response", async () => {
+  let release;
+  let reads = 0;
+  const old = new Promise((resolve) => {
+    release = resolve;
+  });
+  const { page } = setup("match-edit", {
+    ensureSession: async () => ({ ...session, user: { role: "admin" } }),
+    request: async (url) => {
+      if (url === "/seasons") return [];
       reads += 1;
       if (reads === 1) return old;
-      return match({ revision: 8, opponent: '最新对手' });
-    }
+      return match({ revision: 8, opponent: "最新对手" });
+    },
   });
-  page.id = '1';
+  page.id = "1";
   const first = page.refresh();
-  await new Promise(resolve => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
   await page.refresh();
   assert.equal(page.data.revision, 8);
-  release(match({ revision: 3, opponent: '旧对手' }));
+  release(match({ revision: 3, opponent: "旧对手" }));
   await first;
   assert.equal(page.data.revision, 8);
-  assert.equal(page.data.form.opponent, '最新对手');
+  assert.equal(page.data.form.opponent, "最新对手");
 });
 
-test('successful login retains session when switchTab synchronously unloads page', async () => {
+test("successful login retains session when switchTab synchronously unloads page", async () => {
   let pageRef;
-  const { page, events } = setup('login', { login: async () => ({}) }, {
-    switchTab() { pageRef.onUnload(); }
-  });
+  const { page, events } = setup(
+    "login",
+    { login: async () => ({}) },
+    {
+      switchTab() {
+        pageRef.onUnload();
+      },
+    },
+  );
   pageRef = page;
-  page.data.username = 'member';
-  page.data.password = 'test-password';
+  page.data.username = "member";
+  page.data.password = "test-password";
   await page.submit();
   assert.equal(page._disposed, true);
   assert.equal(page._authenticated, true);
-  assert.equal(events.filter(event => event[0] === 'clear').length, 0);
-  assert.equal(page.data.password, '');
+  assert.equal(events.filter((event) => event[0] === "clear").length, 0);
+  assert.equal(page.data.password, "");
 });
 
-test('pending login cancellation clears session before late success', async () => {
+test("pending login cancellation clears session before late success", async () => {
   let release;
-  const { page, events } = setup('login', { login: () => new Promise(resolve => { release = resolve; }) });
-  page.data.username = 'member'; page.data.password = 'test-password';
+  const { page, events } = setup("login", {
+    login: () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  });
+  page.data.username = "member";
+  page.data.password = "test-password";
   const pending = page.submit();
-  page.onUnload(); release({}); await pending;
-  assert.equal(events.filter(event => event[0] === 'clear').length, 1);
-  assert.equal(events.some(event => event[0] === 'switchTab'), false);
+  page.onUnload();
+  release({});
+  await pending;
+  assert.equal(events.filter((event) => event[0] === "clear").length, 1);
+  assert.equal(
+    events.some((event) => event[0] === "switchTab"),
+    false,
+  );
 });
 
-test('password hide/reentry clears fields and suppresses stale failure without locking controls', async () => {
+test("password hide/reentry clears fields and suppresses stale failure without locking controls", async () => {
   let rejectPassword;
-  const { page } = setup('me', {
-    request: async url => {
-      if (url === '/auth/password') return new Promise((resolve, reject) => { rejectPassword = reject; });
-      if (url === '/players') return [];
-      return {players: []};
-    }
+  const { page } = setup("me", {
+    request: async (url) => {
+      if (url === "/auth/password")
+        return new Promise((resolve, reject) => {
+          rejectPassword = reject;
+        });
+      if (url === "/players") return [];
+      return { players: [] };
+    },
   });
-  page.data.currentPassword = 'old-password'; page.data.newPassword = 'new-password';
+  page.data.currentPassword = "old-password";
+  page.data.newPassword = "new-password";
   const pending = page.changePassword();
   page.onHide();
-  assert.equal(page.data.currentPassword, ''); assert.equal(page.data.newPassword, '');
+  assert.equal(page.data.currentPassword, "");
+  assert.equal(page.data.newPassword, "");
   await page.refresh();
-  page.input({currentTarget:{dataset:{field:'newPassword'}},detail:{value:'not-allowed-while-busy'}});
-  assert.equal(page.data.newPassword, '');
-  rejectPassword(new Error('旧请求错误')); await pending;
-  assert.equal(page.data.actionError, ''); assert.equal(page.data.busy, false);
-  page.input({currentTarget:{dataset:{field:'newPassword'}},detail:{value:'new-attempt'}});
-  assert.equal(page.data.newPassword, 'new-attempt');
+  page.input({
+    currentTarget: { dataset: { field: "newPassword" } },
+    detail: { value: "not-allowed-while-busy" },
+  });
+  assert.equal(page.data.newPassword, "");
+  rejectPassword(new Error("旧请求错误"));
+  await pending;
+  assert.equal(page.data.actionError, "");
+  assert.equal(page.data.busy, false);
+  page.input({
+    currentTarget: { dataset: { field: "newPassword" } },
+    detail: { value: "new-attempt" },
+  });
+  assert.equal(page.data.newPassword, "new-attempt");
 });
 
-test('successful hidden password update still clears revoked credentials and returns to login', async () => {
+test("successful hidden password update still clears revoked credentials and returns to login", async () => {
   let release;
-  const { page, events } = setup('me', {request: () => new Promise(resolve => { release = resolve; })});
-  page.data.currentPassword = 'old-password'; page.data.newPassword = 'new-password';
-  const pending = page.changePassword(); page.onHide(); release(); await pending;
-  assert.equal(page.data.currentPassword, ''); assert.equal(page.data.newPassword, '');
-  assert.equal(events.some(event => event[0] === 'clear'), true);
-  assert.equal(events.find(event => event[0] === 'reLaunch')[1].url, '/pages/login/index');
+  const { page, events } = setup("me", {
+    request: () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  });
+  page.data.currentPassword = "old-password";
+  page.data.newPassword = "new-password";
+  const pending = page.changePassword();
+  page.onHide();
+  release();
+  await pending;
+  assert.equal(page.data.currentPassword, "");
+  assert.equal(page.data.newPassword, "");
+  assert.equal(
+    events.some((event) => event[0] === "clear"),
+    true,
+  );
+  assert.equal(
+    events.find((event) => event[0] === "reLaunch")[1].url,
+    "/pages/login/index",
+  );
   assert.equal(page.data.busy, false);
+});
+
+test("large snapshots/base64 never cross setData and session credentials are not projected", async () => {
+  const huge = "x".repeat(32 * 1024 * 1024);
+  const crest = "data:image/png;base64," + "A".repeat(2800000);
+  const account = {
+    ...session,
+    token: "must-not-enter-page",
+    team: { name: "测试球队", crest },
+  };
+  const raw = match({
+    tacticSnapshots: [
+      { sourceTacticId: 1, tactic: { name: "留档", data: huge } },
+    ],
+  });
+  const detail = setup("match-detail", {
+    ensureSession: async () => account,
+    request: async (url) => (url === "/players" ? [] : raw),
+  });
+  detail.page.id = "1";
+  await detail.page.refresh();
+  const serialized = JSON.stringify(detail.page.data);
+  assert.ok(serialized.length < 5000);
+  assert.equal(serialized.includes(crest), false);
+  assert.equal(serialized.includes(huge), false);
+  assert.equal(detail.page.data.snapshots[0].name, "留档");
+  const home = setup("home", {
+    ensureSession: async () => account,
+    request: async (url) =>
+      url === "/players"
+        ? []
+        : url === "/matches"
+          ? [raw]
+          : { team: { matches: 0, wins: 0 } },
+  });
+  await home.page.refresh();
+  assert.equal(home.page.data.team.crest, "wxfile://test/avatar.png");
+  assert.ok(JSON.stringify(home.page.data).length < 5000);
+  const me = setup("me", {
+    ensureSession: async () => account,
+    request: async (url) =>
+      url === "/players"
+        ? [{ id: "p1", name: "成员", avatar: crest, positions: [] }]
+        : { players: [] },
+  });
+  await me.page.refresh();
+  assert.equal(me.page.data.player.avatar, "wxfile://test/avatar.png");
+  assert.ok(JSON.stringify(me.page.data).length < 5000);
+  assert.equal(me.page.data.session.token, undefined);
+  assert.equal(me.page.data.session.team.crest, undefined);
+});
+
+test("render bridge refuses oversize data explicitly rather than exceeding 1MB", async () => {
+  const { page, shared } = setup("home");
+  await shared.load(page, async () => ({ unknownBulk: "A".repeat(1000001) }));
+  assert.match(page.data.error, /记录过多/);
+  assert.equal(page.data.unknownBulk, undefined);
+  assert.equal(page.data.loading, false);
+});
+
+test("uncertain match creation is locked and offers schedule verification; 400 remains retryable", async () => {
+  let calls = 0;
+  const { page, events } = setup("match-edit", {
+    request: async () => {
+      calls++;
+      throw Object.assign(new Error("network"), { status: 0 });
+    },
+  });
+  page.data.seasons = [{ id: null }];
+  page.data.form.opponent = "对手";
+  page.data.form.date = "2026-11-15";
+  await page.save();
+  await page.save();
+  assert.equal(calls, 1);
+  assert.equal(page.data.uncertain, true);
+  assert.match(page.data.actionError, /可能已创建/);
+  page.checkSchedule();
+  assert.equal(
+    events.find((e) => e[0] === "switchTab")[1].url,
+    "/pages/schedule/index",
+  );
+  let validationCalls = 0;
+  const retry = setup("match-edit", {
+    request: async () => {
+      validationCalls++;
+      throw Object.assign(new Error("validation"), { status: 400 });
+    },
+  }).page;
+  retry.data.seasons = [{ id: null }];
+  retry.data.form.opponent = "对手";
+  retry.data.form.date = "2026-11-15";
+  await retry.save();
+  await retry.save();
+  assert.equal(validationCalls, 2);
+  assert.equal(retry.data.uncertain, false);
+});
+
+test("position choice survives reordered options and removed choice resets consistently", async () => {
+  let rows = [
+    { id: "fw", name: "前锋", number: 1, status: "active", positions: ["FW"] },
+    { id: "gk", name: "门将", number: 2, status: "active", positions: ["GK"] },
+  ];
+  const { page } = setup("players", { request: async () => rows });
+  await page.refresh();
+  page.position({ detail: { value: 1 } });
+  assert.equal(page.data.selectedPosition, "FW");
+  rows = [rows[1], rows[0]];
+  await page.refresh();
+  assert.equal(page.data.positions[page.data.positionIndex], "FW");
+  assert.equal(page.data.visible[0].id, "fw");
+  rows = [rows[0]];
+  await page.refresh();
+  assert.equal(page.data.selectedPosition, "");
+  assert.equal(page.data.positionIndex, 0);
+  assert.equal(page.data.visible[0].id, "gk");
+});
+
+test("season selection survives option order changes and local year is explicit", async () => {
+  let seasons = [
+    { id: 7, name: "甲赛季" },
+    { id: 9, name: "乙赛季" },
+  ];
+  const requests = [];
+  const stats = { team: { goalsFor: null, goalsAgainst: null }, players: [] };
+  const { page } = setup("statistics", {
+    request: async (url) => {
+      requests.push(url);
+      return url === "/seasons" ? seasons : stats;
+    },
+  });
+  await page.refresh();
+  page.data.selectedSeasonId = 9;
+  page.data.seasonIndex = 2;
+  seasons = [seasons[1], seasons[0]];
+  await page.refresh();
+  assert.equal(page.data.seasons[page.data.seasonIndex].id, 9);
+  assert.equal(requests.at(-1), "/statistics?seasonId=9");
+  for (const name of ["home", "me"]) {
+    const seen = [];
+    const current = setup(name, {
+      request: async (url) => {
+        seen.push(url);
+        return url === "/players" || url === "/matches"
+          ? []
+          : { team: { matches: 0, wins: 0 }, players: [] };
+      },
+    });
+    await current.page.refresh();
+    assert.ok(seen.includes("/statistics?year=" + new Date().getFullYear()));
+  }
+});
+
+test("5xx unknown creation retains draft only for same login and requires explicit reconciliation", async () => {
+  let account = {
+    user: { id: 8, teamId: 2, role: "admin" },
+    team: { name: "队伍" },
+    token: "first",
+    expiresAt: 123,
+  };
+  let creates = 0;
+  const { page } = setup("match-edit", {
+    ensureSession: async () => ({user: account.user, team: account.team}),
+    getSession: () => account,
+    request: async (url, method) => {
+      if (method === "POST") {
+        creates++;
+        throw Object.assign(new Error("gateway"), { status: 502 });
+      }
+      return [];
+    },
+  });
+  await page.refresh();
+  page.data.form.opponent = "保留这个对手";
+  page.data.form.date = "2026-11-15";
+  await page.save();
+  assert.equal(page.data.uncertain, true);
+  page.onUnload();
+  page.data.form.opponent = "";
+  await page.refresh();
+  assert.equal(page.data.form.opponent, "保留这个对手");
+  assert.equal(page.data.uncertain, true);
+  assert.equal(JSON.stringify(page.data).includes("first"), false);
+  await page.save();
+  assert.equal(creates, 1);
+  page.confirmAbsent();
+  assert.equal(page.data.uncertain, false);
+  assert.equal(page.data.form.opponent, "保留这个对手");
+  await page.save();
+  assert.equal(creates, 2);
+  page.onUnload();
+  account = { ...account, token: "new-login" };
+  page.data.form.opponent = "";
+  await page.refresh();
+  assert.equal(page.data.uncertain, false);
+  assert.equal(page.data.form.opponent, "");
 });

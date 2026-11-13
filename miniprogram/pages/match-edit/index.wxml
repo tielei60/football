@@ -146,11 +146,12 @@
         disabled="{{busy}}"
       /></view
     ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
-    ><button wx:if="{{conflict}}" bindtap="reload">重新载入最新版本</button
+    ><button wx:if="{{uncertain}}" bindtap="checkSchedule">前往赛程核对</button><button wx:if="{{uncertain}}" class="ghost" bindtap="confirmAbsent">已核对，继续编辑</button>
+<button wx:if="{{conflict}}" bindtap="reload">重新载入最新版本</button
     ><button
       class="primary"
       style="margin-top: 20rpx"
-      disabled="{{busy || conflict}}"
+      disabled="{{busy || conflict || uncertain}}"
       loading="{{busy}}"
       bindtap="save"
     >

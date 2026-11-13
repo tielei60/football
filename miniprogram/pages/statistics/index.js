@@ -5,6 +5,7 @@ Page({
     error: "",
     seasons: [],
     seasonIndex: 0,
+    selectedSeasonId: null,
     year: String(new Date().getFullYear()),
     stats: null,
     leaders: [],
@@ -24,13 +25,16 @@ Page({
     return s.load(this, async () => {
       const seasons = await s.api.request("/seasons");
       const options = [{ id: null, name: "按自然年" }, ...seasons];
-      const selected = options[this.data.seasonIndex] || options[0];
+      const selected =
+        options.find((option) => option.id === this.data.selectedSeasonId) ||
+        options[0];
       const stats = await s.api.request(
         "/statistics?" +
           (selected.id ? "seasonId=" + selected.id : "year=" + this.data.year),
       );
       return {
         seasons: options,
+        selectedSeasonId: selected.id,
         seasonIndex: options.indexOf(selected),
         stats: {
           ...stats,
@@ -63,7 +67,11 @@ Page({
       }));
   },
   season(e) {
-    this.setData({ seasonIndex: Number(e.detail.value) });
+    const seasonIndex = Number(e.detail.value);
+    this.setData({
+      seasonIndex,
+      selectedSeasonId: this.data.seasons[seasonIndex]?.id ?? null,
+    });
     this.refresh();
   },
   year(e) {

@@ -46,7 +46,13 @@ function sessionValid(value) {
     value.expiresAt > Date.now()
   );
 }
+function persistSession() {
+  // Large crest images belong to the view cache, not the credential storage record.
+  const team = { id: session.team.id, name: session.team.name, revision: session.team.revision, crest: null };
+  wx.setStorageSync(STORAGE_KEY, { ...session, team });
+}
 function clearSession() {
+  require("./media").clearImageCache();
   epoch += 1;
   session = null;
   checking = null;
@@ -178,7 +184,7 @@ async function login(username, password) {
     serverOrigin: origin,
   };
   try {
-    wx.setStorageSync(STORAGE_KEY, session);
+    persistSession();
   } catch (_) {
     /* login remains usable until process exit */
   }
@@ -211,7 +217,7 @@ function ensureSession() {
         team: result.team,
       });
       try {
-        wx.setStorageSync(STORAGE_KEY, session);
+        persistSession();
       } catch (_) {
         /* memory remains valid */
       }

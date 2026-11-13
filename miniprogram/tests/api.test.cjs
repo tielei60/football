@@ -37,7 +37,7 @@ function fixture(options = {}) {
   };
   const context = {
     module: { exports: {} },
-    require: () => config,
+    require: (id) => id === "./media" ? { clearImageCache() {} } : config,
     wx,
     Date,
     Number,
@@ -233,3 +233,7 @@ test("stale ensureSession cannot replace new login or release its newer check", 
   await current;
   assert.equal(f.api.getSession().token, token("b"));
 });
+
+ test("credential persistence omits large team images", async () => {
+ const f=fixture();const pending=f.api.login("user","password");const data=session();data.team.crest="data:image/png;base64,"+"A".repeat(1500000);f.complete(0,200,data);await pending;assert.equal(f.storage.get(key).team.crest,null);assert.ok(JSON.stringify(f.storage.get(key)).length<1000);
+ });

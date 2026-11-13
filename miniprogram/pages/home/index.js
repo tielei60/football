@@ -24,7 +24,7 @@ Page({
       const [matches, players, stats] = await Promise.all([
         s.api.request("/matches"),
         s.api.request("/players"),
-        s.api.request("/statistics"),
+        s.api.request("/statistics?year=" + new Date().getFullYear()),
       ]);
       const today = new Date();
       const date = [
@@ -36,9 +36,9 @@ Page({
         .filter((m) => m.status === "published" && m.date >= date)
         .sort((a, b) => (a.date + a.kickoff).localeCompare(b.date + b.kickoff));
       return {
-        team: { ...session.team, crest: s.assetUrl(session.team.crest) },
+        team: s.teamView(session.team),
         playerCount: players.filter((p) => p.status === "active").length,
-        stats,
+        stats: { team: { matches: stats.team.matches, wins: stats.team.wins } },
         next: upcoming[0]
           ? s.matchView(upcoming[0], session.user.playerId)
           : null,

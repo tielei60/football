@@ -8,6 +8,7 @@ Page({
     search: "",
     status: "active",
     positionIndex: 0,
+    selectedPosition: "",
     positions: ["全部位置"],
   },
   onShow() {
@@ -27,23 +28,33 @@ Page({
         "全部位置",
         ...new Set(players.flatMap((p) => p.positions || [])),
       ];
+      const selectedPosition = positions.includes(this.data.selectedPosition)
+        ? this.data.selectedPosition
+        : "";
       return {
+        selectedPosition,
+        positionIndex: selectedPosition
+          ? positions.indexOf(selectedPosition)
+          : 0,
         players,
         positions,
-        visible: this.filter(players, this.data.search, this.data.status),
+        visible: this.filter(
+          players,
+          this.data.search,
+          this.data.status,
+          selectedPosition,
+        ),
       };
     });
   },
-  filter(rows, q, status) {
+  filter(rows, q, status, selectedPosition = this.data.selectedPosition) {
     const needle = q.trim().toLowerCase();
     return rows
       .filter(
         (p) =>
           p.status === status &&
-          (!this.data.positionIndex ||
-            (p.positions || []).includes(
-              this.data.positions[this.data.positionIndex],
-            )) &&
+          (!selectedPosition ||
+            (p.positions || []).includes(selectedPosition)) &&
           (!needle ||
             p.name.toLowerCase().includes(needle) ||
             String(p.number ?? "").includes(needle)),
@@ -62,7 +73,13 @@ Page({
     });
   },
   position(e) {
-    this.setData({ positionIndex: Number(e.detail.value) });
+    const positionIndex = Number(e.detail.value);
+    this.setData({
+      positionIndex,
+      selectedPosition: positionIndex
+        ? this.data.positions[positionIndex] || ""
+        : "",
+    });
     this.setData({
       visible: this.filter(
         this.data.players,
