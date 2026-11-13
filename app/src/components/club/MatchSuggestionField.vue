@@ -46,6 +46,5 @@ function choose(event: Event) {
 .match-suggestion label {
   display: flex;
   flex-direction: column;
-  gap: 7px;
 }
 </style>

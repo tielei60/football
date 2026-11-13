@@ -27,6 +27,15 @@ test("composed schedule keeps unknowns and drafts, selects weekdays and crosses 
   expect(format).not.toBeNull();
   expect(side).not.toBeNull();
   expect(Math.abs(format!.y - side!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(format!.height - side!.height)).toBeLessThanOrEqual(1);
+  for (const label of ["赛事名称", "对手"]) {
+    const input = await page.getByRole("textbox", { name: label, exact: true }).boundingBox();
+    expect(input).not.toBeNull();
+    expect(Math.abs(input!.y - format!.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(input!.height - format!.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(input!.y - side!.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(input!.height - side!.height)).toBeLessThanOrEqual(1);
+  }
   await setMatchSchedule(page, "2091-12-31", "23:30");
   await expectUiValue(page.getByRole("combobox", { name: "比赛时长", exact: true }), "90");
   await expect(page.getByText(/预计结束：2092-01-01 周. 01:00 · 按球场当地时间/)).toBeVisible();
