@@ -1,3 +1,4 @@
+import { setMatchSchedule } from "./match-schedule";
 import { selectUiOption, expectUiValue } from "./ui-select";
 import { test, expect } from "./fixtures";
 
@@ -13,7 +14,7 @@ test("club admin records unknown statistics separately from zero and creates cro
   await expect(page.getByRole("heading", { name: "球队比赛" })).toBeVisible();
   await page.getByRole("button", { name: "新建比赛" }).click();
   await page.getByLabel("对手", { exact: true }).fill(`对手${suffix}`);
-  await page.getByLabel("比赛日期").fill("2027-01-15");
+  await setMatchSchedule(page, "2027-01-15");
   await page.getByRole("button", { name: "创建草稿" }).click();
   await expect(page.getByRole("heading", { name: /比赛信息与分析/ })).toBeVisible();
   const matchId = Number(page.url().split("/").pop());

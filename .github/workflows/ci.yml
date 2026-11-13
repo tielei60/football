@@ -26,11 +26,14 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:server
       - run: npm run demo:check
+      - run: npm run test:matchday
       - run: npm run test:bundle
       - run: node scripts/services.test.mjs
       - name: Build deployment image
         working-directory: .
-        run: docker build -t football-club:ci .
+        run: |
+          docker build -t football-club:ci .
+          docker build -f app/Dockerfile -t football-club:compat .
       - name: Smoke test deployment image
         working-directory: .
         run: |
@@ -47,6 +50,7 @@ jobs:
           curl --fail --silent -H 'Content-Type: application/json' -H 'Origin: http://127.0.0.1:13002' \
             -d '{"username":"ciadmin","password":"ci-only-password-123"}' \
             http://127.0.0.1:13002/api/auth/login | grep '"role":"admin"'
+          docker exec football-ci node --input-type=module -e "import {createRequire} from 'node:module'; import {matchPhoto1} from './scripts/demo-media.mjs'; const sharp=createRequire(new URL('./app/package.json',import.meta.url))('sharp'); const {info}=await sharp(Buffer.from(matchPhoto1.split(',')[1],'base64')).raw().toBuffer({resolveWithObject:true}); if(info.width!==640 || info.height!==360)process.exit(1)"
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Save visual review evidence

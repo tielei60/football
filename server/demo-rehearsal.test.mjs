@@ -12,6 +12,7 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { DatabaseSync } from "node:sqlite";
 import { createDemo } from "../scripts/create-demo.mjs";
 import { createFootballServer } from "./index.mjs";
 import { openFootballStore } from "./football-store.mjs";
@@ -52,6 +53,15 @@ test("fictional rehearsal preserves complete match, season, registration and per
     );
     const players = club.listPlayers(admin.team_id);
     assert.equal(players.length, 8);
+    assert.equal(
+      players.filter((p) => p.avatar?.startsWith("data:image/png;base64,"))
+        .length,
+      2,
+    );
+    const venues = club.listVenues(admin.team_id);
+    assert.equal(venues.length, 3);
+    assert.equal(venues.filter((v) => v.status === "active").length, 2);
+    assert.equal(venues.filter((v) => v.status === "archived").length, 1);
     const byName = new Map(players.map((p) => [p.name, p]));
     assert.deepEqual(
       ["林远", "周泽", "顾川", "陈越"].map((n) => byName.get(n).number),
@@ -75,6 +85,50 @@ test("fictional rehearsal preserves complete match, season, registration and per
     assert.equal(home.date, "2027-01-10");
     assert.equal(away.opponent, home.opponent);
     assert.equal(away.side, "away");
+    assert.equal(away.durationMinutes, 90);
+    assert.equal(home.durationMinutes, null);
+    assert.ok(away.notice.length > 0);
+    assert.ok(away.venueSnapshot.name);
+    assert.equal(away.photos.length, 2);
+    assert.equal(away.photoCount, 2);
+    assert.equal(away.coverPhotoId, away.photos[0].id);
+    assert.equal(away.coverPhotoUrl, away.photos[0].url);
+    assert.ok(away.photos.every((p) => p.byteSize > 0));
+    const sourcePhotos = legacy.database
+      .prepare(
+        "SELECT id,hex(data) AS data,caption,position FROM club_match_photos ORDER BY match_id,position",
+      )
+      .all();
+    const backupPath = join(demo.directory, "photo-backup.sqlite");
+    const backup = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL("../scripts/backup.mjs", import.meta.url)),
+        backupPath,
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, FOOTBALL_DB_PATH: demo.databasePath },
+      },
+    );
+    assert.equal(backup.status, 0, backup.stderr);
+    const backupDb = new DatabaseSync(backupPath, { readOnly: true });
+    try {
+      assert.deepEqual(
+        backupDb
+          .prepare(
+            "SELECT id,hex(data) AS data,caption,position FROM club_match_photos ORDER BY match_id,position",
+          )
+          .all(),
+        sourcePhotos,
+      );
+      assert.equal(
+        backupDb.prepare("PRAGMA integrity_check").get().integrity_check,
+        "ok",
+      );
+    } finally {
+      backupDb.close();
+    }
     assert.equal(home.side, "home");
     assert.deepEqual(
       [away.homeScore, away.awayScore, home.homeScore, home.awayScore],
@@ -109,6 +163,8 @@ test("fictional rehearsal preserves complete match, season, registration and per
     ]);
     const upcoming = club.getMatch(admin, demo.matches.upcoming);
     assert.equal(upcoming.status, "published");
+    assert.equal(upcoming.photos.length, 1);
+    assert.equal(upcoming.coverPhotoId, upcoming.photos[0].id);
     assert.deepEqual(upcoming.roster, []);
     assert.deepEqual([upcoming.homeScore, upcoming.awayScore], [null, null]);
     assert.deepEqual(upcoming.rsvps.map((r) => r.response).sort(), [

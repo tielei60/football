@@ -10,6 +10,12 @@ import {
   MAX_PLAYER_AVATAR_CHARACTERS,
 } from "./football-store.mjs";
 
+import {
+  validateMatchPhoto,
+  MAX_MATCH_PHOTOS,
+  MAX_MATCH_PHOTO_TOTAL_BYTES,
+} from "./match-images.mjs";
+
 const fail = (status, message) => {
   throw new FootballError(status, message);
 };
@@ -296,6 +302,45 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     ) STRICT`);
     q(
       "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-season-membership-v5',?)",
+    ).run(Date.now());
+  });
+  tx(() => {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS club_venues (
+        id INTEGER PRIMARY KEY, team_id INTEGER NOT NULL REFERENCES club_teams(id),
+        revision INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, address TEXT NOT NULL DEFAULT '',
+        latitude REAL, longitude REAL, note TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived')),
+        CHECK((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180))
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS club_match_photos (
+        id TEXT PRIMARY KEY, team_id INTEGER NOT NULL, match_id INTEGER NOT NULL,
+        mime TEXT NOT NULL, data BLOB NOT NULL, caption TEXT NOT NULL DEFAULT '', position INTEGER NOT NULL,
+        FOREIGN KEY(team_id,match_id) REFERENCES club_matches(team_id,id)
+      ) STRICT;
+      CREATE INDEX IF NOT EXISTS club_match_photos_match ON club_match_photos(team_id,match_id,position);
+    `);
+    const columns = new Set(
+      q("PRAGMA table_info(club_matches)")
+        .all()
+        .map((c) => c.name),
+    );
+    for (const [name, definition] of [
+      [
+        "duration_minutes",
+        "INTEGER CHECK(duration_minutes BETWEEN 1 AND 1440)",
+      ],
+      ["notice", "TEXT NOT NULL DEFAULT ''"],
+      ["venue_id", "INTEGER REFERENCES club_venues(id)"],
+      ["venue_snapshot", "TEXT"],
+      ["cover_photo_id", "TEXT"],
+    ])
+      if (!columns.has(name))
+        database.exec(
+          `ALTER TABLE club_matches ADD COLUMN ${name} ${definition}`,
+        );
+    q(
+      "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-matchday-v6',?)",
     ).run(Date.now());
   });
   function checkRevision(input, current) {
@@ -750,6 +795,165 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       return getSeasonRoster(teamId, id);
     });
   }
+  const venueView = (r) => ({
+    id: r.id,
+    revision: r.revision,
+    name: r.name,
+    address: r.address,
+    latitude: r.latitude,
+    longitude: r.longitude,
+    note: r.note,
+    status: r.status,
+  });
+  function getVenue(teamId, id) {
+    const row = q("SELECT * FROM club_venues WHERE team_id=? AND id=?").get(
+      teamId,
+      id,
+    );
+    if (!row) fail(404, "未找到球场。");
+    return venueView(row);
+  }
+  function saveVenue(teamId, id, input) {
+    object(input);
+    const v = {
+      ...(id
+        ? getVenue(teamId, id)
+        : {
+            name: "",
+            address: "",
+            latitude: null,
+            longitude: null,
+            note: "",
+            status: "active",
+          }),
+      ...input,
+    };
+    v.name = text(v.name, 200, true);
+    v.address = text(v.address, 500);
+    v.note = text(v.note, 2000);
+    oneOf(v.status, ["active", "archived"]);
+    if (
+      !(
+        (v.latitude === null && v.longitude === null) ||
+        (typeof v.latitude === "number" &&
+          Number.isFinite(v.latitude) &&
+          Math.abs(v.latitude) <= 90 &&
+          typeof v.longitude === "number" &&
+          Number.isFinite(v.longitude) &&
+          Math.abs(v.longitude) <= 180)
+      )
+    )
+      fail(400, "经纬度须同时填写有效的 WGS84 坐标，或同时留空。");
+    return tx(() => {
+      if (id) {
+        checkRevision(input, getVenue(teamId, id));
+        q(
+          "UPDATE club_venues SET name=?,address=?,latitude=?,longitude=?,note=?,status=?,revision=revision+1 WHERE team_id=? AND id=?",
+        ).run(
+          v.name,
+          v.address,
+          v.latitude,
+          v.longitude,
+          v.note,
+          v.status,
+          teamId,
+          id,
+        );
+      } else
+        id = Number(
+          q(
+            "INSERT INTO club_venues(team_id,name,address,latitude,longitude,note,status) VALUES (?,?,?,?,?,?,?)",
+          ).run(
+            teamId,
+            v.name,
+            v.address,
+            v.latitude,
+            v.longitude,
+            v.note,
+            v.status,
+          ).lastInsertRowid,
+        );
+      return getVenue(teamId, id);
+    });
+  }
+  const photoUrl = (matchId, id) => `/api/matches/${matchId}/photos/${id}`;
+  function getMatchPhoto(u, matchId, id) {
+    getMatch(u, matchId, { includeTacticSnapshots: false });
+    const row = q(
+      "SELECT mime,data FROM club_match_photos WHERE team_id=? AND match_id=? AND id=?",
+    ).get(u.team_id, matchId, id);
+    if (!row) fail(404, "未找到比赛照片。");
+    return { mime: row.mime, bytes: row.data };
+  }
+  function saveMatchPhotos(u, matchId, input) {
+    object(input);
+    if (u.role !== "admin") fail(403, "此操作需要管理员权限。");
+    if (!Array.isArray(input.photos) || input.photos.length > MAX_MATCH_PHOTOS)
+      fail(400, "每场比赛最多保存 10 张照片。");
+    return tx(() => {
+      const match = getMatch(u, matchId, { includeTacticSnapshots: false });
+      checkRevision(input, match);
+      const existing = new Map(
+        q("SELECT * FROM club_match_photos WHERE team_id=? AND match_id=?")
+          .all(u.team_id, matchId)
+          .map((p) => [p.id, p]),
+      );
+      const used = new Set();
+      let total = 0;
+      const photos = input.photos.map((item, position) => {
+        object(item);
+        const previous =
+          item.id === undefined ? undefined : existing.get(item.id);
+        if (
+          item.id !== undefined &&
+          (typeof item.id !== "string" || !previous || used.has(item.id))
+        )
+          fail(400, "照片编号无效或重复，请重新载入相册。");
+        const id = previous?.id ?? randomUUID();
+        used.add(id);
+        const image =
+          item.data === undefined && previous
+            ? { mime: previous.mime, bytes: previous.data }
+            : validateMatchPhoto(item.data);
+        total += image.bytes.length;
+        if (total > MAX_MATCH_PHOTO_TOTAL_BYTES)
+          fail(413, "单场照片总量不能超过 16 MiB。");
+        return {
+          id,
+          ...image,
+          caption: text(item.caption ?? previous?.caption ?? "", 500),
+          position,
+        };
+      });
+      let coverId;
+      if (input.coverIndex === undefined)
+        coverId = photos.some((p) => p.id === match.coverPhotoId)
+          ? match.coverPhotoId
+          : (photos[0]?.id ?? null);
+      else if (input.coverIndex === null) coverId = null;
+      else {
+        if (
+          !Number.isSafeInteger(input.coverIndex) ||
+          input.coverIndex < 0 ||
+          input.coverIndex >= photos.length
+        )
+          fail(400, "请选择相册内的封面照片。");
+        coverId = photos[input.coverIndex].id;
+      }
+      q("DELETE FROM club_match_photos WHERE team_id=? AND match_id=?").run(
+        u.team_id,
+        matchId,
+      );
+      for (const p of photos)
+        q(
+          "INSERT INTO club_match_photos(id,team_id,match_id,mime,data,caption,position) VALUES (?,?,?,?,?,?,?)",
+        ).run(p.id, u.team_id, matchId, p.mime, p.bytes, p.caption, p.position);
+      q(
+        "UPDATE club_matches SET cover_photo_id=?,revision=revision+1 WHERE id=? AND team_id=?",
+      ).run(coverId, matchId, u.team_id);
+      return getMatch(u, matchId);
+    });
+  }
   function getMatch(u, id, { includeTacticSnapshots = true } = {}) {
     const r = q("SELECT * FROM club_matches WHERE team_id=? AND id=?").get(
       u.team_id,
@@ -768,6 +972,24 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       date: r.match_date,
       kickoff: r.kickoff,
       location: r.location,
+      durationMinutes: r.duration_minutes,
+      notice: r.notice,
+      venueId: r.venue_id,
+      venueSnapshot: r.venue_snapshot ? JSON.parse(r.venue_snapshot) : null,
+      coverPhotoId: r.cover_photo_id,
+      coverPhotoUrl: r.cover_photo_id ? photoUrl(id, r.cover_photo_id) : null,
+      photoCount: q(
+        "SELECT count(*) AS n FROM club_match_photos WHERE team_id=? AND match_id=?",
+      ).get(u.team_id, id).n,
+      ...(includeTacticSnapshots
+        ? {
+            photos: q(
+              "SELECT id,caption,length(data) AS byteSize FROM club_match_photos WHERE team_id=? AND match_id=? ORDER BY position,id",
+            )
+              .all(u.team_id, id)
+              .map((p) => ({ ...p, url: photoUrl(id, p.id) })),
+          }
+        : {}),
       status: r.status,
       homeScore: r.home_score,
       awayScore: r.away_score,
@@ -836,6 +1058,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             date: "",
             kickoff: "",
             location: "",
+            durationMinutes: null,
+            notice: "",
+            venueId: null,
+            venueSnapshot: null,
             status: "draft",
             homeScore: null,
             awayScore: null,
@@ -858,6 +1084,19 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (m.kickoff && !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.kickoff))
       fail(400, "开球时间须为 HH:mm。");
     m.location = text(m.location, 500);
+    if (
+      m.durationMinutes !== null &&
+      (!Number.isSafeInteger(m.durationMinutes) ||
+        m.durationMinutes < 1 ||
+        m.durationMinutes > 1440)
+    )
+      fail(400, "比赛时长须为 1 至 1440 分钟，未知请留空。");
+    m.notice = text(m.notice, 10000);
+    if (
+      m.venueId !== null &&
+      (!Number.isSafeInteger(m.venueId) || m.venueId < 1)
+    )
+      fail(400, "请选择有效球场。");
     oneOf(m.status, ["draft", "published", "completed", "cancelled"]);
     integer(m.homeScore);
     integer(m.awayScore);
@@ -873,7 +1112,23 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
 
     validateTotals(m.homeScore, id ? getMatch(u, id).roster : []);
     return tx(() => {
-      if (id) checkRevision(input, getMatch(u, id));
+      const current = id ? getMatch(u, id) : null;
+      if (id) checkRevision(input, current);
+      if (m.venueId === null) m.venueSnapshot = null;
+      else if (current?.venueId === m.venueId && current.venueSnapshot)
+        m.venueSnapshot = current.venueSnapshot;
+      else {
+        const venue = getVenue(u.team_id, m.venueId);
+        if (venue.status !== "active")
+          fail(400, "已归档球场不能用于新关联，请选择其他球场。");
+        m.venueSnapshot = {
+          name: venue.name,
+          address: venue.address,
+          latitude: venue.latitude,
+          longitude: venue.longitude,
+        };
+      }
+      if (m.venueSnapshot) m.location = m.venueSnapshot.name;
       if (m.seasonId !== null) {
         const season = getSeason(u.team_id, m.seasonId);
         if (m.date < season.startDate || m.date > season.endDate)
@@ -881,7 +1136,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       }
       if (id)
         q(
-          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,competition=?,format=?,side=?,season_id=?,revision=revision+1 WHERE id=? AND team_id=?",
+          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,competition=?,format=?,side=?,season_id=?,duration_minutes=?,notice=?,venue_id=?,venue_snapshot=?,revision=revision+1 WHERE id=? AND team_id=?",
         ).run(
           m.opponent,
           m.date,
@@ -895,13 +1150,17 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           m.format,
           m.side,
           m.seasonId,
+          m.durationMinutes,
+          m.notice,
+          m.venueId,
+          m.venueSnapshot ? JSON.stringify(m.venueSnapshot) : null,
           id,
           u.team_id,
         );
       else
         id = Number(
           q(
-            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis,competition,format,side,season_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis,competition,format,side,season_id,duration_minutes,notice,venue_id,venue_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
           ).run(
             u.team_id,
             m.opponent,
@@ -916,6 +1175,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             m.format,
             m.side,
             m.seasonId,
+            m.durationMinutes,
+            m.notice,
+            m.venueId,
+            m.venueSnapshot ? JSON.stringify(m.venueSnapshot) : null,
           ).lastInsertRowid,
         );
       const wanted = new Set(m.tacticIds);
@@ -961,6 +1224,12 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     const m = getMatch(u, id);
     if (!u.player_id) fail(403, "管理员账户未绑定球员，不能代替球员报名。");
     if (m.status !== "published") fail(409, "仅已发布的比赛可以报名。");
+    if (input.response === null) {
+      q(
+        "DELETE FROM club_rsvps WHERE team_id=? AND match_id=? AND player_id=?",
+      ).run(u.team_id, id, u.player_id);
+      return getMatch(u, id);
+    }
     oneOf(input.response, ["yes", "no", "maybe"]);
     q(
       "INSERT INTO club_rsvps(team_id,match_id,player_id,response) VALUES (?,?,?,?) ON CONFLICT(match_id,player_id) DO UPDATE SET response=excluded.response",
@@ -1274,6 +1543,14 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     saveSeason,
     getSeasonRoster,
     saveSeasonRoster,
+    getVenue,
+    saveVenue,
+    listVenues: (teamId) =>
+      q("SELECT * FROM club_venues WHERE team_id=? ORDER BY status,name,id")
+        .all(teamId)
+        .map(venueView),
+    getMatchPhoto,
+    saveMatchPhotos,
     getMatch,
     saveMatch,
     saveRsvp,

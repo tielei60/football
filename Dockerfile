@@ -4,6 +4,7 @@ COPY app/package.json app/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY app/ ./
 RUN npm run build
+RUN npm prune --omit=dev --no-audit --no-fund
 
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=13001 FOOTBALL_DB_PATH=/data/football.sqlite
@@ -11,6 +12,8 @@ WORKDIR /opt/football
 COPY server/ ./server/
 COPY scripts/ ./scripts/
 COPY --from=build /opt/football/app/dist ./app/dist
+COPY --from=build /opt/football/app/package.json ./app/package.json
+COPY --from=build /opt/football/app/node_modules ./app/node_modules
 RUN mkdir -p /data && chown node:node /data
 USER node
 VOLUME /data

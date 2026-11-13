@@ -26,10 +26,6 @@
           球衣号码
           <input v-model="form.number" type="number" min="0" max="999" placeholder="未知" />
         </label>
-        <label>
-          位置（逗号分隔，可多选）
-          <input v-model="positions" placeholder="例如：中后卫, 中场" />
-        </label>
 
         <label>
           惯用脚
@@ -48,23 +44,29 @@
           </UiSelect>
         </label>
       </div>
-      <div class="club-position-suggestions" aria-label="常用位置快捷选择">
-        <span class="club-muted">快捷添加位置</span>
-        <button
-          v-for="position in positionOptions"
-          :key="position"
-          type="button"
-          :aria-pressed="selectedPositions.includes(position)"
-          :class="{ selected: selectedPositions.includes(position) }"
-          @click="togglePosition(position)"
-        >
-          {{ position }}
-        </button>
-      </div>
+      <fieldset class="player-position-picker">
+        <legend>球员位置（可多选）</legend>
+        <div class="player-position-options">
+          <label
+            v-for="position in positionOptions"
+            :key="position"
+            :class="{ selected: selectedPositions.includes(position) }"
+          >
+            <input type="checkbox" :checked="selectedPositions.includes(position)" @change="togglePosition(position)" />
+            {{ position }}
+          </label>
+        </div>
+        <p class="club-muted">可选择多个位置；尚未确定时请选择“待定”。</p>
+      </fieldset>
       <div class="club-avatar-editor">
         <label>
           上传球员头像
-          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="selectAvatar" />
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            @change="selectAvatar"
+          />
         </label>
         <p class="club-muted">支持 PNG、JPEG、WebP、GIF，最大 2 MiB。预览后保存才会更新；已有头像可直接保留。</p>
         <img
@@ -119,10 +121,21 @@
     </fieldset>
   </form>
   <div class="club-card">
-    <label style="max-width: 300px; margin-bottom: 18px">
-      查找球员
-      <input v-model="search" placeholder="姓名、号码或位置" />
-    </label>
+    <div class="player-filters">
+      <label>
+        查找球员
+        <input v-model="search" placeholder="姓名、号码或位置" />
+      </label>
+      <label>
+        头像筛选
+        <UiSelect v-model="avatarFilter">
+          <option value="">全部球员</option>
+          <option value="set">已设置头像</option>
+          <option value="missing">未设置头像</option>
+        </UiSelect>
+      </label>
+      <span class="club-muted">{{ players.filter((p) => !!p.avatar).length }} / {{ players.length }} 位已设置头像</span>
+    </div>
     <p v-if="loading" role="status" class="club-loading">正在载入球员…</p>
     <ClubTableWrap v-else label="球员资料表">
       <table>
@@ -140,13 +153,18 @@
           <tr v-for="p in filtered" :key="p.id">
             <td>
               <div class="club-player-identity">
-                <img
+                <button
                   v-if="p.avatar"
-                  :src="p.avatar"
-                  :alt="`${p.name}头像`"
-                  class="club-player-avatar"
-                  referrerpolicy="no-referrer"
-                />
+                  type="button"
+                  class="player-avatar-button"
+                  :aria-label="`查看${p.name}头像`"
+                  @click="previewPlayer = p"
+                >
+                  <img :src="p.avatar" :alt="`${p.name}头像`" class="club-player-avatar" referrerpolicy="no-referrer" />
+                </button>
+                <span v-else class="player-avatar-placeholder" :aria-label="`${p.name}尚未设置头像`">
+                  {{ p.name.slice(0, 1) }}
+                </span>
                 <strong>
                   {{ p.name }}
                   <span v-if="p.id === auth.session?.user.playerId">（我）</span>
@@ -165,16 +183,8 @@
             <td v-if="auth.isAdmin">
               <div class="club-actions">
                 <button :disabled="busy" @click="edit(p)">编辑</button>
-                <button
-                  :disabled="busy"
-                  @click="
-                    cancelEdit();
-                    account = p;
-                    username = '';
-                    password = '';
-                    success = '';
-                  "
-                >
+                <button :disabled="busy" @click="edit(p, true)">管理头像</button>
+                <button :disabled="busy" @click="openAccount(p)">
                   {{ p.hasAccount ? "重置密码" : "创建账号" }}
                 </button>
               </div>
@@ -185,9 +195,22 @@
       <p v-if="!filtered.length" class="club-empty">暂无符合条件的球员</p>
     </ClubTableWrap>
   </div>
+  <UiDialog :model-value="!!previewPlayer" title="球员头像" @update:model-value="closePreview">
+    <template v-if="previewPlayer">
+      <h3>{{ previewPlayer.name }}</h3>
+      <img
+        :src="previewPlayer.avatar || ''"
+        :alt="`${previewPlayer.name}头像大图`"
+        class="player-avatar-large"
+        referrerpolicy="no-referrer"
+      />
+    </template>
+  </UiDialog>
 </template>
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
+import { confirmAction } from "@/components/ui/confirmAction";
 import ClubTableWrap from "@/components/ClubTableWrap.vue";
 import { useAuthStore } from "@/stores/authStore";
 import { clubApi, ClubApiError, unknown, type ClubPlayer } from "@/services/clubApi";
@@ -213,6 +236,28 @@ const positionOptions = [
 const positions = ref("待定");
 const playerFormElement = ref<HTMLFormElement | null>(null);
 const playerNameInput = ref<HTMLInputElement | null>(null);
+const avatarInput = ref<HTMLInputElement | null>(null);
+const avatarFilter = ref("");
+const previewPlayer = ref<ClubPlayer | null>(null);
+const baseline = ref("");
+const dirty = computed(
+  () =>
+    !!form.value &&
+    (readingAvatar.value || JSON.stringify({ form: form.value, positions: positions.value }) !== baseline.value)
+);
+function closePreview(open: boolean) {
+  if (!open) previewPlayer.value = null;
+}
+async function discard() {
+  return (
+    !dirty.value ||
+    (await confirmAction("未保存的球员资料或头像将丢失，继续吗？", {
+      title: "放弃球员修改",
+      confirmText: "放弃修改",
+      danger: true,
+    }))
+  );
+}
 const selectedPositions = computed(() =>
   positions.value
     .split(/[,，]/)
@@ -223,7 +268,11 @@ function togglePosition(position: string) {
   if (busy.value) return;
   const selected = new Set(selectedPositions.value);
   if (selected.has(position)) selected.delete(position);
-  else selected.add(position);
+  else {
+    if (position === "待定") selected.clear();
+    else selected.delete("待定");
+    selected.add(position);
+  }
   positions.value = [...selected].join(", ");
 }
 const account = ref<ClubPlayer | null>(null);
@@ -244,8 +293,8 @@ function stopAvatarRead() {
   avatarReader = undefined;
   readingAvatar.value = false;
 }
-function cancelEdit() {
-  if (busy.value) return;
+async function cancelEdit() {
+  if (busy.value || !(await discard())) return;
   stopAvatarRead();
   form.value = null;
 }
@@ -304,8 +353,10 @@ function selectAvatar(event: Event) {
   next.readAsDataURL(file);
 }
 const filtered = computed(() =>
-  players.value.filter((p) =>
-    `${p.name} ${p.number ?? ""} ${p.positions.join(" ")}`.toLowerCase().includes(search.value.toLowerCase())
+  players.value.filter(
+    (p) =>
+      (avatarFilter.value === "" || (avatarFilter.value === "set" ? !!p.avatar : !p.avatar)) &&
+      `${p.name} ${p.number ?? ""} ${p.positions.join(" ")}`.toLowerCase().includes(search.value.toLowerCase())
   )
 );
 async function load() {
@@ -317,8 +368,8 @@ async function load() {
     loading.value = false;
   }
 }
-function edit(p?: ClubPlayer) {
-  if (busy.value) return;
+async function edit(p?: ClubPlayer, avatar = false) {
+  if (busy.value || !(await discard())) return;
   stopAvatarRead();
   account.value = null;
   password.value = "";
@@ -337,10 +388,12 @@ function edit(p?: ClubPlayer) {
         hasAccount: false,
       };
   positions.value = p?.positions.join(", ") || "待定";
+  baseline.value = JSON.stringify({ form: form.value, positions: positions.value });
   success.value = "";
   void nextTick(() => {
     playerFormElement.value?.scrollIntoView({ block: "start" });
-    playerNameInput.value?.focus({ preventScroll: true });
+    (avatar ? avatarInput.value : playerNameInput.value)?.focus({ preventScroll: true });
+    if (avatar) avatarInput.value?.scrollIntoView({ block: "center" });
   });
 }
 async function save() {
@@ -374,6 +427,15 @@ async function save() {
     busy.value = false;
   }
 }
+async function openAccount(p: ClubPlayer) {
+  if (busy.value || !(await discard())) return;
+  stopAvatarRead();
+  form.value = null;
+  account.value = p;
+  username.value = "";
+  password.value = "";
+  success.value = "";
+}
 async function saveAccount() {
   if (busy.value || !account.value) return;
   busy.value = true;
@@ -396,7 +458,7 @@ async function saveAccount() {
   }
 }
 async function reload() {
-  if (busy.value) return;
+  if (busy.value || !(await discard())) return;
   stopAvatarRead();
   busy.value = true;
   error.value = "";
@@ -413,14 +475,88 @@ async function reload() {
     loading.value = false;
   }
 }
-onMounted(load);
+function beforeUnload(event: BeforeUnloadEvent) {
+  if (dirty.value) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+}
+onBeforeRouteLeave(async () => !busy.value && (await discard()));
+onMounted(() => {
+  void load();
+  window.addEventListener("beforeunload", beforeUnload);
+});
 onUnmounted(() => {
   disposed = true;
+  window.removeEventListener("beforeunload", beforeUnload);
   stopAvatarRead();
 });
 </script>
 
 <style scoped>
+.player-position-picker {
+  margin: 18px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.player-position-picker legend {
+  font-weight: 650;
+  padding: 0 6px;
+}
+.player-position-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.player-position-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.player-position-options label.selected {
+  background: var(--color-brand-soft);
+  border-color: var(--color-brand);
+}
+.player-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.player-filters label {
+  min-width: min(240px, 100%);
+}
+.player-avatar-button {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+}
+.player-avatar-placeholder {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  flex-shrink: 0;
+}
+.player-avatar-large {
+  display: block;
+  width: min(100%, 360px);
+  max-height: 65vh;
+  object-fit: contain;
+  margin: 16px auto;
+}
+
 .club-avatar-editor {
   margin: 18px 0;
 }

@@ -7,6 +7,7 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { FootballError, openFootballStore } from "./football-store.mjs";
 import { createClubStore } from "./club-store.mjs";
+import { validateMatchPhotoUploads } from "./match-photo-decode.mjs";
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../app");
 const contentTypes = {
@@ -233,7 +234,7 @@ export function createFootballServer({
       let parsedBody;
       if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method)) {
         const largeBody =
-          /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
+          /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|matches\/[1-9]\d*\/photos$|players(?:$|\/[^/]+$))/.test(
             pathname,
           );
         parsedBody = await readRequest(
@@ -350,6 +351,63 @@ export function createFootballServer({
             new URL(request.url, "http://localhost").searchParams,
           ),
         );
+      if (pathname === "/api/venues") {
+        if (method === "GET")
+          return send(response, 200, club.listVenues(user.team_id));
+        if (method === "POST") {
+          admin();
+          return send(
+            response,
+            201,
+            club.saveVenue(user.team_id, null, body()),
+          );
+        }
+      }
+      const venueRoute = /^\/api\/venues\/([1-9]\d*)$/.exec(pathname);
+      if (venueRoute) {
+        const id = routeId(venueRoute[1]);
+        if (method === "GET")
+          return send(response, 200, club.getVenue(user.team_id, id));
+        if (method === "PUT") {
+          admin();
+          return send(response, 200, club.saveVenue(user.team_id, id, body()));
+        }
+      }
+      const photoRoute =
+        /^\/api\/matches\/([1-9]\d*)\/photos(?:\/([a-f0-9-]{36}))?$/.exec(
+          pathname,
+        );
+      if (photoRoute) {
+        const id = routeId(photoRoute[1]);
+        if (photoRoute[2] && method === "GET") {
+          const photo = club.getMatchPhoto(user, id, photoRoute[2]);
+          response.writeHead(200, {
+            "Content-Type": photo.mime,
+            "Content-Length": photo.bytes.length,
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'",
+            "Cross-Origin-Resource-Policy": "same-origin",
+          });
+          return response.end(photo.bytes);
+        }
+        if (!photoRoute[2] && method === "PUT") {
+          admin();
+          // Check visibility before CPU work, then decode outside any SQLite transaction.
+          club.getMatch(user, id, { includeTacticSnapshots: false });
+          await validateMatchPhotoUploads(body());
+          // Logout/password reset during an asynchronous decoder must revoke this write.
+          const currentUser = club.authenticate(token);
+          if (currentUser.role !== "admin")
+            throw new FootballError(403, "此操作需要管理员权限。");
+          // The synchronous store rechecks revision, IDs and total byte quota atomically.
+          return send(
+            response,
+            200,
+            club.saveMatchPhotos(currentUser, id, body()),
+          );
+        }
+      }
       if (pathname === "/api/matches") {
         if (method === "GET")
           return send(response, 200, club.listMatches(user));

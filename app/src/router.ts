@@ -27,6 +27,7 @@ const router = createRouter({
       children: [
         { path: "", component: () => import("./views/ClubMatchesView.vue") },
         { path: "players", component: () => import("./views/ClubPlayersView.vue") },
+        { path: "venues", component: () => import("./views/ClubVenuesView.vue") },
         { path: "statistics", component: () => import("./views/ClubStatisticsView.vue") },
         { path: "account", component: () => import("./views/AccountView.vue") },
         { path: "matches/:id", component: () => import("./views/ClubMatchView.vue") },

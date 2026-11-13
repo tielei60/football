@@ -1,3 +1,4 @@
+import { setMatchSchedule } from "./match-schedule";
 import { selectUiOption } from "./ui-select";
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- One sequential story shares a browser session and depends on previous steps. */
 import type { Page } from "@playwright/test";
@@ -38,7 +39,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
       await page.getByRole("button", { name: "添加球员", exact: true }).click();
       await page.getByLabel("姓名", { exact: true }).fill(member.name);
       await page.getByLabel("球衣号码").fill("99");
-      await page.getByLabel("位置（逗号分隔，可多选）").fill("中场");
+      await page.getByRole("checkbox", { name: "中场", exact: true }).check();
       await page.getByRole("button", { name: "保存球员", exact: true }).click();
       const row = page.getByRole("row").filter({ hasText: member.name });
       await row.getByRole("button", { name: "创建账号" }).click();
@@ -103,7 +104,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
       await page.goto("/club");
       await page.getByRole("button", { name: "新建比赛" }).click();
       await page.getByLabel("对手", { exact: true }).fill("河岸联队（虚构）");
-      await page.getByLabel("比赛日期").fill(date);
+      await setMatchSchedule(page, date);
       await page.getByLabel("赛事名称").fill("周末友谊杯");
       await selectUiOption(page.getByLabel("比赛人数制"), "8");
       await selectUiOption(page.getByRole("combobox", { name: "主客场", exact: true }), "neutral");
@@ -121,7 +122,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
     for (let i = 0; i < members.length; i += 1) {
       await switchAccount(page, members[i].username, password);
       await page.goto(matches[0]);
-      await page.getByRole("button", { name: ["参加", "不参加", "待定"][i], exact: true }).click();
+      await page.getByRole("button", { name: ["参加", "请假 / 不参加", "待定"][i], exact: true }).click();
       await expect(page.getByRole("status").filter({ hasText: "报名意愿已更新" })).toHaveText("报名意愿已更新");
       await expect(page.getByRole("button", { name: "保存比赛信息" })).toHaveCount(0);
       await expect(page.getByText("尚未录入比赛名单")).toBeVisible();

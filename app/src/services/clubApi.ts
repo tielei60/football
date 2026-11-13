@@ -44,6 +44,22 @@ export interface Appearance {
   goals: number | null;
   assists: number | null;
 }
+export interface Venue {
+  id: number;
+  revision: number;
+  name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  note: string;
+  status: "active" | "archived";
+}
+export interface MatchPhoto {
+  byteSize: number;
+  id: string;
+  url: string;
+  caption: string;
+}
 export interface ClubMatch {
   revision: number;
   id: number;
@@ -55,6 +71,14 @@ export interface ClubMatch {
   date: string;
   kickoff: string;
   location: string;
+  durationMinutes: number | null;
+  notice: string;
+  venueId: number | null;
+  venueSnapshot: Pick<Venue, "name" | "address" | "latitude" | "longitude"> | null;
+  photos: MatchPhoto[];
+  coverPhotoId: string | null;
+  coverPhotoUrl: string | null;
+  photoCount: number;
   status: "draft" | "published" | "completed" | "cancelled";
   homeScore: number | null;
   awayScore: number | null;
@@ -69,7 +93,7 @@ export interface ClubMatch {
   rsvps: { playerId: string; response: "yes" | "no" | "maybe" }[];
   roster: Appearance[];
 }
-export type ClubMatchSummary = Omit<ClubMatch, "tacticSnapshots">;
+export type ClubMatchSummary = Omit<ClubMatch, "tacticSnapshots" | "photos">;
 export interface TeamSummary {
   matches: number;
   scoredMatches: number;

@@ -47,6 +47,8 @@ export default defineConfig({
       workbox: {
         // 只缓存页面资源，战术内容始终通过服务读取。
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
+        // Map code is optional and must not be downloaded by service-worker precaching.
+        globIgnores: ["**/optional-map-*.js", "**/leaflet-*.js", "**/leaflet-*.css"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
       },
@@ -66,6 +68,9 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        manualChunks(id) {
+          if (id.includes("/node_modules/leaflet/") && id.endsWith(".js")) return "optional-map";
+        },
         compact: true,
         assetFileNames: "[ext]/[name]-[hash].[ext]",
         chunkFileNames: "js/[name]-[hash].js",

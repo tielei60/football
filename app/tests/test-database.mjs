@@ -46,7 +46,9 @@ function resetClubTestDataAttempt(databasePath) {
         DELETE FROM club_season_roster;
         DELETE FROM club_rsvps;
         DELETE FROM club_roster;
+        DELETE FROM club_match_photos;
         DELETE FROM club_matches;
+        DELETE FROM club_venues;
         DELETE FROM club_seasons;
         DELETE FROM club_sessions;
         DELETE FROM club_users WHERE role = 'player';

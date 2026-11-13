@@ -1,3 +1,4 @@
+import { setMatchSchedule } from "./match-schedule";
 import { selectUiOption, expectUiValue } from "./ui-select";
 /* eslint-disable no-restricted-syntax, no-await-in-loop -- Browser steps share a page and must run sequentially, not concurrently. */
 import { mkdir } from "node:fs/promises";
@@ -157,6 +158,10 @@ test("player save locks cancellation and switching, then stale profile retains t
   await expect(page.getByRole("alert")).toContainText("你的输入已保留");
   await expect(page.getByLabel("姓名", { exact: true })).toHaveValue("保留球员草稿");
   await page.getByRole("button", { name: "重新载入球员（放弃未保存修改）" }).click();
+  await page
+    .getByRole("dialog", { name: "放弃球员修改", exact: true })
+    .getByRole("button", { name: "放弃修改", exact: true })
+    .click();
   await expect(page.getByRole("row").filter({ hasText: "其他管理员姓名" })).toBeVisible();
 });
 
@@ -696,7 +701,7 @@ test("season roster and match fields preserve historical identity, number and ta
   await page.getByRole("link", { name: "比赛", exact: true }).click();
   await page.getByRole("button", { name: "新建比赛" }).click();
   await page.getByLabel("对手", { exact: true }).fill("归属对手");
-  await page.getByLabel("比赛日期").fill("2092-01-01");
+  await setMatchSchedule(page, "2092-01-01");
   await page.getByLabel("赛事名称").fill("业余杯");
   await selectUiOption(page.getByLabel("比赛人数制"), "8");
   await selectUiOption(page.getByRole("combobox", { name: "主客场", exact: true }), "away");

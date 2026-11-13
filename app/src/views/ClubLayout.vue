@@ -28,6 +28,10 @@
           <UsersRound :size="18" aria-hidden="true" />
           <span>球员</span>
         </RouterLink>
+        <RouterLink to="/club/venues">
+          <MapPin :size="18" aria-hidden="true" />
+          <span>球场</span>
+        </RouterLink>
         <RouterLink to="/club/statistics">
           <ChartNoAxesCombined :size="18" aria-hidden="true" />
           <span>统计与赛季</span>
@@ -65,7 +69,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { CalendarDays, UsersRound, ChartNoAxesCombined, Goal, UserRound } from "lucide-vue-next";
+import { CalendarDays, UsersRound, ChartNoAxesCombined, Goal, UserRound, MapPin } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import defaultBadge from "@/assets/default-club-badge.svg";
 import { useAuthStore } from "@/stores/authStore";

@@ -1,3 +1,4 @@
+import { setMatchSchedule } from "./match-schedule";
 import { test, expect } from "./fixtures";
 import { selectUiOption, expectUiValue } from "./ui-select";
 
@@ -30,7 +31,7 @@ test("keyboard custom choices preserve number and null values through real match
   await expectUiValue(format, 5);
   await selectUiOption(page.getByRole("combobox", { name: "归属赛季", exact: true }), season.id);
   await page.getByLabel("对手", { exact: true }).fill("控件类型虚构对手");
-  await page.getByLabel("比赛日期").fill("2095-01-15");
+  await setMatchSchedule(page, "2095-01-15");
   await page.getByRole("button", { name: "创建草稿", exact: true }).click();
   await expect(page.getByRole("heading", { name: "比赛信息与分析", exact: true })).toBeVisible();
   const id = Number(page.url().split("/").pop());

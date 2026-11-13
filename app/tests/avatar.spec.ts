@@ -135,11 +135,19 @@ test("late avatar reads cannot mutate a different player draft or survive cancel
   await page.getByLabel("上传球员头像").setInputFiles(image);
   await expect(page.getByRole("button", { name: "保存球员", exact: true })).toBeDisabled();
   await page.getByRole("row").filter({ hasText: "乙头像" }).getByRole("button", { name: "编辑", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "放弃球员修改", exact: true })
+    .getByRole("button", { name: "放弃修改", exact: true })
+    .click();
   await expect(page.getByLabel("姓名", { exact: true })).toHaveValue("乙头像");
   await page.evaluate(() => (window as typeof window & { flushAvatarReads: () => Promise<void[]> }).flushAvatarReads());
   await expect(page.getByAltText("球员头像预览")).toHaveCount(0);
   await page.getByLabel("上传球员头像").setInputFiles(image);
   await page.getByRole("button", { name: "取消", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "放弃球员修改", exact: true })
+    .getByRole("button", { name: "放弃修改", exact: true })
+    .click();
   await page.evaluate(() => (window as typeof window & { flushAvatarReads: () => Promise<void[]> }).flushAvatarReads());
   await page.getByRole("row").filter({ hasText: "甲头像" }).getByRole("button", { name: "编辑", exact: true }).click();
   await expect(page.getByAltText("球员头像预览")).toHaveCount(0);

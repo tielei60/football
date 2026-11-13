@@ -5,6 +5,12 @@ import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import { openFootballStore } from "../server/football-store.mjs";
 import { createClubStore } from "../server/club-store.mjs";
+import {
+  portrait,
+  portraitAlternate,
+  matchPhoto1,
+  matchPhoto2,
+} from "./demo-media.mjs";
 
 // No destination argument is supported. In particular, FOOTBALL_DB_PATH is never read.
 export function createDemo() {
@@ -66,6 +72,7 @@ export function createDemo() {
         name,
         number: numbers[index],
         positions: positions[index],
+        avatar: index === 0 ? portrait : index === 1 ? portraitAlternate : null,
         note: "虚构成年球员，仅用于演练，无真实个人资料。",
       }),
     );
@@ -85,12 +92,40 @@ export function createDemo() {
         number: seasonNumbers[index],
       })),
     }).season;
+    const venue = club.saveVenue(admin.team_id, null, {
+      name: "青岚社区球场（虚构）",
+      address: "仅为地图操作演练坐标，不对应实际球场，请勿前往。",
+      latitude: 31.23,
+      longitude: 121.47,
+      note: "虚构公共场地演练资料，无真实个人地址。",
+      status: "active",
+    });
+    const alternateVenue = club.saveVenue(admin.team_id, null, {
+      name: "松风室内球场（虚构）",
+      address: "演练地址，实际地点待确认",
+      latitude: null,
+      longitude: null,
+      note: "用于演练未设置坐标时仍可选场地。",
+      status: "active",
+    });
+    const archivedVenue = club.saveVenue(admin.team_id, null, {
+      name: "旧训练场（虚构、已归档）",
+      address: "仅为归档功能演练",
+      latitude: null,
+      longitude: null,
+      note: "归档场地不能用于新关联，可由管理员恢复。",
+      status: "archived",
+    });
     const common = {
       seasonId: season.id,
       format: 7,
       competition: "虚构周末联赛",
       kickoff: "15:00",
       location: "青岚社区球场（虚构）",
+      venueId: venue.id,
+      durationMinutes: 90,
+      notice:
+        "虚构演练须知：提前 15 分钟集合，自备饮水和护腿板；报名状态变化请及时更新。此内容不是免责协议，也不代表已经签署任何条款。",
     };
     // Use the same public store contract as the editor, without initializing the desk.
     // Same landscape SVG coordinates as PITCH_8V8 / the 7-a-side formation picker.
@@ -258,6 +293,14 @@ export function createDemo() {
       analysis:
         "虚构已结束比赛。报名意愿与实际出场独立：周泽报名不参加但后来替补出场；顾川出场尚未核实。",
     });
+    away = club.saveMatchPhotos(admin, away.id, {
+      revision: away.revision,
+      photos: [
+        { data: matchPhoto1, caption: "虚构赛后合影示意图 1，无真实人物" },
+        { data: matchPhoto2, caption: "虚构赛后合影示意图 2，可练习调整顺序" },
+      ],
+      coverIndex: 0,
+    });
     // The saved match keeps its original independent snapshot, not this revision.
     legacy.saveTactic(tactic.tacticId, {
       note: "赛后模板调整：历史比赛仍保留原始站位",
@@ -279,17 +322,23 @@ export function createDemo() {
       date: "2027-01-10",
       side: "home",
       status: "completed",
+      durationMinutes: null,
       homeScore: 0,
       awayScore: null,
       analysis:
         "虚构已结束比赛：本队零进球已确认，对手比分未知，出场和个人明细未录入。",
     });
-    const upcoming = club.saveMatch(admin, null, {
+    let upcoming = club.saveMatch(admin, null, {
       ...common,
       opponent: "松风社区队（虚构）",
       date: "2027-02-07",
       side: "home",
       status: "published",
+    });
+    upcoming = club.saveMatchPhotos(admin, upcoming.id, {
+      revision: upcoming.revision,
+      photos: [{ data: matchPhoto1, caption: "虚构比赛封面，非真实照片" }],
+      coverIndex: 0,
     });
     sessions.forEach((session, index) =>
       club.saveRsvp(club.authenticate(session.token), upcoming.id, {
@@ -327,6 +376,7 @@ export function createDemo() {
       })),
       players,
       season,
+      venues: [venue, alternateVenue, archivedVenue],
       matches: {
         away: away.id,
         home: home.id,
