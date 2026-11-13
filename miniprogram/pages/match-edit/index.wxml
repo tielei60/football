@@ -1,0 +1,162 @@
+<view class="page"
+  ><page-state
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error}}"
+    ><view class="title">安排一场比赛</view
+    ><view class="subtitle">保存后，球队成员可在赛程中查看已发布比赛</view
+    ><view class="card section"
+      ><view class="field"
+        ><text class="field-label">对手 *</text
+        ><input
+          class="input"
+          value="{{form.opponent}}"
+          data-field="opponent"
+          bindinput="input"
+          maxlength="200"
+          placeholder="对手名称"
+          disabled="{{busy}}" /></view
+      ><view class="field"
+        ><text class="field-label">赛事</text
+        ><input
+          class="input"
+          value="{{form.competition}}"
+          data-field="competition"
+          bindinput="input"
+          maxlength="200"
+          placeholder="如：周末友谊赛"
+          disabled="{{busy}}" /></view
+      ><view class="filter-row"
+        ><view class="grow"
+          ><text class="field-label">日期 *</text
+          ><picker
+            mode="date"
+            value="{{form.date}}"
+            bindchange="date"
+            disabled="{{busy}}"
+            ><view class="picker">{{dateLabel || '选择日期'}}</view></picker
+          ></view
+        ><view class="grow"
+          ><text class="field-label">开球时间</text
+          ><picker
+            mode="time"
+            value="{{form.kickoff}}"
+            bindchange="time"
+            disabled="{{busy}}"
+            ><view class="picker">{{form.kickoff || '时间待定'}}</view></picker
+          ></view
+        ></view
+      ><button
+        wx:if="{{form.kickoff}}"
+        class="small ghost"
+        bindtap="clearTime"
+        disabled="{{busy}}"
+      >
+        清除开球时间</button
+      ><view class="field"
+        ><text class="field-label">地点</text
+        ><input
+          class="input"
+          value="{{form.location}}"
+          data-field="location"
+          bindinput="input"
+          maxlength="500"
+          placeholder="球场名称或地址"
+          disabled="{{busy}}" /></view
+      ><view class="filter-row"
+        ><view class="grow"
+          ><text class="field-label">人数制</text
+          ><picker
+            range="{{formats}}"
+            range-key="label"
+            value="{{formatIndex}}"
+            data-field="formatIndex"
+            bindchange="pick"
+            disabled="{{busy}}"
+            ><view class="picker">{{formats[formatIndex].label}}</view></picker
+          ></view
+        ><view class="grow"
+          ><text class="field-label">主客场</text
+          ><picker
+            range="{{sides}}"
+            range-key="label"
+            value="{{sideIndex}}"
+            data-field="sideIndex"
+            bindchange="pick"
+            disabled="{{busy}}"
+            ><view class="picker">{{sides[sideIndex].label}}</view></picker
+          ></view
+        ></view
+      ><view class="field"
+        ><text class="field-label">所属赛季</text
+        ><picker
+          range="{{seasons}}"
+          range-key="name"
+          value="{{seasonIndex}}"
+          data-field="seasonIndex"
+          bindchange="pick"
+          disabled="{{busy}}"
+          ><view class="picker">{{seasons[seasonIndex].name}}</view></picker
+        ></view
+      ><view class="field"
+        ><text class="field-label">比赛状态</text
+        ><picker
+          range="{{statuses}}"
+          range-key="label"
+          value="{{statusIndex}}"
+          data-field="statusIndex"
+          bindchange="pick"
+          disabled="{{busy}}"
+          ><view class="picker">{{statuses[statusIndex].label}}</view></picker
+        ></view
+      ></view
+    ><view class="card"
+      ><view class="section-title">比分与复盘</view
+      ><view class="filter-row"
+        ><view class="grow"
+          ><text class="field-label">我方比分</text
+          ><input
+            class="input"
+            type="number"
+            value="{{form.homeScore}}"
+            data-field="homeScore"
+            bindinput="input"
+            maxlength="3"
+            placeholder="未知"
+            disabled="{{busy}}" /></view
+        ><view class="grow"
+          ><text class="field-label">对方比分</text
+          ><input
+            class="input"
+            type="number"
+            value="{{form.awayScore}}"
+            data-field="awayScore"
+            bindinput="input"
+            maxlength="3"
+            placeholder="未知"
+            disabled="{{busy}}" /></view></view
+      ><text class="field-label">复盘</text
+      ><textarea
+        value="{{form.analysis}}"
+        data-field="analysis"
+        bindinput="input"
+        maxlength="10000"
+        placeholder="记录这场比赛的收获"
+        disabled="{{busy}}"
+      /></view
+    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
+    ><button wx:if="{{conflict}}" bindtap="reload">重新载入最新版本</button
+    ><button
+      class="primary"
+      style="margin-top: 20rpx"
+      disabled="{{busy || conflict}}"
+      loading="{{busy}}"
+      bindtap="save"
+    >
+      保存比赛</button
+    ><view class="hint"
+      >只有“已完赛”比赛计入统计；比分未知时请留空。</view
+    ></block
+  ></view
+>

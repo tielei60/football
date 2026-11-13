@@ -1,0 +1,61 @@
+<view class="page"
+  ><view class="between"
+    ><view
+      ><view class="title">每一场，都在这里</view
+      ><view class="subtitle">赛程 · 报名 · 赛果</view></view
+    ><button wx:if="{{admin}}" class="small primary no-wrap" bindtap="create">
+      发布比赛
+    </button></view
+  ><view class="tabs"
+    ><view
+      class="tab {{tab==='upcoming'?'active':''}}"
+      data-tab="upcoming"
+      bindtap="changeTab"
+      >待比赛</view
+    ><view
+      class="tab {{tab==='past'?'active':''}}"
+      data-tab="past"
+      bindtap="changeTab"
+      >已结束</view
+    ><view
+      wx:if="{{admin}}"
+      class="tab {{tab==='draft'?'active':''}}"
+      data-tab="draft"
+      bindtap="changeTab"
+      >草稿</view
+    ></view
+  ><page-state
+    loading="{{loading}}"
+    error="{{error}}"
+    empty="{{!visible.length}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error}}"
+    ><block wx:for="{{visible}}" wx:key="id"
+      ><view wx:if="{{item.monthHeading}}" class="section-title"
+        >{{item.monthHeading}}</view
+      ><view class="card" data-id="{{item.id}}" bindtap="openMatch"
+        ><view class="between"
+          ><text class="muted"
+            >{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</text
+          ><text class="tag {{item.status}}">{{item.statusLabel}}</text></view
+        ><view class="between" style="margin-top: 20rpx"
+          ><view class="grow"
+            ><view class="section-title break" style="margin: 0"
+              >{{item.opponent}}</view
+            ><view class="muted"
+              >{{item.competition || '球队比赛'}}{{item.format ? ' · '+item.format+'人制' : ''}}</view
+            ></view
+          ><view wx:if="{{item.status==='completed'}}" class="score"
+            >{{item.scoreLabel}}</view
+          ></view
+        ><view class="divider"></view
+        ><view class="between"
+          ><text class="muted grow break">{{item.location || '地点待定'}}</text
+          ><text wx:if="{{item.status==='published'}}" class="link"
+            >{{item.yesCount}}人参加 · {{item.responseLabel}} ›</text
+          ></view
+        ></view
+      ></block
+    ></block
+  ></view
+>

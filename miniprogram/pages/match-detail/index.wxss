@@ -1,0 +1,33 @@
+.match-hero {
+  text-align: center;
+  background: linear-gradient(160deg, #fff, #f3ebf7);
+}
+.teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin: 30rpx 0;
+  font-weight: 650;
+}
+.teams view {
+  flex: 1;
+  word-break: break-word;
+}
+.teams .score {
+  font-size: 40rpx;
+  white-space: nowrap;
+}
+.detail-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 30rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0ecf3;
+}
+.detail-line:last-child {
+  border: 0;
+}
+.detail-line text:last-child {
+  text-align: right;
+}

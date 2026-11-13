@@ -1,0 +1,76 @@
+<view class="page"
+  ><page-state
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error}}"
+    ><view class="hero"
+      ><view class="row"
+        ><view class="avatar large"
+          ><image
+            wx:if="{{team.crest}}"
+            src="{{team.crest}}"
+            data-target="team"
+            binderror="imageError"
+            mode="aspectFit"
+          /><text wx:else>足</text></view
+        ><view class="grow"
+          ><view class="subtitle">OUR CLUB · 一起上场</view
+          ><view class="title break">{{team.name}}</view></view
+        ></view
+      ><view class="hero-metrics"
+        ><view
+          ><text class="hero-number">{{playerCount}}</text
+          ><text>位队员</text></view
+        ><view
+          ><text class="hero-number">{{stats.team.matches}}</text
+          ><text>本年完赛</text></view
+        ><view
+          ><text class="hero-number">{{stats.team.wins}}</text
+          ><text>胜场</text></view
+        ></view
+      ></view
+    ><view class="section"
+      ><view class="between"
+        ><view class="section-title">下一场，一起踢</view
+        ><text class="link" bindtap="schedule">全部赛程 ›</text></view
+      ><view
+        wx:if="{{next}}"
+        class="card next"
+        data-id="{{next.id}}"
+        bindtap="openMatch"
+        ><view class="between"
+          ><text class="tag">{{next.competition || '球队比赛'}}</text
+          ><text class="muted"
+            >{{next.format ? next.format + '人制' : '赛制待定'}}</text
+          ></view
+        ><view class="match-title">对阵 {{next.opponent}}</view
+        ><view>{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
+        ><view class="muted">{{next.location || '地点待定'}}</view
+        ><view class="divider"></view
+        ><view class="between"
+          ><text class="muted"
+            >{{next.yesCount}} 人参加 · {{next.maybeCount}} 人待定</text
+          ><text class="tag">{{next.responseLabel}}</text></view
+        ><button class="primary" style="margin-top: 24rpx">
+          查看比赛与报名
+        </button></view
+      ><view wx:else class="card empty">还没有即将开始的比赛</view></view
+    ><view class="section"
+      ><view class="section-title">最近赛果</view
+      ><view
+        wx:for="{{recent}}"
+        wx:key="id"
+        class="card between"
+        data-id="{{item.id}}"
+        bindtap="openMatch"
+        ><view class="grow"
+          ><view class="bold break">{{item.opponent}}</view
+          ><view class="muted">{{item.dateLabel}}</view></view
+        ><view class="score">{{item.scoreLabel}}</view></view
+      ><view wx:if="{{!recent.length}}" class="card empty"
+        >赛后记录会出现在这里</view
+      ></view
+    ></block
+  ></view
+>

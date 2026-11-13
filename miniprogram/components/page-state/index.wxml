@@ -1,0 +1,7 @@
+<view wx:if="{{loading}}" class="state"
+  ><view class="pulse"></view><text>正在加载</text></view
+>
+<view wx:elif="{{error}}" class="state"
+  ><text>{{error}}</text><button bindtap="retry">重试</button></view
+>
+<view wx:elif="{{empty}}" class="state"><text>暂时没有记录</text></view>

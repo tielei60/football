@@ -1,0 +1,115 @@
+<view class="page"
+  ><page-state
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error && match}}"
+    ><view class="card match-hero"
+      ><view class="between"
+        ><text class="tag {{match.status}}">{{match.statusLabel}}</text
+        ><text class="muted"
+          >{{match.competition || '球队比赛'}}{{match.format?' · '+match.format+'人制':''}}</text
+        ></view
+      ><view class="teams"
+        ><view>{{team.name}}</view
+        ><text class="score"
+          >{{match.status==='completed'?match.scoreLabel:'VS'}}</text
+        ><view>{{match.opponent}}</view></view
+      ><view class="muted"
+        >{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</view
+      ></view
+    ><view class="card"
+      ><view class="detail-line"
+        ><text class="muted">比赛日期</text
+        ><text>{{match.dateLabel}}</text></view
+      ><view class="detail-line"
+        ><text class="muted">开球时间</text
+        ><text>{{match.kickoff || '待定'}}</text></view
+      ><view class="detail-line"
+        ><text class="muted">比赛地点</text
+        ><text class="break">{{match.location || '待定'}}</text></view
+      ></view
+    ><button wx:if="{{admin}}" class="primary" bindtap="edit">
+      编辑比赛与比分</button
+    ><view class="section"
+      ><view class="section-title">报名情况</view
+      ><view class="metrics"
+        ><view class="metric"
+          ><text class="number">{{match.yesCount}}</text
+          ><text class="label">参加</text></view
+        ><view class="metric"
+          ><text class="number">{{match.noCount}}</text
+          ><text class="label">请假</text></view
+        ><view class="metric"
+          ><text class="number">{{match.maybeCount}}</text
+          ><text class="label">待定</text></view
+        ></view
+      ><view class="card" style="margin-top: 20rpx"
+        ><view wx:for="{{replies}}" wx:key="playerId" class="detail-line"
+          ><text>{{item.name}}</text
+          ><text class="tag">{{item.label}}</text></view
+        ><view wx:if="{{!replies.length}}" class="empty"
+          >还没有报名回应</view
+        ></view
+      ></view
+    ><view class="section"
+      ><view class="section-title">比赛名单与实际表现</view
+      ><view wx:for="{{roster}}" wx:key="playerId" class="card"
+        ><view class="between"
+          ><view class="bold">{{item.number}} · {{item.name}}</view
+          ><text class="tag">{{item.selectionLabel}}</text></view
+        ><view class="muted"
+          >{{item.position || '位置未记录'}} · {{item.appearedLabel}}</view
+        ><view style="margin-top: 16rpx"
+          >进球 {{item.goalsLabel}} · 助攻 {{item.assistsLabel}}</view
+        ><text wx:if="{{item.snapshotSource==='migration'}}" class="muted"
+          >身份资料为迁移时留存</text
+        ></view
+      ><view wx:if="{{!roster.length}}" class="card empty"
+        >名单尚未录入</view
+      ></view
+    ><view class="section" wx:if="{{match.analysis}}"
+      ><view class="section-title">赛后复盘</view
+      ><view class="card prewrap">{{match.analysis}}</view></view
+    ><view class="section" wx:if="{{snapshots.length}}"
+      ><view class="section-title">战术留档</view
+      ><view class="card"
+        ><view wx:for="{{snapshots}}" wx:key="id" class="detail-line"
+          ><text>{{item.name}}</text
+          ><text class="muted">{{item.source}}</text></view
+        ><view class="hint">完整战术快照请在网页管理端查看。</view></view
+      ></view
+    ><view class="hint">报名不等于实际出场；“—”表示未记录。</view
+    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
+    ><view wx:if="{{canReply}}" class="bottom-space"></view
+    ><view wx:if="{{canReply}}" class="fixed-actions"
+      ><view class="between" style="margin-bottom: 14rpx"
+        ><text class="bold">我的报名</text
+        ><text class="muted">当前：{{match.responseLabel}}</text></view
+      ><view class="actions"
+        ><button
+          class="{{match.response==='yes'?'primary':''}}"
+          data-response="yes"
+          bindtap="reply"
+          disabled="{{busy}}"
+        >
+          参加</button
+        ><button
+          class="{{match.response==='maybe'?'primary':''}}"
+          data-response="maybe"
+          bindtap="reply"
+          disabled="{{busy}}"
+        >
+          待定</button
+        ><button
+          class="{{match.response==='no'?'primary':''}}"
+          data-response="no"
+          bindtap="reply"
+          disabled="{{busy}}"
+        >
+          请假
+        </button></view
+      ></view
+    ></block
+  ></view
+>

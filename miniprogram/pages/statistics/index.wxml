@@ -1,0 +1,98 @@
+<view class="page"
+  ><view class="title">属于球队的记录</view
+  ><view class="subtitle">只统计已完赛 · 未知不计作零</view
+  ><view class="filter-row"
+    ><picker
+      range="{{seasons}}"
+      range-key="name"
+      value="{{seasonIndex}}"
+      bindchange="season"
+      ><view class="picker"
+        >{{seasons[seasonIndex].name || '按自然年'}}</view
+      ></picker
+    ><picker
+      wx:if="{{seasonIndex===0}}"
+      mode="date"
+      fields="year"
+      value="{{year}}"
+      bindchange="year"
+      ><view class="picker">{{year}} 年</view></picker
+    ></view
+  ><page-state
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error && stats}}"
+    ><view class="card"
+      ><view class="between"
+        ><view class="bold">{{stats.filter.label}}</view
+        ><text class="tag">{{stats.team.matches}} 场完赛</text></view
+      ><view class="metrics" style="margin-top: 24rpx"
+        ><view class="metric"
+          ><text class="number">{{stats.team.wins}}</text
+          ><text class="label">胜</text></view
+        ><view class="metric"
+          ><text class="number">{{stats.team.draws}}</text
+          ><text class="label">平</text></view
+        ><view class="metric"
+          ><text class="number">{{stats.team.losses}}</text
+          ><text class="label">负</text></view
+        ></view
+      ><view class="between" style="margin-top: 24rpx"
+        ><text
+          >进球 {{stats.team.goalsForLabel}} · 失球
+          {{stats.team.goalsAgainstLabel}}</text
+        ><text class="muted"
+          >比分完整 {{stats.team.scoredMatches}}/{{stats.team.matches}}</text
+        ></view
+      ></view
+    ><view class="tabs"
+      ><view
+        class="tab {{metric==='goals'?'active':''}}"
+        data-metric="goals"
+        bindtap="metric"
+        >进球榜</view
+      ><view
+        class="tab {{metric==='assists'?'active':''}}"
+        data-metric="assists"
+        bindtap="metric"
+        >助攻榜</view
+      ><view
+        class="tab {{metric==='appearances'?'active':''}}"
+        data-metric="appearances"
+        bindtap="metric"
+        >出场榜</view
+      ></view
+    ><view class="card"
+      ><view
+        wx:for="{{leaders}}"
+        wx:key="playerId"
+        class="rank-row row"
+        data-id="{{item.playerId}}"
+        bindtap="openPlayer"
+        ><text class="rank">{{item.rank}}</text
+        ><view class="grow"
+          ><view class="bold">{{item.name}}</view
+          ><view class="muted" wx:if="{{metric!=='appearances'}}"
+            >已记录 {{item.coverage}} 场 · 出场 {{item.appearances}} 场</view
+          ><view class="muted" wx:else
+            >出场待确认 {{item.unknownAppearances}} 场</view
+          ></view
+        ><text class="rank-value">{{item.value}}</text></view
+      ><view wx:if="{{!leaders.length}}" class="empty">暂无球员记录</view></view
+    ><view class="hint"
+      >未录入名单 {{stats.matchesWithoutRoster}}
+      场。榜单展示已记录的数据，不代表缺失记录为零。</view
+    ><view class="section-title">对手交锋</view
+    ><view wx:for="{{stats.opponents}}" wx:key="opponent" class="card"
+      ><view class="bold">{{item.opponent}}</view
+      ><view class="between"
+        ><text class="muted"
+          >{{item.matches}}场 · {{item.scoredMatches}}场完整比分</text
+        ><text>{{item.wins}}胜 {{item.draws}}平 {{item.losses}}负</text></view
+      ></view
+    ><view wx:if="{{!stats.opponents.length}}" class="card empty"
+      >暂无交锋记录</view
+    ></block
+  ></view
+>
