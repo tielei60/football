@@ -1,0 +1,2285 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TOUCHLINE · 青岚周末足球俱乐部</title>
+    <style>
+      [hidden] {
+        display: none !important;
+      }
+      :root {
+        --pine: #142e28;
+        --lime: #ddf67c;
+        --paper: #f5f5ee;
+        --ink: #18231e;
+        --muted: #768079;
+        --line: #d9ddd3;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          14px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          "Microsoft Yahei",
+          sans-serif;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button,
+      a,
+      input,
+      textarea {
+        outline-offset: 4px;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid #8faa39;
+      }
+      button {
+        border: 0;
+      }
+      button:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+      }
+      button {
+        transition:
+          background 0.18s,
+          transform 0.18s;
+      }
+      button:hover:not(:disabled) {
+        filter: brightness(0.96);
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .sidebar {
+        background: var(--pine);
+        color: #fff;
+        padding: 34px 22px;
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 220px;
+        z-index: 10;
+      }
+      .brand {
+        font-size: 24px;
+        letter-spacing: -1px;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .brand span {
+        color: var(--lime);
+      }
+      .brand small {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 4px;
+        font-weight: 500;
+        margin-top: 12px;
+        color: #a8bbb0;
+      }
+      .clubmark {
+        border-top: 1px solid #ffffff20;
+        margin-top: 36px;
+        padding-top: 28px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .crest {
+        width: 38px;
+        height: 44px;
+        color: var(--lime);
+        flex: none;
+      }
+      .clubmark strong {
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .clubmark small {
+        display: block;
+        color: #91a99e;
+        font-size: 10px;
+        letter-spacing: 1px;
+      }
+      nav {
+        margin-top: 34px;
+        display: grid;
+        gap: 7px;
+      }
+      nav button {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        color: #b8c8bf;
+        background: transparent;
+        text-align: left;
+        padding: 13px 15px;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+      nav button.active {
+        background: var(--lime);
+        color: var(--pine);
+        font-weight: 700;
+      }
+      nav svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+      }
+      .sidebottom {
+        margin-top: auto;
+        padding-top: 50px;
+        color: #91a99e;
+        font-size: 11px;
+      }
+      .profile {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        border-top: 1px solid #ffffff20;
+        padding-top: 20px;
+        margin-top: 18px;
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        background: #395247;
+        color: var(--lime);
+        font-size: 12px;
+      }
+      .profile strong {
+        color: #e7eee7;
+        font-weight: 500;
+      }
+      .main {
+        grid-column: 2;
+        min-width: 0;
+      }
+      .topbar {
+        height: 76px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 40px;
+        font-size: 12px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .prototype {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #687468;
+      }
+      .dot {
+        height: 6px;
+        width: 6px;
+        border-radius: 50%;
+        background: #8ca33f;
+      }
+      .topright {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+      .page {
+        padding: 34px 40px 50px;
+        max-width: 1600px;
+        margin: auto;
+      }
+      .page[hidden] {
+        display: none;
+      }
+      .heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 26px;
+        gap: 16px;
+      }
+      h1 {
+        font-size: 32px;
+        letter-spacing: -1px;
+        line-height: 1.3;
+        margin: 7px 0;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 0;
+      }
+      h3 {
+        font-size: 15px;
+        margin: 0;
+      }
+      p {
+        margin: 8px 0;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 10px 16px;
+        background: transparent;
+        color: var(--ink);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .btn.primary {
+        background: var(--pine);
+        color: #fff;
+        border-color: var(--pine);
+      }
+      .btn.lime {
+        background: var(--lime);
+        border-color: var(--lime);
+        color: var(--pine);
+      }
+      .btn.small {
+        font-size: 12px;
+        padding: 7px 12px;
+      }
+      .arrow {
+        margin-left: 16px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .between {
+        justify-content: space-between;
+      }
+      .dashboard {
+        display: grid;
+        grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+        gap: 24px;
+      }
+      .hero {
+        background: var(--pine);
+        color: white;
+        padding: 28px 30px;
+        position: relative;
+        overflow: hidden;
+        min-height: 300px;
+      }
+      .hero:after {
+        content: "";
+        position: absolute;
+        width: 290px;
+        height: 290px;
+        border: 1px solid #ffffff0e;
+        border-radius: 50%;
+        right: -120px;
+        top: 10px;
+        pointer-events: none;
+      }
+      .hero .eyebrow {
+        color: #b2c4ac;
+      }
+      .pill {
+        font-size: 11px;
+        border-radius: 3px;
+        padding: 4px 8px;
+        background: #eef1e8;
+        color: #476149;
+        display: inline-block;
+      }
+      .hero .pill {
+        background: #ffffff12;
+        color: var(--lime);
+      }
+      .hero-date {
+        font-size: 13px;
+        color: #c3d0c6;
+        margin-top: 26px;
+      }
+      .versus {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        margin: 13px 0 20px;
+      }
+      .versus strong {
+        font-size: 28px;
+        letter-spacing: -1px;
+      }
+      .versus em {
+        font-style: normal;
+        font-size: 12px;
+        color: #91a99e;
+      }
+      .hero-bottom {
+        border-top: 1px solid #ffffff24;
+        padding-top: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 22px;
+      }
+      .hero .muted {
+        color: #b6c6bb;
+      }
+      .attendance {
+        padding: 24px;
+        border: 1px solid var(--line);
+        background: #ffffff55;
+      }
+      .numbergrid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin: 22px 0;
+      }
+      .numbergrid strong {
+        display: block;
+        font-size: 32px;
+        font-weight: 650;
+        line-height: 1.2;
+        letter-spacing: -1px;
+      }
+      .numbergrid span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .bar {
+        display: flex;
+        height: 5px;
+        gap: 3px;
+        margin-bottom: 18px;
+      }
+      .bar span:nth-child(1) {
+        background: #436d40;
+        flex: 12;
+      }
+      .bar span:nth-child(2) {
+        background: #b4b8ae;
+        flex: 3;
+      }
+      .bar span:nth-child(3) {
+        background: #b5cc66;
+        flex: 2;
+      }
+      .bar span:nth-child(4) {
+        background: #e0e3da;
+        flex: 5;
+      }
+      .self-rsvp {
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+      }
+      .choices {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .choices button {
+        flex: 1;
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 8px 4px;
+        font-size: 12px;
+      }
+      .choices button.selected {
+        background: var(--pine);
+        color: var(--lime);
+        border-color: var(--pine);
+      }
+      .sectionhead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .textbtn {
+        background: none;
+        color: #496440;
+        font-size: 12px;
+        padding: 4px 0;
+      }
+      .panel {
+        border-top: 1px solid var(--ink);
+        padding-top: 18px;
+        margin-top: 10px;
+      }
+      .result {
+        display: grid;
+        grid-template-columns: 58px 1fr 70px 26px;
+        gap: 12px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 17px 0;
+      }
+      .result .score {
+        font-size: 20px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+      .result .badge {
+        width: 23px;
+        height: 23px;
+        background: #e8eccc;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        color: #516027;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 24px 0;
+      }
+      .metric strong {
+        display: block;
+        font-size: 40px;
+        line-height: 1.1;
+        font-weight: 600;
+        letter-spacing: -2px;
+      }
+      .metric span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .metric + .metric {
+        border-left: 1px solid var(--line);
+        padding-left: 24px;
+      }
+      .coverage {
+        font-size: 12px;
+        background: #eaece3;
+        padding: 14px 16px;
+        color: #67715f;
+      }
+      .prepare {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        grid-column: 1/-1;
+      }
+      .prep {
+        border: 1px solid var(--line);
+        padding: 20px 23px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff40;
+      }
+      .prep p {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 3px 0;
+      }
+      .tabs {
+        display: flex;
+        gap: 22px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 20px;
+      }
+      .tabs button {
+        background: none;
+        padding: 12px 0;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        font-size: 13px;
+      }
+      .tabs button.active {
+        color: var(--ink);
+        border-color: var(--pine);
+        font-weight: 700;
+      }
+      .tabs small {
+        font-size: 10px;
+        margin-left: 4px;
+        color: var(--muted);
+      }
+      .dropdown {
+        position: relative;
+        display: inline-block;
+      }
+      .select-trigger {
+        min-width: 160px;
+        display: flex;
+        justify-content: space-between;
+        gap: 25px;
+        align-items: center;
+        font-size: 12px;
+      }
+      .select-trigger:after {
+        content: "⌄";
+        font-size: 17px;
+        font-weight: 400;
+      }
+      .options {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 7px);
+        min-width: 225px;
+        background: #fff;
+        border: 1px solid #cfd5c7;
+        padding: 7px;
+        box-shadow: 0 12px 30px #142e2818;
+        z-index: 30;
+        border-radius: 5px;
+      }
+      .options[hidden] {
+        display: none;
+      }
+      .options .label {
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        padding: 8px 10px;
+      }
+      .options button {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        text-align: left;
+        background: white;
+        padding: 11px 10px;
+        font-size: 12px;
+        border-radius: 3px;
+      }
+      .options button[aria-selected="true"] {
+        background: #edf2dc;
+        color: #294c27;
+        font-weight: 700;
+      }
+      .options button:hover,
+      .options button:focus {
+        background: #f0f2ea;
+      }
+      .match-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.9fr);
+        gap: 26px;
+      }
+      .matchrow {
+        width: 100%;
+        background: transparent;
+        border: 1px solid var(--line);
+        padding: 20px;
+        display: grid;
+        grid-template-columns: 48px 1fr auto;
+        gap: 16px;
+        text-align: left;
+        align-items: center;
+        margin-bottom: 12px;
+        border-radius: 3px;
+        color: var(--ink);
+      }
+      .matchrow.selected {
+        border-color: #476141;
+        background: #eaf0df;
+        box-shadow: inset 3px 0 var(--pine);
+      }
+      .calendar {
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 650;
+      }
+      .calendar small {
+        display: block;
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 500;
+        margin-top: 4px;
+      }
+      .matchrow strong {
+        font-size: 14px;
+      }
+      .matchrow p {
+        font-size: 11px;
+        color: var(--muted);
+        margin: 4px 0;
+      }
+      .detail {
+        background: #fff;
+        border: 1px solid var(--line);
+        padding: 25px;
+      }
+      .detail h2 {
+        font-size: 21px;
+        margin: 15px 0 5px;
+      }
+      .detail .tabs {
+        gap: 20px;
+        margin-top: 18px;
+      }
+      .rosterline {
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        padding: 11px 0;
+        font-size: 12px;
+      }
+      .detail-content {
+        min-height: 220px;
+      }
+      .detail-content[hidden] {
+        display: none;
+      }
+      .tactics-top {
+        margin-bottom: 22px;
+      }
+      .editor {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 235px;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+      .pitcharea {
+        background: #183b31;
+        padding: 18px 20px 12px;
+        min-width: 0;
+        position: relative;
+      }
+      .pitch-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #b4c5b8;
+        font-size: 10px;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+      .tools {
+        display: flex;
+        gap: 4px;
+      }
+      .tools button {
+        width: 30px;
+        height: 30px;
+        color: #b9cdbf;
+        background: #ffffff0c;
+        border: 1px solid #ffffff12;
+        border-radius: 3px;
+        font-size: 16px;
+      }
+      .tools button.active {
+        background: var(--lime);
+        color: var(--pine);
+      }
+      .field {
+        display: block;
+        width: 100%;
+        max-height: 500px;
+        aspect-ratio: 680/470;
+      }
+      .field text {
+        font-family: inherit;
+      }
+      .field .player {
+        transition: transform 1s ease-in-out;
+      }
+      .pitch-caption {
+        display: flex;
+        justify-content: space-between;
+        color: #91af9d;
+        font-size: 10px;
+        margin-top: 8px;
+      }
+      .rosterside {
+        padding: 20px 17px;
+      }
+      .rosterside .eyebrow {
+        margin-bottom: 20px;
+      }
+      .playerline {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 0;
+        border-bottom: 1px solid #edf0e7;
+        font-size: 12px;
+      }
+      .shirt {
+        background: #eff3e4;
+        color: #52623c;
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+      }
+      .playerline small {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .playerline .pos {
+        margin-left: auto;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .timeline {
+        border: 1px solid var(--line);
+        border-top: 0;
+        background: #fff;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .play {
+        width: 36px;
+        height: 36px;
+        background: var(--pine);
+        color: var(--lime);
+        border-radius: 50%;
+        font-size: 15px;
+      }
+      .frame {
+        padding: 8px 16px;
+        border: 1px solid var(--line);
+        background: #f6f7f1;
+        font-size: 11px;
+      }
+      .frame.active {
+        border-color: #739444;
+        background: #edf3da;
+      }
+      .timeline small {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .timeline .spacer {
+        flex: 1;
+      }
+      .pagefoot {
+        display: flex;
+        justify-content: space-between;
+        color: #8b9289;
+        font-size: 10px;
+        margin-top: 26px;
+        letter-spacing: 0.4px;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: #0b211cc0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        backdrop-filter: blur(3px);
+      }
+      .modal-backdrop[hidden] {
+        display: none;
+      }
+      .modal {
+        background: var(--paper);
+        width: min(540px, 100%);
+        padding: 30px;
+        border-radius: 6px;
+        box-shadow: 0 30px 80px #0003;
+      }
+      .modal label {
+        display: block;
+        font-size: 12px;
+        margin-top: 18px;
+      }
+      .modal input,
+      .modal textarea {
+        width: 100%;
+        background: #fff;
+        border: 1px solid #cbd2c5;
+        border-radius: 3px;
+        padding: 11px 12px;
+        margin-top: 7px;
+        color: var(--ink);
+      }
+      .formrow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .modalfooter {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+        margin-top: 24px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+      .close {
+        background: transparent;
+        font-size: 24px;
+        line-height: 1;
+        color: #65715e;
+      }
+      .toast {
+        position: fixed;
+        bottom: 28px;
+        left: calc(50% + 110px);
+        transform: translateX(-50%);
+        background: var(--pine);
+        color: #fff;
+        padding: 13px 22px;
+        box-shadow: 0 6px 24px #0002;
+        border: 1px solid #4b6754;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 120;
+      }
+      .toast[hidden] {
+        display: none;
+      }
+      .empty {
+        padding: 40px 15px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .detail-note {
+        font-size: 11px;
+        color: #7b8577;
+        margin-top: 18px;
+      }
+      @media (min-width: 1500px) {
+        .field {
+          max-height: 570px;
+        }
+      }
+      @media (max-width: 1200px) {
+        .page {
+          padding: 28px;
+        }
+        .topbar {
+          padding: 0 28px;
+        }
+        .dashboard {
+          grid-template-columns: 1.3fr 1fr;
+        }
+        .hero {
+          padding: 24px;
+        }
+        .versus strong {
+          font-size: 23px;
+        }
+        .editor {
+          grid-template-columns: minmax(0, 1fr) 200px;
+        }
+        .rosterside {
+          padding: 18px 13px;
+        }
+        .match-layout {
+          grid-template-columns: 1fr 1fr;
+        }
+        .matchrow {
+          padding: 16px;
+          gap: 10px;
+        }
+        .metric strong {
+          font-size: 34px;
+        }
+      }
+      @media (max-width: 850px) {
+        .app {
+          grid-template-columns: 76px 1fr;
+        }
+        .sidebar {
+          width: 76px;
+          padding: 24px 12px;
+        }
+        .brand {
+          font-size: 18px;
+        }
+        .brand small,
+        .clubmark,
+        .sidebottom,
+        nav span {
+          display: none;
+        }
+        nav button {
+          padding: 15px;
+          justify-content: center;
+        }
+        .main {
+          grid-column: 2;
+        }
+        .topright > span {
+          display: none;
+        }
+        .topbar {
+          padding: 0 20px;
+          height: 60px;
+        }
+        .page {
+          padding: 24px 20px;
+        }
+        .dashboard,
+        .match-layout {
+          grid-template-columns: 1fr;
+        }
+        .prepare {
+          grid-template-columns: 1fr;
+        }
+        .editor {
+          grid-template-columns: 1fr;
+        }
+        .rosterside {
+          display: none;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        .heading {
+          flex-wrap: wrap;
+        }
+        .toast {
+          left: 55%;
+          width: 75%;
+        }
+        .timeline {
+          gap: 9px;
+          padding: 14px;
+        }
+        .frame {
+          padding: 8px;
+        }
+        .timeline small {
+          display: none;
+        }
+        .hero {
+          min-height: 280px;
+        }
+        .pagefoot {
+          gap: 15px;
+        }
+        .prototype {
+          font-size: 10px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="crest" viewBox="0 0 40 46">
+          <path
+            d="M3 3H37V28Q35 37 20 43Q5 37 3 28Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <path
+            d="M9 29L20 11L31 29M14 24H26"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path d="M11 34H29" stroke="currentColor" />
+        </symbol>
+      </defs>
+    </svg>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          TOUCH<span>LINE</span><small>边线 · 俱乐部工作室</small>
+        </div>
+        <div class="clubmark">
+          <svg class="crest"><use href="#crest" /></svg
+          ><strong>青岚周末足球俱乐部<small>QINGLAN WEEKEND FC</small></strong>
+        </div>
+        <nav aria-label="主要导航">
+          <button class="active" data-page="home">
+            <svg viewBox="0 0 20 20">
+              <rect x="2" y="2" width="6" height="6" />
+              <rect x="12" y="2" width="6" height="6" />
+              <rect x="2" y="12" width="6" height="6" />
+              <rect x="12" y="12" width="6" height="6" /></svg
+            ><span>工作台</span></button
+          ><button data-page="matches">
+            <svg viewBox="0 0 20 20">
+              <rect x="2" y="4" width="16" height="14" rx="1" />
+              <path d="M6 1V7M14 1V7M2 9H18" /></svg
+            ><span>比赛日程</span></button
+          ><button data-page="tactics">
+            <svg viewBox="0 0 20 20">
+              <rect x="2" y="2" width="16" height="16" />
+              <path d="M2 10H18" />
+              <circle cx="10" cy="10" r="3" /></svg
+            ><span>战术室</span>
+          </button>
+        </nav>
+        <div class="sidebottom">
+          一群人，一整季。
+          <div class="profile">
+            <div class="avatar">林</div>
+            <div>
+              <strong>林远</strong><br /><span id="roleIdentity"
+                >俱乐部管理员 · 虚构身份</span
+              >
+            </div>
+          </div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div class="prototype">
+            <span class="dot"></span>设计原型 · 虚构数据
+          </div>
+          <div class="topright">
+            <span>2026 年 11 月 18 日 · 星期三</span
+            ><button class="btn small" id="roleToggle" aria-pressed="false">
+              管理端预览 ⇄</button
+            ><span class="eyebrow">SEASON 26 / 27</span>
+          </div>
+        </header>
+        <section id="home" class="page">
+          <div class="heading">
+            <div>
+              <div class="eyebrow">新入口布局提案 / WORKSPACE</div>
+              <h1>下一次上场，准备好了。</h1>
+              <p class="muted">青岚的周末，从这里开始。</p>
+            </div>
+            <button class="btn" data-page="matches">
+              查看赛程
+              <span class="arrow"
+                ><svg
+                  class="inline-arrow"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  style="
+                    display: inline-block;
+                    vertical-align: -2px;
+                    flex-shrink: 0;
+                  "
+                >
+                  <path
+                    d="M3 13L13 3M4 3H13V12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  /></svg
+              ></span>
+            </button>
+          </div>
+          <div class="dashboard">
+            <article class="hero">
+              <div class="row between">
+                <span class="eyebrow">NEXT MATCH / 下一场</span
+                ><span class="pill">已发布 · 报名中</span>
+              </div>
+              <div class="hero-date">11 月 21 日 · 周六 · 15:00</div>
+              <div class="versus">
+                <strong>青岚周末</strong><em>VS</em><strong>海棠联队</strong>
+              </div>
+              <p class="muted">城市友谊赛　/　7 人制　/　主场</p>
+              <div class="hero-bottom">
+                <div class="muted">⌖　滨江运动公园 · 2 号场</div>
+                <button class="btn lime small" data-page="matches">
+                  准备这场比赛
+                  <svg
+                    class="inline-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    style="
+                      display: inline-block;
+                      vertical-align: -2px;
+                      flex-shrink: 0;
+                    "
+                  >
+                    <path
+                      d="M3 13L13 3M4 3H13V12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </article>
+            <article class="attendance">
+              <div class="row between">
+                <h3>谁会来到球场？</h3>
+                <span class="muted">22 位队员</span>
+              </div>
+              <div class="numbergrid">
+                <div><strong id="yesCount">12</strong><span>参加</span></div>
+                <div><strong id="noCount">3</strong><span>不参加</span></div>
+                <div><strong id="maybeCount">2</strong><span>待定</span></div>
+                <div><strong>5</strong><span>未回复</span></div>
+              </div>
+              <div class="bar">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <div
+                class="admin-rsvp-note"
+                data-admin
+                style="border-top: 1px solid var(--line); padding-top: 16px"
+              >
+                <p class="muted">
+                  报名意愿不等于实际出场。<br />请在赛后独立记录首发、替补与实际出场。
+                </p>
+                <button class="textbtn" data-action="admin-lineup">
+                  查看本场名单 →
+                </button>
+              </div>
+              <div class="self-rsvp" data-player hidden>
+                <div class="row between">
+                  <span class="muted">我的报名 · 林远</span
+                  ><span class="muted">可随时修改</span>
+                </div>
+                <div class="choices" data-rsvp data-player hidden>
+                  <button
+                    data-choice="yes"
+                    class="selected"
+                    aria-pressed="true"
+                  >
+                    参加</button
+                  ><button data-choice="no" aria-pressed="false">不参加</button
+                  ><button data-choice="maybe" aria-pressed="false">
+                    待定
+                  </button>
+                </div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="sectionhead">
+                <h2>最近的终场哨</h2>
+                <button class="textbtn" data-page="matches">
+                  全部比赛
+                  <svg
+                    class="inline-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    style="
+                      display: inline-block;
+                      vertical-align: -2px;
+                      flex-shrink: 0;
+                    "
+                  >
+                    <path
+                      d="M3 13L13 3M4 3H13V12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="result">
+                <span class="muted">11.14</span>
+                <div>北岸竞技 <span class="muted">· 客场</span></div>
+                <span class="score">3 : 1</span><span class="badge">胜</span>
+              </div>
+              <div class="result">
+                <span class="muted">11.07</span>
+                <div>河畔星期天 <span class="muted">· 主场</span></div>
+                <span class="score">2 : 2</span><span class="badge">平</span>
+              </div>
+              <div class="result">
+                <span class="muted">10.31</span>
+                <div>山野 FC <span class="muted">· 中立</span></div>
+                <span class="muted">比分未知</span><span>—</span>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="sectionhead">
+                <h2>这一季，在向前</h2>
+                <span class="muted">2026 / 27</span>
+              </div>
+              <div class="metrics">
+                <div class="metric">
+                  <strong>08</strong><span>完赛场次</span>
+                </div>
+                <div class="metric">
+                  <strong>04</strong><span>已知胜场</span>
+                </div>
+                <div class="metric">
+                  <strong>17</strong><span>已记录进球</span>
+                </div>
+              </div>
+              <div class="coverage">
+                比分已记录 7 / 8 场 · 1 场待补充<br />胜平负与进球仅统计已知记录，不以
+                0 代替未知。
+              </div>
+            </article>
+            <div class="prepare">
+              <div class="prep">
+                <div>
+                  <h3>让每个人，找到自己的位置。</h3>
+                  <p>本场名单 9 人 · 首发 7 人 · 替补 2 人</p>
+                </div>
+                <button class="btn small" data-action="lineup">
+                  查看名单
+                  <svg
+                    class="inline-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    style="
+                      display: inline-block;
+                      vertical-align: -2px;
+                      flex-shrink: 0;
+                    "
+                  >
+                    <path
+                      d="M3 13L13 3M4 3H13V12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="prep">
+                <div>
+                  <h3>场上的默契，场下先演练。</h3>
+                  <p>已关联战术 · 边路推进 / 2-3-1</p>
+                </div>
+                <button class="btn small" data-page="tactics">
+                  进入战术室
+                  <svg
+                    class="inline-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    style="
+                      display: inline-block;
+                      vertical-align: -2px;
+                      flex-shrink: 0;
+                    "
+                  >
+                    <path
+                      d="M3 13L13 3M4 3H13V12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <footer class="pagefoot">
+            <span>TOUCHLINE / 把注意力留给足球</span
+            ><span>仅交互演示 · 不连接真实球队数据</span>
+          </footer>
+        </section>
+        <section id="matches" class="page" hidden>
+          <div class="heading">
+            <div>
+              <div class="eyebrow">MATCHDAY</div>
+              <h1>每一个周末，都值得记录。</h1>
+            </div>
+            <button class="btn primary" data-admin id="newMatch">
+              ＋ 新建比赛
+            </button>
+          </div>
+          <div class="row between">
+            <div class="tabs" id="statusTabs">
+              <button class="active" data-filter="all">
+                全部 <small id="allCount">4</small></button
+              ><button data-filter="upcoming">未开始 <small>1</small></button
+              ><button data-filter="completed">已完赛 <small>3</small></button>
+            </div>
+            <div class="dropdown" data-select="season">
+              <button
+                class="btn select-trigger"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+              >
+                2026 / 27 赛季
+              </button>
+              <div class="options" role="listbox" aria-label="选择赛季" hidden>
+                <div class="label">SEASON / 赛季筛选</div>
+                <button role="option" aria-selected="true" data-value="current">
+                  2026 / 27 赛季 <span>✓</span></button
+                ><button role="option" aria-selected="false" data-value="past">
+                  2025 / 26 赛季</button
+                ><button role="option" aria-selected="false" data-value="all">
+                  全部赛季
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="match-layout">
+            <div id="matchList"></div>
+            <article id="emptyDetail" class="detail empty" hidden>
+              选择一场比赛查看详情
+            </article>
+            <article id="matchDetail" class="detail">
+              <div
+                id="fixedExampleNote"
+                class="coverage"
+                hidden
+                style="margin-bottom: 18px"
+              >
+                设计示例 ·
+                当前比赛的名单、报名人员与战术区域沿用首场示例，不代表该场真实记录。
+              </div>
+              <div class="row between">
+                <span class="eyebrow">MATCH BRIEF</span
+                ><span class="pill" id="detailStatus">报名中</span>
+              </div>
+              <h2 id="detailTitle">青岚周末 vs 海棠联队</h2>
+              <p class="muted" id="detailMeta">
+                11 月 21 日 15:00 · 滨江运动公园
+              </p>
+              <div class="tabs" id="detailTabs">
+                <button class="active" data-detail="registration">报名</button
+                ><button data-detail="lineup">名单</button
+                ><button data-detail="tactic">战术</button
+                ><button data-detail="review">复盘</button>
+              </div>
+              <div id="registration" class="detail-content">
+                <p class="muted">22 位队员 · 报名与实际出场独立记录</p>
+                <div class="rosterline">
+                  <span id="registrationName">林远</span
+                  ><span id="myStatus">参加</span>
+                </div>
+                <div class="rosterline"><span>陈泽</span><span>参加</span></div>
+                <div class="rosterline"><span>周牧</span><span>待定</span></div>
+                <div class="rosterline">
+                  <span>许川</span><span class="muted">未回复</span>
+                </div>
+                <div class="choices" data-rsvp data-player hidden>
+                  <button
+                    class="selected"
+                    data-choice="yes"
+                    aria-pressed="true"
+                  >
+                    参加</button
+                  ><button data-choice="no" aria-pressed="false">不参加</button
+                  ><button data-choice="maybe" aria-pressed="false">
+                    待定
+                  </button>
+                </div>
+              </div>
+              <div id="lineup" class="detail-content" hidden>
+                <p class="muted">首发 7 人 · 替补 2 人</p>
+                <div class="rosterline">
+                  <span>01　沈舟</span><span>首发 · 门将</span>
+                </div>
+                <div class="rosterline">
+                  <span>04　陈泽　　05　陆森</span><span>首发 · 后卫</span>
+                </div>
+                <div class="rosterline">
+                  <span>08　周牧　　06　许川　　11　江明</span
+                  ><span>首发 · 中场</span>
+                </div>
+                <div class="rosterline">
+                  <span>09　林远</span><span>首发 · 前锋</span>
+                </div>
+                <div class="rosterline">
+                  <span>12　叶青　　17　苏野</span><span>替补</span>
+                </div>
+                <p class="detail-note">
+                  这是赛前计划，不代表实际出场。名单与比赛信息独立保存。
+                </p>
+                <button class="btn primary small" data-admin data-save-demo>
+                  保存名单数据
+                </button>
+              </div>
+              <div id="tactic" class="detail-content" hidden>
+                <div class="eyebrow" style="margin-top: 25px">
+                  01 / MATCH PLAN
+                </div>
+                <h2>边路推进 · 2-3-1</h2>
+                <p class="muted">左路吸引防守，转移到弱侧完成进攻。</p>
+                <button
+                  class="btn primary"
+                  style="margin-top: 22px"
+                  data-page="tactics"
+                >
+                  打开战术室
+                  <svg
+                    class="inline-arrow"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    aria-hidden="true"
+                    style="
+                      display: inline-block;
+                      vertical-align: -2px;
+                      flex-shrink: 0;
+                    "
+                  >
+                    <path
+                      d="M3 13L13 3M4 3H13V12"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </button>
+                <p class="detail-note">
+                  <strong>比赛冻结快照 · v2</strong
+                  ><br />此比赛已保存的战术与名单不随模板修改改变。进入战术室查看的是独立模板草稿。
+                </p>
+              </div>
+              <div id="review" class="detail-content" hidden>
+                <p class="muted">本场尚未结束</p>
+                <h3 style="margin-top: 28px">终场之后，把经验留下。</h3>
+                <p class="muted">比分、实际出场、进球与助攻将在这里汇总。</p>
+                <button class="btn small" disabled style="margin-top: 15px">
+                  尚未开放复盘
+                </button>
+              </div>
+              <button class="btn small" data-admin data-save-demo>
+                保存比赛信息
+              </button>
+              <p class="detail-note">原型示意 · 不发送通知，不写入真实数据</p>
+            </article>
+          </div>
+          <footer class="pagefoot">
+            <span>比赛是故事，记录让它延续。</span
+            ><span>所有球队及人物均为虚构</span>
+          </footer>
+        </section>
+        <section id="tactics" class="page" hidden>
+          <div class="heading tactics-top">
+            <div>
+              <div class="eyebrow">TACTICAL STUDIO</div>
+              <h1>边路推进</h1>
+              <p class="muted">
+                模板 · 边路推进　/　版本 v3　/　原型内存草稿（未关联比赛）
+              </p>
+            </div>
+            <div class="row">
+              <div class="dropdown" data-select="formation">
+                <button
+                  class="btn select-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                >
+                  7 人制 · 2-3-1
+                </button>
+                <div
+                  class="options"
+                  role="listbox"
+                  aria-label="选择阵型"
+                  hidden
+                >
+                  <div class="label">FORMATION / 阵型</div>
+                  <button role="option" aria-selected="true" data-value="231">
+                    7 人制 · 2-3-1 <span>✓</span></button
+                  ><button role="option" aria-selected="false" data-value="222">
+                    7 人制 · 2-2-2</button
+                  ><button role="option" aria-selected="false" data-value="321">
+                    7 人制 · 3-2-1
+                  </button>
+                </div>
+              </div>
+              <button class="btn primary" data-admin id="saveTactic">
+                保存原型草稿
+              </button>
+            </div>
+          </div>
+          <div class="editor">
+            <div class="pitcharea">
+              <div class="pitch-toolbar">
+                <div class="tools" aria-label="画布工具">
+                  <button class="active" data-tool="选择" title="选择球员">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M3 2L13 7L8 8L6 13Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.3"
+                      />
+                    </svg></button
+                  ><button data-tool="跑位箭头" title="跑位箭头">
+                    <svg
+                      class="inline-arrow"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                      style="
+                        display: inline-block;
+                        vertical-align: -2px;
+                        flex-shrink: 0;
+                      "
+                    >
+                      <path
+                        d="M3 13L13 3M4 3H13V12"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.5"
+                      />
+                    </svg></button
+                  ><button data-tool="传球线" title="传球线">⇢</button
+                  ><button data-tool="足球" title="足球">◉</button>
+                </div>
+                <span>7-A-SIDE / ATTACK →</span><span>100%</span>
+              </div>
+              <svg
+                class="field"
+                id="field"
+                viewBox="0 0 680 470"
+                role="img"
+                aria-label="7人制2-3-1阵型足球场，含7名队员及两步跑位动画"
+              >
+                <defs>
+                  <pattern
+                    id="stripes"
+                    width="80"
+                    height="470"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <rect
+                      width="40"
+                      height="470"
+                      fill="#ffffff"
+                      opacity=".018"
+                    />
+                  </pattern>
+                  <marker
+                    id="arrow"
+                    markerWidth="8"
+                    markerHeight="8"
+                    refX="6"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <path
+                      d="M0 0L6 3L0 6"
+                      fill="none"
+                      stroke="#ddf67c"
+                      stroke-width="1.3"
+                    />
+                  </marker>
+                </defs>
+                <rect
+                  x="20"
+                  y="20"
+                  width="640"
+                  height="430"
+                  fill="url(#stripes)"
+                  stroke="#89ae9360"
+                />
+                <path
+                  d="M340 20V450M20 120H120V350H20M660 120H560V350H660M20 180H65V290H20M660 180H615V290H660"
+                  fill="none"
+                  stroke="#89ae9360"
+                />
+                <circle
+                  cx="340"
+                  cy="235"
+                  r="58"
+                  fill="none"
+                  stroke="#89ae9360"
+                />
+                <circle cx="340" cy="235" r="2" fill="#89ae93" />
+                <path
+                  d="M120 188Q170 235 120 282M560 188Q510 235 560 282"
+                  fill="none"
+                  stroke="#89ae9360"
+                />
+                <path
+                  d="M14 213H3V257H14M666 213H677V257H666"
+                  fill="none"
+                  stroke="#a5bf9b80"
+                />
+                <path
+                  id="runArrow"
+                  d="M360 105Q430 90 495 135"
+                  fill="none"
+                  stroke="#ddf67c"
+                  stroke-width="2"
+                  stroke-dasharray="6 5"
+                  marker-end="url(#arrow)"
+                />
+                <path
+                  d="M234 270L348 131"
+                  fill="none"
+                  stroke="#ddf67c70"
+                  stroke-width="1.4"
+                  stroke-dasharray="3 6"
+                  marker-end="url(#arrow)"
+                />
+                <g id="players"></g>
+                <g id="ball" transform="translate(253 260)">
+                  <circle r="7" fill="#f5f5ee" />
+                  <path d="M-3 -2L1 -4L4 0L1 3L-3 2Z" fill="#18231e" />
+                </g>
+              </svg>
+              <div class="pitch-caption">
+                <span id="toolLabel">选择工具 · 点击队员查看位置</span
+                ><span>→ 进攻方向　/　虚构演示</span>
+              </div>
+            </div>
+            <aside class="rosterside">
+              <div class="eyebrow">STARTING VII / 首发</div>
+              <div id="sidePlayers"></div>
+              <div
+                style="
+                  margin-top: 25px;
+                  border-top: 1px solid var(--line);
+                  padding-top: 14px;
+                "
+              >
+                <span class="muted">替补席 · 2 人</span>
+                <p style="font-size: 12px">12 叶青　　17 苏野</p>
+              </div>
+            </aside>
+          </div>
+          <div class="timeline">
+            <button class="play" id="play" aria-label="播放两步动画">▶</button>
+            <div>
+              <strong style="font-size: 12px">跑位演练</strong><br /><small
+                id="frameLabel"
+                >第 1 / 2 帧 · 初始站位</small
+              >
+            </div>
+            <button class="frame active" data-frame="0">01 初始站位</button
+            ><span class="muted">→</span
+            ><button class="frame" data-frame="1">02 弱侧前插</button>
+            <div class="spacer"></div>
+            <small>2 帧 · 循环播放</small
+            ><button class="btn small" id="resetFrame">复位</button>
+          </div>
+          <footer class="pagefoot">
+            <span>先让想法上场。</span
+            ><span>仅演示阵型与两步动画 · 不修改真实战术</span>
+          </footer>
+        </section>
+      </main>
+    </div>
+    <div class="modal-backdrop" id="matchModal" hidden>
+      <form
+        class="modal"
+        id="matchForm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalTitle"
+      >
+        <div class="row between">
+          <div>
+            <div class="eyebrow">NEW MATCH</div>
+            <h2 id="modalTitle">约一场球。</h2>
+          </div>
+          <button class="close" type="button" data-close aria-label="关闭弹窗">
+            ×
+          </button>
+        </div>
+        <p class="muted">仅保存在本次原型内存中，刷新页面后清空。</p>
+        <label
+          >对手名称<input
+            id="opponent"
+            required
+            maxlength="40"
+            placeholder="例如：南风足球队"
+            autocomplete="off"
+        /></label>
+        <div class="formrow">
+          <label
+            >比赛日期<input
+              id="matchDate"
+              type="date"
+              required
+              value="2026-11-28" /></label
+          ><label
+            >开球时间<input id="matchTime" type="time" required value="15:00"
+          /></label>
+        </div>
+        <label
+          >球场<input
+            id="venue"
+            maxlength="60"
+            placeholder="输入比赛地点"
+            value="滨江运动公园"
+        /></label>
+        <div class="coverage" style="margin-top: 20px">
+          2026 / 27 赛季 · 7 人制 · 友谊赛<br />原型不会创建真实比赛或通知球员。
+        </div>
+        <div class="modalfooter">
+          <button class="btn" type="button" data-close>取消</button
+          ><button class="btn primary" type="submit">保存到原型</button>
+        </div>
+      </form>
+    </div>
+    <div class="toast" role="status" id="toast" hidden></div>
+    <script>
+      const $ = (s) => document.querySelector(s),
+        $$ = (s) => [...document.querySelectorAll(s)];
+      let toastTimer;
+      function toast(message) {
+        $("#toast").textContent = message;
+        $("#toast").hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => ($("#toast").hidden = true), 3200);
+      }
+      function switchPage(name) {
+        $$(".page").forEach((p) => (p.hidden = p.id !== name));
+        $$("nav button").forEach((b) => {
+          b.classList.toggle("active", b.dataset.page === name);
+          b.setAttribute(
+            "aria-current",
+            b.dataset.page === name ? "page" : "false",
+          );
+        });
+        closeDropdowns();
+        window.scrollTo(0, 0);
+      }
+      $$("[data-page]").forEach((b) =>
+        b.addEventListener("click", () => switchPage(b.dataset.page)),
+      );
+      function closeDropdowns() {
+        $$(".options").forEach((o) => (o.hidden = true));
+        $$(".select-trigger").forEach((b) =>
+          b.setAttribute("aria-expanded", "false"),
+        );
+      }
+      $$(".dropdown").forEach((drop) => {
+        let trigger = drop.querySelector(".select-trigger"),
+          list = drop.querySelector(".options"),
+          opts = [...list.querySelectorAll("[role=option]")];
+        function open() {
+          closeDropdowns();
+          list.hidden = false;
+          trigger.setAttribute("aria-expanded", "true");
+          (
+            opts.find((o) => o.getAttribute("aria-selected") === "true") ||
+            opts[0]
+          ).focus();
+        }
+        trigger.onclick = () => (list.hidden ? open() : closeDropdowns());
+        trigger.onkeydown = (e) => {
+          if (["ArrowDown", "ArrowUp"].includes(e.key)) {
+            e.preventDefault();
+            open();
+          }
+        };
+        opts.forEach((opt, i) => {
+          opt.onclick = () => {
+            opts.forEach((o) => {
+              o.setAttribute("aria-selected", String(o === opt));
+              const span = o.querySelector("span");
+              if (span) span.remove();
+            });
+            const tick = document.createElement("span");
+            tick.textContent = "✓";
+            opt.append(tick);
+            trigger.textContent = opt.childNodes[0].textContent.trim();
+            closeDropdowns();
+            trigger.focus();
+            if (drop.dataset.select === "season") {
+              season = opt.dataset.value;
+              renderMatches();
+            } else {
+              formation = opt.dataset.value;
+              setFrame(0);
+              toast("已切换阵型 · 仅保留在原型中");
+            }
+          };
+          opt.onkeydown = (e) => {
+            if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+              e.preventDefault();
+              opts[
+                e.key === "Home"
+                  ? 0
+                  : e.key === "End"
+                    ? opts.length - 1
+                    : (i + (e.key === "ArrowDown" ? 1 : -1) + opts.length) %
+                      opts.length
+              ].focus();
+            }
+            if (e.key === "Escape") {
+              closeDropdowns();
+              trigger.focus();
+            }
+          };
+        });
+      });
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".dropdown")) closeDropdowns();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeDropdowns();
+          if (!$("#matchModal").hidden) closeModal();
+        }
+      });
+      let rsvp = "yes";
+      $$("[data-choice]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            rsvp = b.dataset.choice;
+            $$("[data-choice]").forEach((x) => {
+              x.classList.toggle("selected", x.dataset.choice === rsvp);
+              x.setAttribute("aria-pressed", String(x.dataset.choice === rsvp));
+            });
+            $("#yesCount").textContent = rsvp === "yes" ? 12 : 11;
+            $("#noCount").textContent = rsvp === "no" ? 4 : 3;
+            $("#maybeCount").textContent = rsvp === "maybe" ? 3 : 2;
+            $$(".bar span").forEach(
+              (segment, i) =>
+                (segment.style.flex = String(
+                  [
+                    rsvp === "yes" ? 12 : 11,
+                    rsvp === "no" ? 4 : 3,
+                    rsvp === "maybe" ? 3 : 2,
+                    5,
+                  ][i],
+                )),
+            );
+            $("#myStatus").textContent = {
+              yes: "参加",
+              no: "不参加",
+              maybe: "待定",
+            }[rsvp];
+            toast("报名已更新 · 仅原型内存，不发送通知");
+          }),
+      );
+      let matches = [
+        {
+          id: 1,
+          date: "2026-11-21",
+          time: "15:00",
+          opponent: "海棠联队",
+          venue: "滨江运动公园",
+          status: "upcoming",
+          score: null,
+        },
+        {
+          id: 2,
+          date: "2026-11-14",
+          time: "14:00",
+          opponent: "北岸竞技",
+          venue: "北岸体育中心",
+          status: "completed",
+          score: "3 : 1",
+        },
+        {
+          id: 3,
+          date: "2026-11-07",
+          time: "15:30",
+          opponent: "河畔星期天",
+          venue: "滨江运动公园",
+          status: "completed",
+          score: "2 : 2",
+        },
+        {
+          id: 4,
+          date: "2026-10-31",
+          time: "15:00",
+          opponent: "山野 FC",
+          venue: "城市体育公园",
+          status: "completed",
+          score: "未知",
+        },
+      ];
+      let filter = "all",
+        season = "current",
+        selected = 1;
+      function renderMatches() {
+        let shown = matches.filter(
+          (m) => (filter === "all" || filter === m.status) && season !== "past",
+        );
+        $("#matchList").replaceChildren();
+        $("#matchDetail").hidden = !shown.length;
+        $("#emptyDetail").hidden = !!shown.length;
+        if (shown.length && !shown.some((m) => m.id === selected)) {
+          selected = shown[0].id;
+          updateDetail(shown[0]);
+        }
+        if (!shown.length) {
+          let p = document.createElement("p");
+          p.className = "empty";
+          p.textContent = "这个筛选下暂无比赛 · 试试其他赛季或状态";
+          $("#matchList").append(p);
+        }
+        shown.forEach((m) => {
+          let b = document.createElement("button");
+          b.className = "matchrow" + (selected === m.id ? " selected" : "");
+          let date = document.createElement("div");
+          date.className = "calendar";
+          date.textContent = m.date.slice(8);
+          let month = document.createElement("small");
+          month.textContent = m.date.slice(5, 7) + "月";
+          date.append(month);
+          let text = document.createElement("div"),
+            title = document.createElement("strong"),
+            meta = document.createElement("p");
+          title.textContent = "vs " + m.opponent;
+          meta.textContent = m.time + " · " + m.venue;
+          text.append(title, meta);
+          let status = document.createElement("span");
+          status.className = "pill";
+          status.textContent = m.status === "upcoming" ? "报名中" : m.score;
+          b.append(date, text, status);
+          b.onclick = () => {
+            selected = m.id;
+            renderMatches();
+            updateDetail(m);
+          };
+          $("#matchList").append(b);
+        });
+        $("#allCount").textContent = season === "past" ? 0 : matches.length;
+        $$("[data-filter]").forEach((b) => {
+          const count = b.querySelector("small");
+          if (count)
+            count.textContent =
+              season === "past"
+                ? 0
+                : b.dataset.filter === "all"
+                  ? matches.length
+                  : matches.filter((m) => m.status === b.dataset.filter).length;
+        });
+      }
+      function updateDetail(m) {
+        $("#fixedExampleNote").hidden = m.id === 1;
+        $("#detailTitle").textContent = "青岚周末 vs " + m.opponent;
+        $("#detailMeta").textContent = m.date + " " + m.time + " · " + m.venue;
+        $("#detailStatus").textContent =
+          m.status === "upcoming" ? "报名中" : "已完赛 · " + m.score;
+        const review = $("#review");
+        review.replaceChildren();
+        const p = document.createElement("p");
+        p.className = "muted";
+        p.textContent =
+          m.status === "upcoming"
+            ? "本场尚未结束，终场之后把经验留下。"
+            : "终场比分：" +
+              m.score +
+              "。此条仅示意比赛列表选择，详细赛后数据未在原型中展开。";
+        review.append(p);
+        $("#registration")
+          .querySelectorAll("button")
+          .forEach((b) => (b.disabled = m.status === "completed"));
+        if (m.id !== 1) toast("已选择比赛 · 名单与战术区域为固定设计示例");
+      }
+      $$("[data-filter]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            filter = b.dataset.filter;
+            $$("[data-filter]").forEach((x) =>
+              x.classList.toggle("active", x === b),
+            );
+            renderMatches();
+          }),
+      );
+      function detailTab(name) {
+        $$("[data-detail]").forEach((b) =>
+          b.classList.toggle("active", b.dataset.detail === name),
+        );
+        $$(".detail-content").forEach((c) => (c.hidden = c.id !== name));
+      }
+      $$("[data-detail]").forEach(
+        (b) => (b.onclick = () => detailTab(b.dataset.detail)),
+      );
+      $$("[data-action=lineup],[data-action=admin-lineup]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            switchPage("matches");
+            detailTab("lineup");
+          }),
+      );
+      renderMatches();
+      let returnFocus;
+      function openModal() {
+        returnFocus = document.activeElement;
+        $("#matchModal").hidden = false;
+        $("#opponent").focus();
+      }
+      function closeModal() {
+        $("#matchModal").hidden = true;
+        returnFocus?.focus();
+      }
+      $("#newMatch").onclick = openModal;
+      $$("[data-close]").forEach((b) => (b.onclick = closeModal));
+      $("#matchModal").onclick = (e) => {
+        if (e.target === $("#matchModal")) closeModal();
+      };
+      $("#matchModal").onkeydown = (e) => {
+        if (e.key === "Tab") {
+          const els = [...$("#matchModal").querySelectorAll("button,input")],
+            first = els[0],
+            last = els.at(-1);
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      $("#matchForm").onsubmit = (e) => {
+        e.preventDefault();
+        if (!$("#opponent").value.trim()) {
+          $("#opponent").setCustomValidity("请输入对手名称");
+          $("#opponent").reportValidity();
+          return;
+        }
+        let m = {
+          id: Date.now(),
+          date: $("#matchDate").value,
+          time: $("#matchTime").value,
+          opponent: $("#opponent").value.trim(),
+          venue: $("#venue").value.trim() || "地点待定",
+          status: "upcoming",
+          score: null,
+        };
+        matches.unshift(m);
+        selected = m.id;
+        filter = "all";
+        season = "current";
+        $$("[data-filter]").forEach((b) =>
+          b.classList.toggle("active", b.dataset.filter === "all"),
+        );
+        const drop = $("[data-select=season]");
+        drop.querySelector(".select-trigger").textContent = "2026 / 27 赛季";
+        drop
+          .querySelectorAll("[role=option]")
+          .forEach((b) =>
+            b.setAttribute(
+              "aria-selected",
+              String(b.dataset.value === "current"),
+            ),
+          );
+        renderMatches();
+        updateDetail(m);
+        closeModal();
+        $("#matchForm").reset();
+        toast("比赛已加入原型 · 刷新即清空，未连接真实 API");
+      };
+      $("#opponent").oninput = () => $("#opponent").setCustomValidity("");
+      const squad = [
+        ["01", "沈舟", "门将"],
+        ["04", "陈泽", "后卫"],
+        ["05", "陆森", "后卫"],
+        ["08", "周牧", "中场"],
+        ["06", "许川", "中场"],
+        ["11", "江明", "中场"],
+        ["09", "林远", "前锋"],
+      ];
+      let formation = "231",
+        frame = 0,
+        playing = false,
+        timer;
+      const positions = {
+        231: [
+          [70, 235],
+          [215, 135],
+          [215, 335],
+          [365, 95],
+          [340, 235],
+          [365, 375],
+          [525, 235],
+        ],
+        222: [
+          [70, 235],
+          [210, 130],
+          [210, 340],
+          [355, 150],
+          [355, 320],
+          [520, 155],
+          [520, 315],
+        ],
+        321: [
+          [70, 235],
+          [210, 100],
+          [190, 235],
+          [210, 370],
+          [355, 140],
+          [355, 330],
+          [525, 235],
+        ],
+      };
+      const ns = "http://www.w3.org/2000/svg";
+      squad.forEach((p, i) => {
+        const g = document.createElementNS(ns, "g");
+        g.classList.add("player");
+        g.setAttribute("tabindex", "0");
+        g.setAttribute("role", "button");
+        g.setAttribute("aria-label", p[1] + " " + p[0] + "号 " + p[2]);
+        const c = document.createElementNS(ns, "circle");
+        c.setAttribute("r", "19");
+        c.setAttribute("fill", i === 0 ? "#e2c37a" : "#ddf67c");
+        c.setAttribute("stroke", "#102b24");
+        c.setAttribute("stroke-width", "3");
+        const n = document.createElementNS(ns, "text");
+        n.setAttribute("text-anchor", "middle");
+        n.setAttribute("y", "5");
+        n.setAttribute("font-size", "12");
+        n.setAttribute("font-weight", "700");
+        n.setAttribute("fill", "#142e28");
+        n.textContent = p[0];
+        const name = document.createElementNS(ns, "text");
+        name.setAttribute("text-anchor", "middle");
+        name.setAttribute("y", "36");
+        name.setAttribute("font-size", "11");
+        name.setAttribute("fill", "#e4eddf");
+        name.textContent = p[1];
+        g.append(c, n, name);
+        g.onclick = () =>
+          toast(p[0] + "号 " + p[1] + " · " + p[2] + "（原型选择演示）");
+        g.onkeydown = (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            g.onclick();
+          }
+        };
+        $("#players").append(g);
+        const line = document.createElement("div");
+        line.className = "playerline";
+        line.innerHTML =
+          '<span class="shirt">' +
+          p[0] +
+          "</span><span>" +
+          p[1] +
+          '</span><span class="pos">' +
+          p[2] +
+          "</span>";
+        $("#sidePlayers").append(line);
+      });
+      function setFrame(value) {
+        frame = value;
+        $$(".player").forEach((g, i) => {
+          let [x, y] = positions[formation][i];
+          if (frame && i > 0) {
+            x += i === 3 ? 125 : i === 5 ? 105 : 35;
+            y += i === 3 ? 45 : i === 5 ? -40 : 0;
+          }
+          g.setAttribute("transform", `translate(${x} ${y})`);
+        });
+        $("#ball").setAttribute(
+          "transform",
+          frame ? "translate(490 152)" : "translate(253 260)",
+        );
+        $$("[data-frame]").forEach((b) =>
+          b.classList.toggle("active", +b.dataset.frame === frame),
+        );
+        $("#frameLabel").textContent =
+          `第 ${frame + 1} / 2 帧 · ${frame ? "弱侧前插" : "初始站位"}`;
+      }
+      function playIcon(paused) {
+        $("#play").innerHTML = paused
+          ? '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M6 4v12l10-6z" fill="currentColor"/></svg>'
+          : '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 4h3v12H5zm7 0h3v12h-3z" fill="currentColor"/></svg>';
+      }
+      function stop() {
+        playing = false;
+        clearInterval(timer);
+        playIcon(true);
+        $("#play").setAttribute("aria-label", "播放两步动画");
+      }
+      $("#play").onclick = () => {
+        if (playing) stop();
+        else {
+          playing = true;
+          playIcon(false);
+          $("#play").setAttribute("aria-label", "暂停动画");
+          setFrame(frame ? 0 : 1);
+          timer = setInterval(() => setFrame(frame ? 0 : 1), 1800);
+        }
+      };
+      $$("[data-frame]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            stop();
+            setFrame(+b.dataset.frame);
+          }),
+      );
+      $("#resetFrame").onclick = () => {
+        stop();
+        setFrame(0);
+      };
+      $("#saveTactic").onclick = () =>
+        toast("战术草稿已保留在本页内存 · 刷新后清空");
+      $$("[data-tool]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            $$("[data-tool]").forEach((x) =>
+              x.classList.toggle("active", x === b),
+            );
+            $("#toolLabel").textContent =
+              b.dataset.tool + "工具 · 原型仅示意工具选择";
+            toast("已选择" + b.dataset.tool + " · 此原型不提供自由绘图");
+          }),
+      );
+      setFrame(0);
+      playIcon(true);
+      let playerPreview = false;
+      $("#roleToggle").onclick = () => {
+        playerPreview = !playerPreview;
+        $("#roleToggle").textContent = playerPreview
+          ? "球员端预览 ⇄"
+          : "管理端预览 ⇄";
+        $("#roleToggle").setAttribute("aria-pressed", String(playerPreview));
+        $$("[data-admin]").forEach((b) => (b.hidden = playerPreview));
+        $$("[data-player]").forEach((b) => (b.hidden = !playerPreview));
+        $("#registrationName").textContent = playerPreview
+          ? "林远 · 我"
+          : "林远";
+        $("#roleIdentity").textContent = playerPreview
+          ? "球队球员 · 虚构身份"
+          : "俱乐部管理员 · 虚构身份";
+        $$(".tools button").forEach((b) => (b.disabled = playerPreview));
+        $("[data-select=formation] .select-trigger").disabled = playerPreview;
+        $(".profile strong").textContent = playerPreview
+          ? "林远 · 球员"
+          : "林远";
+        toast(
+          playerPreview
+            ? "球员只读预览 · 可报名与播放战术"
+            : "管理员预览 · 所有保存仅为原型演示",
+        );
+      };
+      $$("[data-save-demo]").forEach(
+        (b) =>
+          (b.onclick = () =>
+            toast(b.textContent + "：已演示保存，未连接真实 API")),
+      );
+    </script>
+  </body>
+</html>
