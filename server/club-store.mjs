@@ -1,3 +1,5 @@
+import { createMatchMediaStore } from "./match-media-store.mjs";
+import { createVenueStore } from "./venue-store.mjs";
 import {
   randomBytes,
   randomUUID,
@@ -298,6 +300,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-season-membership-v5',?)",
     ).run(Date.now());
   });
+  const venues = createVenueStore(database);
+  const matchMedia = createMatchMediaStore(database, getMatch);
   function checkRevision(input, current) {
     if (!Number.isSafeInteger(input.revision) || input.revision < 1)
       fail(428, "请携带当前版本号保存，重新加载后再试。");
@@ -553,7 +557,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   });
   const dummyHash = hashPassword(randomBytes(20).toString("hex"));
   const loginAttempts = new Map();
-  function login(input, remoteAddress) {
+  function login(input, remoteAddress, transport = "cookie") {
     object(input);
     const username = text(input.username, 100, true);
     const normalizedUsername = username.toLowerCase();
@@ -588,17 +592,25 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (u.player_id && getPlayer(u.team_id, u.player_id).status !== "active")
       fail(403, "此球员账户已停用。");
     loginAttempts.delete(key);
-    const token = randomBytes(32).toString("hex");
+    const token = `${transport === "native" ? "native_" : ""}${randomBytes(32).toString("hex")}`;
+    const expiresAt = now + 7 * 86400000;
     q("DELETE FROM club_sessions WHERE expires_at<=?").run(now);
     q("INSERT INTO club_sessions VALUES (?,?,?)").run(
       tokenHash(token),
       u.id,
-      now + 7 * 86400000,
+      expiresAt,
     );
-    return { token, ...sessionView(u) };
+    return {
+      token,
+      ...(transport === "native" ? { expiresAt } : {}),
+      ...sessionView(u),
+    };
   }
-  function authenticate(token) {
-    if (!token || !/^[a-f0-9]{64}$/.test(token)) fail(401, "请先登录。");
+  function authenticate(token, transport = "cookie") {
+    const tokenPattern =
+      transport === "native" ? /^native_[a-f0-9]{64}$/ : /^[a-f0-9]{64}$/;
+    if (typeof token !== "string" || !tokenPattern.test(token))
+      fail(401, "请先登录。");
     const u = q(
       "SELECT u.* FROM club_sessions s JOIN club_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?",
     ).get(tokenHash(token), Date.now());
@@ -768,10 +780,14 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       date: r.match_date,
       kickoff: r.kickoff,
       location: r.location,
+      venueId: r.venue_id,
+      venueSnapshot: r.venue_snapshot ? JSON.parse(r.venue_snapshot) : null,
       status: r.status,
       homeScore: r.home_score,
       awayScore: r.away_score,
       analysis: r.analysis,
+      notice: r.notice,
+      coverPhotoId: r.cover_photo_id,
       tacticIds: q(
         "SELECT source_tactic_id FROM club_match_tactic_snapshots WHERE match_id=? ORDER BY source_tactic_id",
       )
@@ -836,10 +852,13 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             date: "",
             kickoff: "",
             location: "",
+            venueId: null,
+            venueSnapshot: null,
             status: "draft",
             homeScore: null,
             awayScore: null,
             analysis: "",
+            notice: "",
             tacticIds: [],
           }),
       ...input,
@@ -858,10 +877,13 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (m.kickoff && !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.kickoff))
       fail(400, "开球时间须为 HH:mm。");
     m.location = text(m.location, 500);
+    if (m.venueId !== null && (!Number.isSafeInteger(m.venueId) || m.venueId < 1))
+      fail(400, "球场编号不正确。");
     oneOf(m.status, ["draft", "published", "completed", "cancelled"]);
     integer(m.homeScore);
     integer(m.awayScore);
     m.analysis = text(m.analysis, 50000);
+    m.notice = text(m.notice, 10000);
     if (
       !Array.isArray(m.tacticIds) ||
       m.tacticIds.length > 100 ||
@@ -873,7 +895,19 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
 
     validateTotals(m.homeScore, id ? getMatch(u, id).roster : []);
     return tx(() => {
-      if (id) checkRevision(input, getMatch(u, id));
+      const previousMatch = id ? getMatch(u, id) : null;
+      if (id) checkRevision(input, previousMatch);
+      // Never trust client snapshots. Reusing the same venue retains history;
+      // omission preserves older clients, explicit null detaches the venue.
+      const changedVenue = m.venueId !== (previousMatch?.venueId ?? null);
+      let venueSnapshot = previousMatch?.venueSnapshot ?? null;
+      if (m.venueId === null) venueSnapshot = null;
+      else if (changedVenue || !venueSnapshot) {
+        const venue = venues.getVenue(u.team_id, m.venueId);
+        if (venue.status !== "active") fail(400, "已停用球场不能用于新的比赛关联。");
+        venueSnapshot = {name:venue.name,address:venue.address,latitude:venue.latitude,longitude:venue.longitude,coordinateSystem:"gcj02"};
+        if (input.location === undefined) m.location = [venue.name, venue.address].filter(Boolean).join(" · ").slice(0,500);
+      }
       if (m.seasonId !== null) {
         const season = getSeason(u.team_id, m.seasonId);
         if (m.date < season.startDate || m.date > season.endDate)
@@ -918,6 +952,9 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             m.seasonId,
           ).lastInsertRowid,
         );
+      q("UPDATE club_matches SET venue_id=?,venue_snapshot=? WHERE id=? AND team_id=?")
+        .run(m.venueId, venueSnapshot ? JSON.stringify(venueSnapshot) : null, id, u.team_id);
+      q("UPDATE club_matches SET notice=? WHERE id=? AND team_id=?").run(m.notice, id, u.team_id);
       const wanted = new Set(m.tacticIds);
       const previous = q(
         "SELECT source_tactic_id FROM club_match_tactic_snapshots WHERE match_id=?",
@@ -1259,6 +1296,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   }
   return {
     assertTacticDeletable,
+    ...venues,
+    ...matchMedia,
     getTeam,
     saveTeam,
     login,

@@ -1,3 +1,4 @@
+import { tacticVersion } from "./tactic-version.mjs";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -821,6 +822,14 @@ export function openFootballStore(databasePath) {
           tacticId = insertTactic(tactic);
         } else {
           const previous = getTactic(tacticId);
+          // Optional optimistic guard preserves legacy Web saves; native position
+          // edits require it at their boundary and compare inside this transaction.
+          if (request.expectedVersion !== undefined) {
+            if (typeof request.expectedVersion !== "string" || !/^[a-f0-9]{64}$/.test(request.expectedVersion))
+              throw new FootballError(428, "请先读取当前战术版本。");
+            if (tacticVersion(previous) !== request.expectedVersion)
+              throw new FootballError(409, "战术已被其他页面修改，请核对后重新载入。");
+          }
           prepare(
             `UPDATE tactics SET title = ?, tags = ?, favorite = ?, formation_name = ?, match_details = ?, board = ?, thumbnail = ?, saved_at = ?, preset_name = ?, preset_edition = ? WHERE tactic_id = ?`,
           ).run(

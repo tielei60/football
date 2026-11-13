@@ -1,3 +1,5 @@
+import { readTacticCommands, applyTacticCommands } from "./native-tactic-commands.mjs";
+import { readTacticPositions, moveTacticPositions } from "./native-tactic-positions.mjs";
 import { createServer } from "node:http";
 import { isIP } from "node:net";
 import { stat } from "node:fs/promises";
@@ -202,7 +204,35 @@ export function createFootballServer({
       const method = request.method;
       if (pathname === "/api/health" && method === "GET")
         return send(response, 200, { ok: true });
-      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+      // Native credentials are never ambient cookies. A distinct token format
+      // prevents browser sessions from being replayed to bypass Origin checks.
+      const nativeLogin =
+        pathname === "/api/auth/native-login" && method === "POST";
+      const authorization = request.headers.authorization;
+      const nativeRequest = nativeLogin || authorization !== undefined;
+      if (nativeRequest) {
+        // WeChat Electron simulator adds this exact Fetch Metadata tuple to
+        // wx.request without an Origin. It is not an authentication signal.
+        // Keep Origin/Cookie rejection and native-token isolation intact.
+        const fetchHeaders = Object.keys(request.headers).filter((name) =>
+          name.startsWith("sec-fetch-"),
+        );
+        const simulatorMetadata =
+          fetchHeaders.length === 3 &&
+          request.headers["sec-fetch-site"] === "same-site" &&
+          request.headers["sec-fetch-mode"] === "cors" &&
+          request.headers["sec-fetch-dest"] === "empty";
+        if (
+          request.headers.origin !== undefined ||
+          request.headers.cookie !== undefined ||
+          (fetchHeaders.length > 0 && !simulatorMetadata) ||
+          (nativeLogin && request.headers["x-football-client"] !== "native-v1")
+        )
+          throw new FootballError(403, "请使用小程序客户端重新操作。");
+        if (!nativeLogin && !/^Bearer native_[a-f0-9]{64}$/.test(authorization))
+          throw new FootballError(401, "请先登录。");
+      }
+      if (!nativeRequest && !["GET", "HEAD", "OPTIONS"].includes(method)) {
         const expectedOrigin = publicOrigin || `http://${request.headers.host}`;
         if (
           request.headers.origin !== expectedOrigin ||
@@ -210,12 +240,29 @@ export function createFootballServer({
         )
           throw new FootballError(403, "请求来源不可信，请从本站重新操作。");
       }
-      const token = (request.headers.cookie ?? "")
-        .split(";")
-        .map((value) => value.trim())
-        .find((value) => value.startsWith("football_session="))
-        ?.slice("football_session=".length);
+      const token = nativeRequest
+        ? authorization?.slice("Bearer ".length)
+        : (request.headers.cookie ?? "")
+            .split(";")
+            .map((value) => value.trim())
+            .find((value) => value.startsWith("football_session="))
+            ?.slice("football_session=".length);
+      if (nativeLogin) {
+        if (authorization !== undefined)
+          throw new FootballError(400, "登录时请勿携带旧会话。");
+        return send(
+          response,
+          200,
+          club.login(
+            await readRequest(request, Math.min(maximumRequestBytes, 16384)),
+            clientAddress(request),
+            "native",
+          ),
+        );
+      }
       if (pathname === "/api/auth/login" && method === "POST") {
+        if (nativeRequest)
+          throw new FootballError(400, "请使用小程序登录接口。");
         const { token: sessionToken, ...session } = club.login(
           await readRequest(request, Math.min(maximumRequestBytes, 16384)),
           clientAddress(request),
@@ -225,27 +272,31 @@ export function createFootballServer({
       }
       if (pathname === "/api/auth/logout" && method === "POST") {
         club.logout(token);
-        response.setHeader("Set-Cookie", cookie("", true));
+        if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
       }
       // Read untrusted input before authenticating. A password reset, logout, or
       // archival during a slow upload must invalidate that pending write too.
       let parsedBody;
-      if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method)) {
+      const photoDelete = method === "DELETE" && /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname);
+      if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method) || photoDelete) {
         const largeBody =
           /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
             pathname,
           );
         parsedBody = await readRequest(
           request,
-          pathname === "/api/team"
+          (pathname === "/api/team" || (method === "POST" && /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname)))
             ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
             : largeBody
               ? maximumRequestBytes
               : Math.min(maximumRequestBytes, 1024 * 1024),
         );
       }
-      const user = club.authenticate(token);
+      const user = club.authenticate(
+        token,
+        nativeRequest ? "native" : "cookie",
+      );
       const admin = () => {
         if (user.role !== "admin")
           throw new FootballError(403, "此操作需要管理员权限。");
@@ -261,7 +312,7 @@ export function createFootballServer({
         return send(response, 200, club.sessionView(user));
       if (pathname === "/api/auth/password" && method === "PUT") {
         club.changePassword(user, body());
-        response.setHeader("Set-Cookie", cookie("", true));
+        if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
       }
       if (pathname === "/api/team") {
@@ -270,6 +321,22 @@ export function createFootballServer({
         if (method === "PUT") {
           admin();
           return send(response, 200, club.saveTeam(user.team_id, body()));
+        }
+      }
+      if (pathname === "/api/venues") {
+        if (method === "GET") return send(response, 200, club.listVenues(user.team_id));
+        if (method === "POST") {
+          admin();
+          return send(response, 201, club.saveVenue(user.team_id, null, body()));
+        }
+      }
+      const venueRoute = /^\/api\/venues\/([1-9]\d*)$/.exec(pathname);
+      if (venueRoute) {
+        const id = routeId(venueRoute[1]);
+        if (method === "GET") return send(response, 200, club.getVenue(user.team_id, id));
+        if (method === "PUT") {
+          admin();
+          return send(response, 200, club.saveVenue(user.team_id, id, body()));
         }
       }
       if (pathname === "/api/players") {
@@ -358,6 +425,17 @@ export function createFootballServer({
           return send(response, 201, club.saveMatch(user, null, body()));
         }
       }
+      const matchPhotoRoute = /^\/api\/matches\/([1-9]\d*)\/photos(?:\/(cover|[1-9]\d*))?$/.exec(pathname);
+      if (matchPhotoRoute) {
+        const id = routeId(matchPhotoRoute[1]), part = matchPhotoRoute[2];
+        if (!part && method === "GET") return send(response, 200, club.listMatchPhotos(user, id));
+        if (part && part !== "cover" && method === "GET") return send(response, 200, club.getMatchPhoto(user, id, routeId(part)));
+        admin();
+        if (!part && method === "POST") return send(response, 201, club.addMatchPhoto(user, id, body()));
+        if (part === "cover" && method === "PUT") return send(response, 200, club.setMatchCover(user, id, body()));
+        if (part && part !== "cover" && method === "DELETE") return send(response, 200, club.removeMatchPhoto(user, id, routeId(part), body()));
+        throw new FootballError(405, "照片操作方式不支持。");
+      }
       const matchRoute =
         /^\/api\/matches\/([1-9]\d*)(?:\/(rsvp|roster))?$/.exec(pathname);
       if (matchRoute) {
@@ -377,6 +455,21 @@ export function createFootballServer({
       if (user.team_id !== 1)
         throw new FootballError(403, "无权访问其他球队的战术。");
       if (method !== "GET") admin();
+      const nativeCommands = /^\/api\/tactics\/([1-9]\d*)\/commands$/.exec(pathname);
+      if (nativeCommands) {
+        const id = routeId(nativeCommands[1]);
+        if (method === "GET") return send(response, 200, readTacticCommands(store, id));
+        if (method === "PUT") return send(response, 200, applyTacticCommands(store, id, body(), playerId => club.getPlayer(user.team_id, playerId)));
+        throw new FootballError(405, "此战术命令接口不支持该操作。");
+      }
+      const nativePositions = /^\/api\/tactics\/([1-9]\d*)\/positions$/.exec(pathname);
+      if (nativePositions) {
+        const id = Number(nativePositions[1]);
+        if (!Number.isSafeInteger(id)) throw new FootballError(400, "请选择有效战术编号。");
+        if (method === "GET") return send(response, 200, readTacticPositions(store, id));
+        if (method === "PUT") return send(response, 200, moveTacticPositions(store, id, body()));
+        throw new FootballError(405, "此站位接口不支持该操作。");
+      }
       if (pathname === "/api/tactics") {
         if (method === "GET") return send(response, 200, store.listTactics());
         if (method === "POST")
@@ -427,6 +520,7 @@ export function createFootballServer({
         console.error("Football storage failed:", error);
       if (!response.headersSent)
         send(response, error instanceof FootballError ? error.status : 500, {
+          ...(error instanceof FootballError && error.code === "ANIMATION_IDENTITY_CONFIRMATION_REQUIRED" ? {code:error.code} : {}),
           message:
             error instanceof FootballError
               ? error.message
