@@ -1,4 +1,5 @@
 /* eslint-disable no-use-before-define */
+import { onScopeDispose } from "vue";
 import { storeToRefs } from "pinia";
 import { ElMessage } from "element-plus";
 import { useDrawStore } from "../stores/drawStore";
@@ -28,8 +29,31 @@ export function useDrawing() {
   let startY = 0;
   let pathPoints: [number, number][] = [];
 
+  let activeSvg: SVGSVGElement | null = null;
+  let pointerId: number | null = null;
+  const cleanup = () => {
+    if (animationFrameId !== null) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+    activeSvg?.removeEventListener("pointermove", moveDrawing);
+    document.removeEventListener("pointerup", endDrawing, true);
+    document.removeEventListener("pointercancel", onCancel, true);
+    window.removeEventListener("blur", abandonDrawing);
+    activeSvg = null;
+    pointerId = null;
+  };
+  const abandonDrawing = () => {
+    cleanup();
+    setDrawStatus(false);
+    clearDrawingLayer();
+    pathPoints = [];
+  };
+  const onCancel = (e: PointerEvent) => {
+    if (e.pointerId === pointerId) abandonDrawing();
+  };
+  onScopeDispose(abandonDrawing);
+
   const startDrawing = (e: PointerEvent) => {
-    if (isAnimationMode.value) return;
+    if (isAnimationMode.value || e.button !== 0) return;
     if (!svgElement.value || ["select"].includes(currentTool.value)) return;
     if (isOutOfBoardArea(e, 0)) return;
     e.preventDefault();
@@ -45,6 +69,9 @@ export function useDrawing() {
       return;
     }
 
+    abandonDrawing();
+    activeSvg = svgElement.value;
+    pointerId = e.pointerId;
     setDrawStatus(true);
 
     startX = point.x;
@@ -56,12 +83,18 @@ export function useDrawing() {
 
     createTempDrawing(drawingConfig.value.type, point.x, point.y, pathPoints);
 
-    svgElement.value.addEventListener("pointermove", moveDrawing);
-    svgElement.value.addEventListener("pointerup", endDrawing);
+    activeSvg!.addEventListener("pointermove", moveDrawing);
+    document.addEventListener("pointerup", endDrawing, true);
+    document.addEventListener("pointercancel", onCancel, true);
+    window.addEventListener("blur", abandonDrawing);
   };
 
   const moveDrawing = (e: PointerEvent) => {
-    if (!svgElement.value || !isDrawing.value) return;
+    if (e.pointerId !== pointerId || !svgElement.value || !isDrawing.value) return;
+    if (e.buttons % 2 !== 1) {
+      abandonDrawing();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
 
@@ -85,7 +118,7 @@ export function useDrawing() {
   };
 
   const endDrawing = (event: PointerEvent) => {
-    if (!svgElement.value || !isDrawing.value) return;
+    if (event.pointerId !== pointerId || !svgElement.value || !isDrawing.value) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -97,17 +130,22 @@ export function useDrawing() {
     setDrawStatus(false);
 
     if (isOutOfBoardArea(event, 0)) {
+      abandonDrawing();
       return;
     }
 
     const svgPoint = getSvgPosition(event);
+    // pointerup is the authoritative last sample, even if the RAF was cancelled.
+    if (drawingConfig.value.type === "pen") {
+      const last = pathPoints[pathPoints.length - 1];
+      if (!last || last[0] !== svgPoint.x || last[1] !== svgPoint.y) pathPoints.push([svgPoint.x, svgPoint.y]);
+    }
     pushHistory();
     createDrawing(currentTool.value, startX, startY, svgPoint.x, svgPoint.y, pathPoints);
     clearDrawingLayer();
     pathPoints = [];
 
-    svgElement.value.removeEventListener("pointermove", moveDrawing);
-    svgElement.value.removeEventListener("pointerup", endDrawing);
+    cleanup();
   };
 
   // 取消绘制
@@ -124,8 +162,7 @@ export function useDrawing() {
     pathPoints = [];
 
     // 移除事件监听器
-    svgElement.value.removeEventListener("pointermove", moveDrawing);
-    svgElement.value.removeEventListener("pointerup", endDrawing);
+    cleanup();
 
     // 显示提示信息
     ElMessage({

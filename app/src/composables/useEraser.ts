@@ -1,3 +1,4 @@
+import { onScopeDispose } from "vue";
 import { storeToRefs } from "pinia";
 import { useDrawStore } from "../stores/drawStore";
 import { useGlobalStore } from "../stores/globalStore";
@@ -17,22 +18,39 @@ export function useEraser() {
   const { drawings } = storeToRefs(drawStore);
   const { removeDrawing } = drawStore;
 
+  let activeSvg: SVGSVGElement | null = null;
+  let pointerId: number | null = null;
+  const cleanup = () => {
+    activeSvg?.removeEventListener("pointermove", move);
+    document.removeEventListener("pointerup", end, true);
+    document.removeEventListener("pointercancel", end, true);
+    window.removeEventListener("blur", cleanup);
+    activeSvg = null;
+    pointerId = null;
+  };
+  onScopeDispose(cleanup);
+
   const beginErasing = (e: PointerEvent) => {
-    if (!svgElement.value || currentTool.value !== "eraser") return;
+    if (!svgElement.value || currentTool.value !== "eraser" || e.button !== 0) return;
+    cleanup();
     e.preventDefault();
     e.stopPropagation();
-
+    activeSvg = svgElement.value;
+    pointerId = e.pointerId;
     const point = getSvgPosition(e);
-
-    // 对于橡皮擦，立即开始检测碰撞
     handleEraserCollision(point.x, point.y);
-
-    svgElement.value.addEventListener("pointermove", move);
-    svgElement.value.addEventListener("pointerup", end);
+    activeSvg.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+    window.addEventListener("blur", cleanup);
   };
 
   const move = (e: PointerEvent) => {
-    if (!svgElement.value) return;
+    if (e.pointerId !== pointerId) return;
+    if (!svgElement.value || e.buttons % 2 !== 1 || currentTool.value !== "eraser") {
+      cleanup();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const point = getSvgPosition(e);
@@ -40,12 +58,7 @@ export function useEraser() {
   };
 
   const end = (event: PointerEvent) => {
-    if (!svgElement.value) return;
-    event.preventDefault();
-    event.stopPropagation();
-
-    svgElement.value.removeEventListener("pointermove", move);
-    svgElement.value.removeEventListener("pointerup", end);
+    if (event.pointerId === pointerId) cleanup();
   };
 
   const handleEraserCollision = (eraserX: number, eraserY: number) => {

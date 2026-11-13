@@ -255,7 +255,7 @@ const syncForm = () => {
 
 const onLoad = async (id: number) => {
   try {
-    await store.loadTactic(id);
+    if (!(await store.loadTactic(id))) return;
     syncForm();
   } catch (error) {
     reportError(error);
@@ -264,7 +264,7 @@ const onLoad = async (id: number) => {
 
 const onPlay = async (id: number) => {
   try {
-    await store.loadTactic(id);
+    if (!(await store.loadTactic(id))) return;
     syncForm();
     const animation = useAnimationStore();
     animation.openAnimation();
@@ -277,7 +277,7 @@ const onPlay = async (id: number) => {
 
 const onRollback = async (version: VersionRecord) => {
   try {
-    await store.rollback(version);
+    if (!(await store.rollback(version))) return;
     syncForm();
     ElMessage.success("已恢复历史版本，保存后更新战术");
   } catch (error) {
@@ -440,11 +440,10 @@ const onSeed = async () => {
 
 const onExportJSON = () => {
   const snapshot = store.snapshotBoard();
-  const current = store.tactics.find((t) => t.id === store.currentId);
   const payload = {
-    title: title.value.trim() || current?.title || `战术 ${stamp()}`,
-    tags: tags.value.length ? tags.value : current?.tags || [],
-    match: current?.match,
+    title: title.value.trim(),
+    tags: [...tags.value],
+    match: { opponent: opponent.value, date: matchDate.value, score: score.value },
     exportedAt: Date.now(),
     board: toBoard(snapshot),
   };

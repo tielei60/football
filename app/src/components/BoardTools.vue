@@ -65,8 +65,8 @@ const exportImage = async () => {
   exporting.value = true;
   try {
     await captureScreenshot(boardStore.boardArea);
-  } catch {
-    ElMessage.error("图片导出失败，请重试");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? `图片导出失败：${error.message}` : "图片导出失败，请重试");
   } finally {
     exporting.value = false;
   }

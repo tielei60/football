@@ -6,12 +6,14 @@ import type { RosterEntry } from "./rosterStore";
 import type { TrainingPlan } from "@/types/coaching";
 import { useMatchStore } from "./matchStore";
 import type { MatchPlayerCount } from "@/data/matchFormats";
+import type { AnimationSnapshot } from "@/types/animation";
 
 // 定义操作类型
 type OperationType = "add" | "delete" | "update" | "clear" | "";
 
 // 定义历史记录项的接口
 export interface BoardMetaSnapshot {
+  tacticId?: number | null;
   formationId: string | null;
   awayFormationId: string | null;
   formationCustomized: boolean;
@@ -25,8 +27,15 @@ interface HistoryItem {
   roster?: RosterEntry[];
   coaching?: TrainingPlan;
   meta?: BoardMetaSnapshot;
+  // Undefined: ordinary edit, leave animation alone. Null: boundary had no animation.
+  animation?: AnimationSnapshot | null;
   timestamp: number;
 }
+
+const cloneAnimation = (animation?: AnimationSnapshot | null): AnimationSnapshot | null | undefined => {
+  if (animation === undefined || animation === null) return animation;
+  return JSON.parse(JSON.stringify(animation));
+};
 
 export const useHistoryStore = defineStore("history", () => {
   const undoStack = ref<HistoryItem[]>([]);
@@ -39,7 +48,8 @@ export const useHistoryStore = defineStore("history", () => {
     drawings?: Drawing[],
     roster?: RosterEntry[],
     coaching?: TrainingPlan,
-    meta?: BoardMetaSnapshot
+    meta?: BoardMetaSnapshot,
+    animation?: AnimationSnapshot | null
   ) => {
     const historyItem: HistoryItem = {
       playerCount: useMatchStore().playerCount,
@@ -49,6 +59,7 @@ export const useHistoryStore = defineStore("history", () => {
       roster: roster?.map((p) => ({ ...p, positions: [...p.positions] })),
       coaching: coaching ? { ...coaching } : undefined,
       meta: meta ? { ...meta } : undefined,
+      animation: cloneAnimation(animation),
       timestamp: Date.now(),
     };
     undoStack.value.push(historyItem);
@@ -61,7 +72,8 @@ export const useHistoryStore = defineStore("history", () => {
     drawings?: Drawing[],
     roster?: RosterEntry[],
     coaching?: TrainingPlan,
-    meta?: BoardMetaSnapshot
+    meta?: BoardMetaSnapshot,
+    animation?: AnimationSnapshot | null
   ) => {
     const historyItem: HistoryItem = {
       playerCount: useMatchStore().playerCount,
@@ -71,6 +83,7 @@ export const useHistoryStore = defineStore("history", () => {
       roster: roster?.map((p) => ({ ...p, positions: [...p.positions] })),
       coaching: coaching ? { ...coaching } : undefined,
       meta: meta ? { ...meta } : undefined,
+      animation: cloneAnimation(animation),
       timestamp: Date.now(),
     };
     redoStack.value.push(historyItem);

@@ -32,6 +32,9 @@ export const useTacticsStore = defineStore("tactics", () => {
   const versions = ref<Record<number, VersionRecord[]>>({});
   const currentId = ref<number | null>(null);
   const ready = ref(false);
+  // Every explicit canvas replacement invalidates older asynchronous opens.
+  let boardGeneration = 0;
+  const invalidateBoardRequests = () => ++boardGeneration;
   // 打印源：设置后由 BoardView 渲染 PrintSheet 并调起 window.print
   const printSource = ref<TacticRecord | null>(null);
   const printNote = ref("");
@@ -80,9 +83,17 @@ export const useTacticsStore = defineStore("tactics", () => {
 
   // 人数和阵型来自同一份历史快照，撤销/重做时一起恢复。
   const restoreBoardMeta = (
-    meta: { formationId: string | null; awayFormationId: string | null; formationCustomized: boolean } | undefined
+    meta:
+      | {
+          tacticId?: number | null;
+          formationId: string | null;
+          awayFormationId: string | null;
+          formationCustomized: boolean;
+        }
+      | undefined
   ) => {
     suspendDirty();
+    if (meta?.tacticId !== undefined) currentId.value = meta.tacticId;
     if (!meta) {
       currentFormationId.value = null;
       awayFormationId.value = null;
@@ -159,8 +170,8 @@ export const useTacticsStore = defineStore("tactics", () => {
     const itemStore = useItemStore();
     const drawStore = useDrawStore();
     const rosterStore = useRosterStore();
-    const { pushHistory } = useHistory();
-    pushHistory();
+    const { pushBoardHistory } = useHistory();
+    pushBoardHistory();
     useMatchStore().playerCount = normalizePlayerCount(snap.playerCount);
     useAnimationStore().loadSnapshot(snap.animation);
     useCoachingStore().plan = normalizeTrainingPlan(snap.coaching);
@@ -212,6 +223,7 @@ export const useTacticsStore = defineStore("tactics", () => {
     match: MatchInfo = {},
     asNew = false
   ) => {
+    const generation = boardGeneration;
     const now = Date.now();
     const snapshot = snapshotBoard();
     const capturedContent = JSON.stringify(toBoard(snapshot));
@@ -219,13 +231,13 @@ export const useTacticsStore = defineStore("tactics", () => {
     const sourceId = currentId.value;
     const targetId = asNew ? null : currentId.value;
     const cleanTags = [...tags];
+    const existing = targetId === null ? undefined : tactics.value.find((t) => t.id === targetId);
     const thumb = await captureThumb();
     const cleanMatch: MatchInfo = {
       opponent: match.opponent?.trim() || undefined,
       date: match.date?.trim() || undefined,
       score: match.score?.trim() || undefined,
     };
-    const existing = targetId === null ? undefined : tactics.value.find((t) => t.id === targetId);
     const result = await apiRequest<Tactic>(targetId === null ? "/api/tactics" : `/api/tactics/${targetId}`, {
       method: targetId === null ? "POST" : "PUT",
       body: {
@@ -246,7 +258,7 @@ export const useTacticsStore = defineStore("tactics", () => {
     });
     const savedId = result.tacticId!;
     // 保存的是请求发出时的快照；响应不能清除后续编辑或切换的新画布。
-    if (currentId.value === sourceId) {
+    if (generation === boardGeneration && currentId.value === sourceId) {
       currentId.value = savedId;
       if (JSON.stringify(toBoard(snapshotBoard())) === capturedContent) {
         markBoardClean(formationId, snapshot.awayFormationId, snapshot.formationCustomized);
@@ -257,11 +269,12 @@ export const useTacticsStore = defineStore("tactics", () => {
   };
 
   const newBoard = () => {
+    invalidateBoardRequests();
     const itemStore = useItemStore();
     const drawStore = useDrawStore();
     const rosterStore = useRosterStore();
-    const { pushHistory } = useHistory();
-    pushHistory();
+    const { pushBoardHistory } = useHistory();
+    pushBoardHistory();
     itemStore.clearElements();
     drawStore.clearDrawings();
     useMatchStore().playerCount = 8;
@@ -276,47 +289,59 @@ export const useTacticsStore = defineStore("tactics", () => {
   };
 
   const loadTactic = async (id: number) => {
+    const generation = invalidateBoardRequests();
     const record = fromTactic(await apiRequest<Tactic>(`/api/tactics/${id}`));
+    if (generation !== boardGeneration) return false;
     await loadVersions(id);
+    if (generation !== boardGeneration) return false;
     restoreSnapshot(record.snapshot);
     currentId.value = id;
     restoreFormationMeta(record.snapshot, record.formationId);
     // 打开时现拍缩略图回填（预置导入时无图）
     try {
       const thumb = await captureThumb();
-      if (thumb) {
+      if (thumb && generation === boardGeneration && currentId.value === id) {
         await apiRequest(`/api/tactics/${id}`, { method: "PATCH", body: { thumbnail: thumb } });
         await refresh();
       }
     } catch {
       /* 忽略 */
     }
+    return generation === boardGeneration;
   };
 
   const rollback = async (version: VersionRecord) => {
-    await apiRequest(`/api/tactics/${version.tacticId}`);
+    const generation = invalidateBoardRequests();
     const previousId = currentId.value;
+    const previousBoard = toBoard(snapshotBoard());
+    await apiRequest(`/api/tactics/${version.tacticId}`);
+    if (generation !== boardGeneration) return false;
     // 当前草稿的备份始终属于原战术，空白板由撤销历史保留。
     if (previousId !== null) {
       await apiRequest(`/api/tactics/${previousId}/versions`, {
         method: "POST",
         body: {
           note: "回滚前自动备份",
-          board: toBoard(snapshotBoard()),
+          board: previousBoard,
         },
       });
       await loadVersions(previousId);
     }
+    if (generation !== boardGeneration) return false;
+    // Finish all fallible reads before changing canvas, owner or formation metadata.
+    await loadVersions(version.tacticId);
+    if (generation !== boardGeneration) return false;
     restoreSnapshot(version.snapshot);
     currentId.value = version.tacticId;
-    await loadVersions(version.tacticId);
     restoreFormationMeta(version.snapshot);
     // 回滚只替换工作台草稿，尚未写回战术库。
     boardDirty.value = true;
+    return true;
   };
 
   // 从 JSON 文件导入：落到画布并存为一条新战术（含初始版本）
   const importTactic = async (title: string, tags: string[], snapshot: BoardSnapshot, match?: MatchInfo) => {
+    const generation = invalidateBoardRequests();
     const now = Date.now();
     const safe: BoardSnapshot = {
       playerCount: normalizePlayerCount(snapshot.playerCount),
@@ -346,11 +371,23 @@ export const useTacticsStore = defineStore("tactics", () => {
         note: "导入",
       },
     });
+    if (generation !== boardGeneration) {
+      await refresh();
+      return;
+    }
+    // Publish the imported record before its selection so form watchers can resolve
+    // all metadata. Finish async reads before changing the active draft, and recheck
+    // ownership after each await so a late import cannot replace a newer selection.
+    await loadVersions(record.tacticId!);
+    if (generation !== boardGeneration) {
+      await refresh();
+      return;
+    }
+    await refresh();
+    if (generation !== boardGeneration) return;
     restoreSnapshot(safe);
     currentId.value = record.tacticId!;
     restoreFormationMeta(safe);
-    await loadVersions(currentId.value);
-    await refresh();
   };
 
   const deleteTactic = async (id: number) => {
@@ -416,6 +453,7 @@ export const useTacticsStore = defineStore("tactics", () => {
 
   // 快速保存：沿用原标题/标签/比赛信息，阵型取当前画布模板；无战术时自动起名新建
   const quickSave = async (): Promise<string> => {
+    const generation = boardGeneration;
     if (currentId.value === null) {
       const name = `战术 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
       await saveTactic(name, [], currentFormationId.value, "快速保存");
@@ -424,6 +462,7 @@ export const useTacticsStore = defineStore("tactics", () => {
     const t =
       tactics.value.find((x) => x.id === currentId.value) ??
       fromTactic(await apiRequest<Tactic>(`/api/tactics/${currentId.value}`));
+    if (generation !== boardGeneration) throw new Error("画布已切换，请在当前战术重新保存");
     if (!t) {
       const name = `战术 ${new Date().toLocaleString("zh-CN", { hour12: false })}`;
       await saveTactic(name, [], currentFormationId.value, "快速保存");
@@ -469,9 +508,13 @@ export const useTacticsStore = defineStore("tactics", () => {
     markBoardEdited,
     markBoardClean,
     restoreBoardMeta,
+    invalidateBoardRequests,
     syncBoardDirty,
     snapshotBoard,
-    restoreSnapshot,
+    restoreSnapshot: (snapshot: BoardSnapshot) => {
+      invalidateBoardRequests();
+      restoreSnapshot(snapshot);
+    },
     refresh,
     loadVersions,
     saveTactic,

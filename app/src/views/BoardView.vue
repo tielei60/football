@@ -598,7 +598,7 @@ const stepPresent = async (delta: number) => {
   const list = tacticsStore.tactics;
   if (!list.length) return;
   presentIndex.value = (presentIndex.value + delta + list.length) % list.length;
-  await tacticsStore.loadTactic(list[presentIndex.value].id!);
+  if (!(await tacticsStore.loadTactic(list[presentIndex.value].id!))) return;
   if (animationStore.currentAnimationFrameCount > 1) animationStore.openAnimation();
 };
 
@@ -619,19 +619,41 @@ const quickSaveFlow = async () => {
 };
 
 const handleShortcut = (e: KeyboardEvent) => {
-  const target = e.target as HTMLElement | null;
-  const inInput =
-    !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT");
+  // Local controls and IME own their keys; never reinterpret a handled key as a canvas action.
+  if (e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.altKey) return;
+  const target = e.target instanceof Element ? e.target : null;
   const mod = e.ctrlKey || e.metaKey;
-  if (inInput) {
-    // 输入框里只放行 Esc 失焦与 Ctrl+S 保存，其余单键留给输入法
-    if (e.key === "Escape") target.blur();
-    else if (mod && e.key.toLowerCase() === "s") {
-      e.preventDefault();
-      void quickSaveFlow();
-    }
+  const saveShortcut = mod && !e.shiftKey && e.key.toLowerCase() === "s";
+  const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [aria-modal="true"]'));
+  const modalOpen = dialogs.some((dialog) => dialog.getClientRects().length > 0);
+  const inWorkspaceDrawer = !!target?.closest(".coaching-shell, .tactics-shell");
+  const blockingDialog = dialogs.some(
+    (dialog) =>
+      dialog.getClientRects().length > 0 &&
+      !dialog.matches(".coaching-shell, .tactics-shell") &&
+      !dialog.closest(".coaching-shell, .tactics-shell")
+  );
+  // Keep explicit Ctrl/Cmd+S in workspace fields/drawers, but never act behind a confirmation dialog.
+  if (saveShortcut && !blockingDialog && (!modalOpen || inWorkspaceDrawer)) {
+    e.preventDefault();
+    void quickSaveFlow();
     return;
   }
+  if (modalOpen) return;
+  const inInput = !!target?.closest(
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
+  );
+  if (inInput) {
+    if (e.key === "Escape" && target instanceof HTMLElement) target.blur();
+    return;
+  }
+  if (
+    !mod &&
+    target?.closest(
+      'button, a[href], summary, [role="button"], [role="combobox"], [role="listbox"], [role="option"], [role="slider"], [role="menu"], [role="menuitem"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"]'
+    )
+  )
+    return;
   if (presenting.value) {
     if (e.key.toLowerCase() === "f" || e.key === "Escape") exitPresent();
     else if (isAnimationMode.value && [" ", "ArrowRight", "ArrowLeft"].includes(e.key)) {

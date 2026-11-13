@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onScopeDispose, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useItemStore } from "../stores/itemStore";
 import { FieldElement } from "../types/fieldElement";
@@ -79,19 +79,27 @@ const toolItems = computed(() =>
     new FieldElement({ color: "#000000", x: 630, y: 795, number: toolItemNumbers.value[4], elementType: "player" }),
     new FieldElement({ x: 705, y: 795, elementType: "ball" }),
   ].map((item, index) => {
+    const placed = item;
     if (props.portrait) {
-      item.x = 30;
-      item.y = 230 + index * 70;
+      placed.x = 30;
+      placed.y = 230 + index * 70;
     }
     return item;
   })
 );
 
+let cancelDrag: (() => void) | undefined;
+onScopeDispose(() => cancelDrag?.());
+
 const startDragNewItem = (item: FieldElement, event: PointerEvent, index: number) => {
+  if (event.button !== 0 || (isAnimationMode.value && !animationStore.canEdit)) return;
+  cancelDrag?.();
+  event.preventDefault();
   event.stopPropagation();
-  // @ts-ignore
-  const svg = document.getElementById("field") as SVGSVGElement;
+  const svg = boardStore.svgElement;
   if (!svg) return;
+  const pointerId = event.pointerId;
+  const animationMode = isAnimationMode.value;
 
   const svgPoint = boardStore.getSvgPosition(event);
   const elementNumber = toolItemNumbers.value[index];
@@ -107,41 +115,62 @@ const startDragNewItem = (item: FieldElement, event: PointerEvent, index: number
     })
   );
 
-  const stopDrag = (moveEvent: PointerEvent) => {
-    const { x, y } = boardStore.getSvgPosition(moveEvent);
-    if (!boardStore.isOutOfBoardArea(moveEvent, ELEMENT_RADIUS_OBJECT[item.elementType])) {
-      const element = new FieldElement({
-        color: item.color,
-        x,
-        y,
-        number: elementNumber,
-        elementType: item.elementType,
-      });
-      if (isAnimationMode.value) {
-        element.creationMode = "animation";
-        animationStore.addElement(element);
-      }
-      pushHistory();
-      addElement(element);
-      toolItemNumbers.value[index]++;
-    }
+  const cleanup = () => {
     removeDraggingNewItem();
-    svg.removeEventListener("pointermove", moveDrag);
-    svg.removeEventListener("pointerup", stopDrag);
-    svg.removeEventListener("pointercancel", stopDrag);
+    document.removeEventListener("pointermove", moveDrag);
+    document.removeEventListener("pointerup", stopDrag, true);
+    document.removeEventListener("pointercancel", cancelPointer, true);
+    window.removeEventListener("blur", cleanup);
+    cancelDrag = undefined;
   };
-
+  const editable = () => animationMode === isAnimationMode.value && (!animationMode || animationStore.canEdit);
+  const cancelPointer = (e: PointerEvent) => {
+    if (e.pointerId === pointerId) cleanup();
+  };
+  const stopDrag = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== pointerId) return;
+    if (
+      !editable() ||
+      !newDraggingItem.value ||
+      boardStore.isOutOfBoardArea(moveEvent, ELEMENT_RADIUS_OBJECT[item.elementType])
+    ) {
+      cleanup();
+      return;
+    }
+    const { x, y } = boardStore.getSvgPosition(moveEvent);
+    const element = new FieldElement({
+      color: item.color,
+      x,
+      y,
+      number: elementNumber,
+      elementType: item.elementType,
+    });
+    if (isAnimationMode.value) {
+      element.creationMode = "animation";
+      animationStore.addElement(element);
+    }
+    pushHistory();
+    addElement(element);
+    toolItemNumbers.value[index]++;
+    cleanup();
+  };
   const moveDrag = (moveEvent: PointerEvent) => {
+    if (moveEvent.pointerId !== pointerId) return;
+    if (moveEvent.buttons % 2 !== 1 || !editable()) {
+      cleanup();
+      return;
+    }
     if (newDraggingItem.value) {
       const { x, y } = boardStore.getSvgPosition(moveEvent);
       newDraggingItem.value.x = x;
       newDraggingItem.value.y = y;
     }
   };
-
-  svg.addEventListener("pointermove", moveDrag);
-  svg.addEventListener("pointerup", stopDrag);
-  svg.addEventListener("pointercancel", stopDrag);
+  document.addEventListener("pointermove", moveDrag);
+  document.addEventListener("pointerup", stopDrag, true);
+  document.addEventListener("pointercancel", cancelPointer, true);
+  window.addEventListener("blur", cleanup);
+  cancelDrag = cleanup;
 };
 </script>
 

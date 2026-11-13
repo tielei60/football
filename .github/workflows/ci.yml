@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:server
       - run: npm run demo:check
       - run: npm run test:matchday
+      - run: npm run test:tactics
       - run: npm run test:bundle
       - run: node scripts/services.test.mjs
       - name: Build deployment image

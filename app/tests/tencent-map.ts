@@ -4,6 +4,7 @@ import type { Page } from "@playwright/test";
 export async function mockTencentMap(page: Page, mode: "ready" | "script-error" | "no-tiles" | "disabled" = "ready") {
   const state = { sdkRequests: 0, unexpectedRequests: [] as string[] };
   await page.addInitScript(() => {
+    (window as any).__mapFixtureIntrinsics = { Map, Set };
     Object.defineProperty(navigator, "geolocation", {
       configurable: true,
       value: {
@@ -36,6 +37,7 @@ export async function mockTencentMap(page: Page, mode: "ready" | "script-error" 
     return route.fulfill({
       contentType: "application/javascript",
       body: `
+        (() => {
         window.__mapFixture = { maps: [], markers: [], destroyed: 0 };
         class LatLng {
           constructor(lat, lng) { this.lat = lat; this.lng = lng; }
@@ -69,6 +71,7 @@ export async function mockTencentMap(page: Page, mode: "ready" | "script-error" 
           destroy() { this.destroyed = true; }
         }
         window.TMap = { Map, LatLng, MultiMarker, MarkerStyle: class { constructor(options) { this.options = options; } } };
+        })();
       `,
     });
   });

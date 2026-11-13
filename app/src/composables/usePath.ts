@@ -1,3 +1,4 @@
+import { onScopeDispose } from "vue";
 import { storeToRefs } from "pinia";
 import { useAnimationStore } from "../stores/animationStore";
 import { FieldElement } from "../types/fieldElement";
@@ -46,13 +47,24 @@ export function usePath() {
     return action ? action.controlPoint : getDefaultControlPoint(element.x, element.y, item.x, item.y);
   };
 
+  let cancelDrag: (() => void) | undefined;
+  onScopeDispose(() => cancelDrag?.());
+
   const startDragControlPoint = (item: FieldElement, event: PointerEvent) => {
+    if (event.button !== 0 || !animationStore.canEdit) return;
+    cancelDrag?.();
+    const pointerId = event.pointerId;
     const svg = (event.currentTarget as SVGElement).closest("svg");
     if (!svg) return;
     const action = elementAction(item);
     if (!action) return;
 
     const moveControlPoint = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      if (moveEvent.buttons % 2 !== 1 || !animationStore.canEdit) {
+        stopDrag();
+        return;
+      }
       const svgPoint = boardStore.getSvgPosition(moveEvent);
       action.controlPoint = {
         x: svgPoint.x,
@@ -62,13 +74,19 @@ export function usePath() {
 
     const stopDrag = () => {
       svg.removeEventListener("pointermove", moveControlPoint);
-      svg.removeEventListener("pointerup", stopDrag);
-      svg.removeEventListener("pointercancel", stopDrag);
+      document.removeEventListener("pointerup", end, true);
+      document.removeEventListener("pointercancel", end, true);
+      window.removeEventListener("blur", stopDrag);
+      cancelDrag = undefined;
     };
-
+    const end = (e: PointerEvent) => {
+      if (e.pointerId === pointerId) stopDrag();
+    };
     svg.addEventListener("pointermove", moveControlPoint);
-    svg.addEventListener("pointerup", stopDrag);
-    svg.addEventListener("pointercancel", stopDrag);
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+    window.addEventListener("blur", stopDrag);
+    cancelDrag = stopDrag;
   };
 
   return {

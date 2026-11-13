@@ -122,13 +122,24 @@ test("venues support opt-in map click, coordinate fallback and immutable archive
   await expect.poll(() => mapRequests.sdkRequests).toBe(1);
   const map = page.locator(".venue-map");
   await expect(map).toHaveAttribute("data-sdk-fixture", "tencent-offline");
+  expect(
+    await page.evaluate(() => {
+      const original = (window as any).__mapFixtureIntrinsics;
+      return (
+        Map === original.Map &&
+        Set === original.Set &&
+        new Map([["native", 1]]).get("native") === 1 &&
+        new Set([1, 1]).size === 1
+      );
+    })
+  ).toBe(true);
   await expect(map).not.toHaveClass(/venue-map-disabled/);
   await map.click({ position: { x: 150, y: 100 } });
-  await expect(page.getByLabel(/^纬度（/)).not.toHaveValue("");
-  await expect(page.getByLabel(/^经度（/)).not.toHaveValue("");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).not.toHaveValue("");
+  await expect(page.getByRole("spinbutton", { name: /^经度（/ })).not.toHaveValue("");
   await page.getByRole("button", { name: "清除坐标", exact: true }).click();
-  await page.getByLabel(/^纬度（/).fill("31.23");
-  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("spinbutton", { name: /^纬度（/ }).fill("31.23");
+  await page.getByRole("spinbutton", { name: /^经度（/ }).fill("121.47");
   await mkdir(evidence, { recursive: true });
   await page.screenshot({ path: `${evidence}/matchday-map-fixture.png`, fullPage: true });
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
@@ -305,17 +316,17 @@ test("map network failure keeps manual coordinate saving usable without geolocat
   await page.getByLabel("球场名称", { exact: true }).fill("离线备用虚构球场");
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: /地图.*(不可用|失败|无法)/ })).toBeVisible();
-  await page.getByLabel(/^纬度（/).fill("31.23");
+  await page.getByRole("spinbutton", { name: /^纬度（/ }).fill("31.23");
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("成对");
   await expect(page.getByLabel("球场名称", { exact: true })).toHaveValue("离线备用虚构球场");
-  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("spinbutton", { name: /^经度（/ }).fill("121.47");
   await mockTencentMap(page);
   await page.getByRole("button", { name: "重试加载地图", exact: true }).click();
   await expect(page.locator(".venue-map")).toHaveAttribute("data-sdk-fixture", "tencent-offline");
   await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
-  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
-  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).toHaveValue("31.23");
+  await expect(page.getByRole("spinbutton", { name: /^经度（/ })).toHaveValue("121.47");
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "球场资料已保存" })).toBeVisible();
   expect(
@@ -473,8 +484,8 @@ test("legacy WGS84 venues are not silently reinterpreted and opening the map alo
   });
   expect(rendered.centers).not.toContainEqual([31.23, 121.47]);
   expect(rendered.markers).toEqual([]);
-  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
-  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).toHaveValue("31.23");
+  await expect(page.getByRole("spinbutton", { name: /^经度（/ })).toHaveValue("121.47");
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "放弃球场修改", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "保存球场", exact: true })).toHaveCount(0);
@@ -510,8 +521,8 @@ test("coordinate system changes require clearing confirmation and map reselectio
   await expect(page.getByLabel("经度（GCJ-02）", { exact: true })).toHaveValue("");
   // Return to an original-coordinate state before explicitly reselecting on the map.
   await selectUiOption(system, "wgs84");
-  await page.getByLabel(/^纬度（/).fill("31.23");
-  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("spinbutton", { name: /^纬度（/ }).fill("31.23");
+  await page.getByRole("spinbutton", { name: /^经度（/ }).fill("121.47");
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
   const map = page.locator(".venue-map");
   await expect(map).not.toHaveClass(/venue-map-disabled/);
@@ -534,15 +545,15 @@ test("missing map tiles time out, retry stays safe, and a late old event cannot 
   await page.goto("/club/venues");
   await page.getByRole("button", { name: "新增球场", exact: true }).click();
   await page.getByLabel("球场名称", { exact: true }).fill("瓦片超时虚构球场");
-  await page.getByLabel(/^纬度（/).fill("31.23");
-  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("spinbutton", { name: /^纬度（/ }).fill("31.23");
+  await page.getByRole("spinbutton", { name: /^经度（/ }).fill("121.47");
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
   await expect(page.locator(".venue-map")).toHaveAttribute("data-sdk-fixture", "tencent-offline");
   await expect(page.locator(".venue-map")).toHaveClass(/venue-map-disabled/);
   await page.clock.runFor(26000);
   await expect(page.getByRole("status").filter({ hasText: "地图加载超时" })).toBeVisible();
-  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
-  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).toHaveValue("31.23");
+  await expect(page.getByRole("spinbutton", { name: /^经度（/ })).toHaveValue("121.47");
   await page.getByRole("button", { name: "重试加载地图", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(2);
   await page.evaluate(() => {
@@ -551,12 +562,12 @@ test("missing map tiles time out, retry stays safe, and a late old event cannot 
     maps[0].emit("click", { latLng: { getLat: () => 1, getLng: () => 2 } });
   });
   await expect(page.locator(".venue-map")).toHaveClass(/venue-map-disabled/);
-  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).toHaveValue("31.23");
   await page.evaluate(() => (window as any).__mapFixture.maps[1].emit("tilesloaded", {}));
   await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
   await page.getByRole("button", { name: "关闭地图", exact: true }).click();
   await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.destroyed)).toBe(2);
-  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await expect(page.getByRole("spinbutton", { name: /^经度（/ })).toHaveValue("121.47");
 });
 
 test("late SDK completion after switching venue editors never attaches the old map to the new venue", async ({
@@ -592,7 +603,7 @@ test("late SDK completion after switching venue editors never attaches the old m
   await expect.poll(() => page.evaluate(() => !!(window as any).__mapFixture)).toBe(true);
   expect(await page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(0);
   await expect(page.locator(".venue-map")).toHaveCount(0);
-  await expect(page.getByLabel(/^纬度（/)).toHaveValue("");
+  await expect(page.getByRole("spinbutton", { name: /^纬度（/ })).toHaveValue("");
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
   await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
   expect(await page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(1);

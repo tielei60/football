@@ -26,7 +26,8 @@
     "demo": "node ../scripts/start-demo.mjs",
     "demo:seed": "node ../scripts/create-demo.mjs",
     "demo:check": "node ../scripts/audit-business-flow.mjs",
-    "test:matchday": "node ../scripts/audit-matchday-flow.mjs"
+    "test:matchday": "node ../scripts/audit-matchday-flow.mjs",
+    "test:tactics": "node ../scripts/audit-tactics-model.mjs"
   },
   "dependencies": {
     "@vueuse/core": "^10.11.0",

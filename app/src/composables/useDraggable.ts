@@ -24,7 +24,7 @@ export function useDraggable() {
 
   const startDrag = (
     item: FieldElement,
-    event: PointerEvent,
+    startEvent: PointerEvent,
     callbacks: {
       onDragMove?: (x: number, y: number) => void;
       onDragEnd?: () => void;
@@ -33,12 +33,12 @@ export function useDraggable() {
     }
   ) => {
     const svg = svgElement.value;
-    if (!svg) return;
+    if (!svg || startEvent.button !== 0) return;
     cancelDrag?.();
 
     hasDragged = false;
-    const startX = event.clientX;
-    const startY = event.clientY;
+    const startX = startEvent.clientX;
+    const startY = startEvent.clientY;
     const dragThreshold = 4; // 拖动阈值
 
     let frame: number | undefined;
@@ -76,8 +76,11 @@ export function useDraggable() {
       const svgPoint = boardStore.getSvgPosition(moveEvent);
       const clamped = boardStore.clampPosition(svgPoint.x, svgPoint.y, item.elementType);
       // 网格吸附（教练栏开关，默认开启）
-      const x = globalStore.snap ? Math.round(clamped.x / SNAP_GRID) * SNAP_GRID : clamped.x;
-      const y = globalStore.snap ? Math.round(clamped.y / SNAP_GRID) * SNAP_GRID : clamped.y;
+      const snappedX = globalStore.snap ? Math.round(clamped.x / SNAP_GRID) * SNAP_GRID : clamped.x;
+      const snappedY = globalStore.snap ? Math.round(clamped.y / SNAP_GRID) * SNAP_GRID : clamped.y;
+
+      // Snapping must never move an already-clamped center beyond the board edge.
+      const { x, y } = boardStore.clampPosition(snappedX, snappedY, item.elementType);
 
       if (isAnimationMode.value) {
         animationStore.updateElementPosition(item.id, x, y);
@@ -99,10 +102,14 @@ export function useDraggable() {
     };
     const handleMoveItem = (event: PointerEvent) => {
       if (event.pointerId !== eventPointerId) return;
+      if (event.buttons % 2 !== 1) {
+        cancelDrag?.();
+        return;
+      }
       pending = event;
       if (frame === undefined) frame = requestAnimationFrame(flushMove);
     };
-    const eventPointerId = event.pointerId;
+    const eventPointerId = startEvent.pointerId;
     const cleanup = () => {
       if (frame !== undefined) cancelAnimationFrame(frame);
       frame = undefined;
@@ -110,6 +117,7 @@ export function useDraggable() {
       document.removeEventListener("pointermove", handleMoveItem);
       document.removeEventListener("pointerup", stopDrag);
       document.removeEventListener("pointercancel", stopDrag);
+      window.removeEventListener("blur", handleBlur);
       cancelDrag = undefined;
     };
     const stopDrag = (event: PointerEvent) => {
@@ -143,11 +151,21 @@ export function useDraggable() {
       }
     };
 
+    const handleBlur = () => cancelDrag?.();
+
     // 监听整个window的事件
     document.addEventListener("pointermove", handleMoveItem);
     document.addEventListener("pointerup", stopDrag);
     document.addEventListener("pointercancel", stopDrag);
-    cancelDrag = cleanup;
+    window.addEventListener("blur", handleBlur);
+    cancelDrag = () => {
+      cleanup();
+      item.isDragging = false;
+      if (isAnimationMode.value && item.id) {
+        const shared = currentAnimation.value?.getSharedElement(item.id);
+        if (shared) shared.isDragging = false;
+      }
+    };
   };
   return {
     startDrag,

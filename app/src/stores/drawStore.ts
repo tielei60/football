@@ -26,7 +26,8 @@ export const useDrawStore = defineStore(
     ) => {
       let newDrawing = null;
       newDrawing = new Drawing({
-        drawingType: drawingConfig.value.type,
+        // Text is a separate tool; the shape palette must not change its stored kind.
+        drawingType: tool === "text" ? "text" : drawingConfig.value.type,
         startX,
         startY,
         endX,
