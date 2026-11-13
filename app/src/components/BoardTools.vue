@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { storeToRefs } from "pinia";
 import { ref } from "vue";
 import {
@@ -53,8 +54,8 @@ const openAnimation = () => {
     .filter((el) => el.elementType === "player" || el.elementType === "ball");
   animationStore.openAnimationFromBoard(elements);
 };
-const clearBoard = () => {
-  if (!confirm("清空场上全部球员与线条？（可撤销）")) return;
+const clearBoard = async () => {
+  if (!(await confirmAction("清空场上全部球员与线条？（可撤销）"))) return;
   pushHistory();
   itemStore.clearElements();
   drawStore.clearDrawings();
@@ -203,7 +204,7 @@ const exportImage = async () => {
   border-radius: 4px;
   color: var(--ink);
 }
-.animation-tools select {
+.animation-tools :deep(.ui-select-trigger) {
   width: 44px;
   height: 34px;
   padding: 0;
@@ -211,7 +212,7 @@ const exportImage = async () => {
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--ink);
-  background: white;
+  background: var(--color-surface);
 }
 @media (max-width: 700px) {
   .board-tools {
@@ -236,7 +237,7 @@ const exportImage = async () => {
   .frame-counter {
     flex-direction: row;
   }
-  .animation-tools select {
+  .animation-tools :deep(.ui-select-trigger) {
     height: 42px;
   }
 }

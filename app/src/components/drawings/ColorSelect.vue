@@ -1,7 +1,10 @@
 <template>
   <div class="color-container">
     <div class="color-group">
-      <div
+      <button
+        type="button"
+        :aria-label="color === 'transparent' ? '透明色' : `颜色 ${color}`"
+        :aria-pressed="selectColor === color"
         v-for="(color, index) in presetColors"
         :key="index"
         class="color-item"
@@ -12,23 +15,32 @@
           :class="{ active: selectColor === color, 'is-transparent': color === 'transparent' }"
           :style="{ backgroundColor: color as string }"
         ></div>
-      </div>
+      </button>
     </div>
     <div class="divider"></div>
     <div class="custom-color">
       <label
-        for="colorPicker"
+        :for="pickerId"
         class="select-color"
         :class="{ 'is-transparent': selectColor === 'transparent' }"
         :style="{ background: selectColor }"
       ></label>
-      <input id="colorPicker" type="color" :value="selectColor" @input="updateColor" class="color-picker" />
+      <input
+        :id="pickerId"
+        aria-label="自定义颜色"
+        type="color"
+        :value="selectColor"
+        @input="updateColor"
+        class="color-picker"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, getCurrentInstance } from "vue";
+
+const pickerId = `drawing-color-${getCurrentInstance()?.uid}`;
 
 const props = defineProps({
   presetColors: {
@@ -87,6 +99,10 @@ watch(selectColor, (newColor) => {
   }
 
   .color-item {
+    border: 0;
+    border-radius: 6px;
+    padding: 7px;
+    background: transparent;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -119,7 +135,7 @@ watch(selectColor, (newColor) => {
   .is-transparent {
     background: none !important;
     background-image: url("/is-transparent.png") !important;
-    box-shadow: inset 0 0 0 1px #d9d9d9;
+    box-shadow: inset 0 0 0 1px var(--color-border-strong);
   }
 }
 </style>

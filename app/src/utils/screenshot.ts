@@ -22,22 +22,8 @@ export const captureScreenshot = async (area: SVGElement) => {
 
   newSvg.appendChild(clonedContent);
 
-  // 将样式内联到克隆的 SVG 内容中
-  const styleSheets = Array.from(document.styleSheets);
-  const cssText = styleSheets
-    .map((sheet) => {
-      try {
-        return Array.from(sheet.cssRules)
-          .map((rule) => rule.cssText)
-          .join("");
-      } catch (e) {
-        return "";
-      }
-    })
-    .join("");
-  const style = document.createElement("style");
-  style.textContent = cssText;
-  newSvg.insertBefore(style, newSvg.firstChild);
+  // prepareBoardExport already freezes resolved paint, including theme tokens.
+  // Do not copy unrelated application CSS into the downloaded image.
 
   // 将新的 SVG 转换为 base64 编码的图片
   const svgData = new XMLSerializer().serializeToString(newSvg);
@@ -61,7 +47,8 @@ export const captureScreenshot = async (area: SVGElement) => {
     ctx.drawImage(img, 0, 0, bbox.width, bbox.height, 0, 0, canvas.width, canvas.height);
     // 球队水印
     const date = new Date().toISOString().slice(0, 10);
-    ctx.fillStyle = "rgba(11, 42, 29, 0.65)";
+    ctx.fillStyle =
+      getComputedStyle(document.documentElement).getPropertyValue("--color-text-muted").trim() || "#6f6277";
     ctx.font = `${20 * SCALE}px sans-serif`;
     ctx.textAlign = "right";
     const playerCount = useMatchStore().playerCount;

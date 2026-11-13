@@ -1,3 +1,4 @@
+import { selectUiOption } from "./ui-select";
 import { type Page } from "@playwright/test";
 import { test, expect } from "./tactical-fixtures";
 
@@ -48,7 +49,7 @@ test("timeline seeks, honors single playback and changes speed without restartin
   await page.getByRole("checkbox", { name: "循环播放" }).uncheck();
   await page.getByRole("button", { name: "播放动画", exact: true }).click();
   await page.clock.runFor(500);
-  await page.getByRole("combobox", { name: "播放速度" }).selectOption("1.5");
+  await selectUiOption(page.getByRole("combobox", { name: "播放速度" }), "1.5");
   await page.clock.runFor(500);
   expect(Number(await timeline.inputValue())).toBeGreaterThan(1.3);
   await page.clock.runFor(1500);
@@ -126,8 +127,11 @@ test("presets provide coaching plans and distinct multi-step demonstrations", as
   expect(result.filter((t) => t.frames >= 4)).toHaveLength(3);
   await page.getByRole("button", { name: "动态演示", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "演示场景" })).toBeVisible();
-  page.on("dialog", (d) => d.accept());
-  await page.getByRole("combobox", { name: "演示场景" }).selectOption("press");
+  await selectUiOption(page.getByRole("combobox", { name: "演示场景" }), "press");
+  const confirmation = page.getByRole("dialog", { name: "请确认操作" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "确认", exact: true }).click();
+  await expect(confirmation).not.toBeVisible();
   await expect(page.locator(".timeline-title")).toContainText("高位逼抢");
   await expect(page.locator("#players > g")).toHaveCount(17);
 });

@@ -17,7 +17,7 @@
       <span>图形类型</span>
       <ShapeSelect></ShapeSelect>
       <span>虚线（跑位线）</span>
-      <el-switch v-model="drawingConfig.dashed" />
+      <el-switch v-model="drawingConfig.dashed" aria-label="使用虚线" />
       <span>描边</span>
       <ColorSelect
         :preset-colors="['#1e1e1e', '#cf423b', '#3472bc']"
@@ -105,7 +105,7 @@ watch(currentTool, (newTool) => {
 .el-popover {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1.5px solid var(--pitch-500, #15803d);
+  border: 1.5px solid var(--pitch-500);
   color: var(--text-dark-color);
   font-weight: 500;
   padding: 20px;

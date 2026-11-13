@@ -9,7 +9,14 @@
       overflow="visible"
     >
       <div class="tools-panel-content">
-        <button class="tbtn" :class="{ active: currentTool === 'select' }" @click="setCurrentTool('select')" title="选择 (V)">选择</button>
+        <button
+          class="tbtn"
+          :class="{ active: currentTool === 'select' }"
+          @click="setCurrentTool('select')"
+          title="选择 (V)"
+        >
+          选择
+        </button>
         <Shape v-if="!isAnimationMode"></Shape>
         <button
           v-if="!isAnimationMode"
@@ -17,18 +24,38 @@
           :class="{ active: currentTool === 'text' }"
           @click="setCurrentTool('text')"
           title="文字标注 (T)"
-        >文字</button>
+        >
+          文字
+        </button>
         <button
           v-if="!isAnimationMode"
           class="tbtn"
           :class="{ active: currentTool === 'eraser' }"
           @click="setCurrentTool('eraser')"
           title="橡皮擦"
-        >橡皮</button>
+        >
+          橡皮
+        </button>
         <button class="tbtn danger" @click="clearBoard" title="清空球员与线条（可撤销）">清空</button>
-        <button v-if="boardArea && !isAnimationMode" class="tbtn" @click="captureScreenshot(boardArea)" title="导出 PNG">截图</button>
-        <button v-if="!isFullscreen && !globalStore.deviceInfo.isIOS" class="tbtn" @click="fullscreen" title="全屏">全屏</button>
-        <button v-if="isFullscreen && !globalStore.deviceInfo.isIOS" class="tbtn" @click="exitFullscreen" title="退出全屏">退出</button>
+        <button
+          v-if="boardArea && !isAnimationMode"
+          class="tbtn"
+          @click="captureScreenshot(boardArea)"
+          title="导出 PNG"
+        >
+          截图
+        </button>
+        <button v-if="!isFullscreen && !globalStore.deviceInfo.isIOS" class="tbtn" @click="fullscreen" title="全屏">
+          全屏
+        </button>
+        <button
+          v-if="isFullscreen && !globalStore.deviceInfo.isIOS"
+          class="tbtn"
+          @click="exitFullscreen"
+          title="退出全屏"
+        >
+          退出
+        </button>
         <div class="animation-controls" v-if="isAnimationMode">
           <div class="frame-counter">
             <input type="number" v-model="frameInput" @change="switchFrameIndex" class="frame-input" />
@@ -51,16 +78,28 @@
           <button v-show="!isPlaying" class="tbtn accent" @click="togglePlayback" title="播放">播放</button>
           <button v-show="isPlaying" class="tbtn accent" @click="togglePlayback" title="停止">停止</button>
         </div>
-        <button v-if="!isAnimationMode" class="tbtn accent" @click="openAnimationFromBoard" title="动画（载入当前阵型）">动画</button>
+        <button
+          v-if="!isAnimationMode"
+          class="tbtn accent"
+          @click="openAnimationFromBoard"
+          title="动画（载入当前阵型）"
+        >
+          动画
+        </button>
         <button v-else class="tbtn" @click="exitAnimation" title="退出动画模式">返回</button>
-        <button v-if="!isAnimationMode" class="tbtn" :class="{ disabled: !canUndo }" @click="handleUndo" title="撤销">撤销</button>
-        <button v-if="!isAnimationMode" class="tbtn" :class="{ disabled: !canRedo }" @click="handleRedo" title="重做">重做</button>
+        <button v-if="!isAnimationMode" class="tbtn" :class="{ disabled: !canUndo }" @click="handleUndo" title="撤销">
+          撤销
+        </button>
+        <button v-if="!isAnimationMode" class="tbtn" :class="{ disabled: !canRedo }" @click="handleRedo" title="重做">
+          重做
+        </button>
       </div>
     </foreignObject>
   </g>
 </template>
 
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { storeToRefs } from "pinia";
 import { onBeforeUnmount, ref, watch, computed } from "vue";
 import { captureScreenshot } from "../utils/index";
@@ -173,8 +212,8 @@ const deleteLastFrame = () => {
   }
 };
 
-const clearBoard = () => {
-  if (!confirm("清空场上全部球员与线条？（可撤销）")) return;
+const clearBoard = async () => {
+  if (!(await confirmAction("清空场上全部球员与线条？（可撤销）"))) return;
   pushHistory();
   clearElements();
   clearDrawings();
@@ -216,8 +255,8 @@ onBeforeUnmount(() => {
 
   .speed-group {
     display: flex;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 9px;
     padding: 3px;
     gap: 3px;
@@ -230,14 +269,14 @@ onBeforeUnmount(() => {
     padding: 4px 6px;
     font-size: 12px;
     font-weight: 700;
-    color: rgba(248, 250, 245, 0.65);
+    color: var(--color-text-muted);
     cursor: pointer;
     white-space: nowrap;
   }
 
   .speed-btn.active {
-    background: rgba(180, 255, 57, 0.2);
-    color: var(--accent, #b4ff39);
+    background: var(--color-brand-soft);
+    color: var(--accent);
   }
 
   .frame-counter {
@@ -245,11 +284,11 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     gap: 2px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 9px;
     padding: 4px 6px;
-    color: var(--paper, #f8faf5);
+    color: var(--paper);
     font-size: 13px;
     font-weight: 700;
   }
@@ -261,7 +300,7 @@ onBeforeUnmount(() => {
     text-align: center;
     font-size: 14px;
     font-weight: 700;
-    color: var(--paper, #f8faf5);
+    color: var(--paper);
     background: transparent;
     padding: 2px;
     border-radius: 4px;
@@ -304,7 +343,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: color 0.3s;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow:
     18px 26px 13px rgba(0, 0, 0, 0.01),
     10px 15px 11px rgba(0, 0, 0, 0.05),
@@ -313,14 +352,14 @@ onBeforeUnmount(() => {
 
   &.is-active,
   &:hover {
-    background: #c2f4f2;
+    background: var(--color-brand-soft);
   }
 
   &.disabled {
     opacity: 0.5;
     cursor: not-allowed;
     &:hover {
-      background: #ffffff;
+      background: var(--color-surface);
     }
   }
 }

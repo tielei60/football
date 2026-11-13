@@ -1,3 +1,4 @@
+import { cancelAllConfirmations } from "./components/ui/confirmAction";
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "./stores/authStore";
 import { useCoachingDeskStore } from "./stores/coachingDeskStore";
@@ -8,6 +9,12 @@ import LoginView from "./views/LoginView.vue";
 import ClubLayout from "./views/ClubLayout.vue";
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition;
+    if (to.hash) return { el: to.hash };
+    if (to.path !== from.path) return { left: 0, top: 0 };
+    return false;
+  },
   routes: [
     { path: "/", redirect: "/club" },
     { path: "/login", name: "login", component: LoginView },
@@ -51,5 +58,9 @@ router.beforeEach(async (to, from) => {
   if (!auth.session && !["login", "about", "changelog"].includes(String(to.name))) return "/login";
   if (auth.session && to.name === "login") return "/club";
   if (to.meta.admin && !auth.isAdmin) return "/club";
+});
+router.afterEach((to, from, failure) => {
+  // Do not cancel guards asking permission to leave until navigation succeeds.
+  if (!failure && to.fullPath !== from.fullPath) cancelAllConfirmations();
 });
 export default router;

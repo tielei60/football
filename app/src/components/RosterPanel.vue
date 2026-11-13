@@ -142,11 +142,11 @@
             </label>
             <label>
               状态
-              <select :value="p.status || 'ok'" @change="onStatus(p.id, $event)">
+              <UiSelect :value="p.status || 'ok'" @change="onStatus(p.id, $event)">
                 <option value="ok">健康</option>
                 <option value="injured">伤</option>
                 <option value="suspended">停</option>
-              </select>
+              </UiSelect>
             </label>
             <div class="detail-status">{{ onPitch(p) ? "状态：在场上" : "状态：替补席" }}</div>
             <SubstitutionControl v-if="!onPitch(p) && (!p.status || p.status === 'ok')" :incoming-id="p.id" />
@@ -175,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { computed, ref, nextTick, watch } from "vue";
 import { Search, SearchX, UserPlus, Maximize2, Minimize2 } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
@@ -234,9 +235,11 @@ const onAdd = () => {
   }
 };
 
-const onRemove = (id: string, name: string) => {
+const onRemove = async (id: string, name: string) => {
   if (
-    confirm(`归档队员 ${name}？场上棋子将移除，球员账号将停用，历史比赛记录保留。可在俱乐部球员管理中重新设为在队。`)
+    await confirmAction(
+      `归档队员 ${name}？场上棋子将移除，球员账号将停用，历史比赛记录保留。可在俱乐部球员管理中重新设为在队。`
+    )
   ) {
     roster.removePlayer(id);
     if (detailId.value === id) detailId.value = null;
@@ -314,7 +317,7 @@ const hideAvatar = (e: Event) => {
 .roster-panel {
   width: 320px;
   flex-shrink: 0;
-  background: var(--surface);
+  background: var(--color-sidebar);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -372,8 +375,10 @@ const hideAvatar = (e: Event) => {
 .squad-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  padding: 4px 0 8px;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 .squad-summary > div {
   display: flex;
@@ -396,7 +401,7 @@ const hideAvatar = (e: Event) => {
   color: var(--muted);
 }
 .squad-summary .warning {
-  color: #b34d40;
+  color: var(--color-danger);
 }
 .roster-add-row {
   display: flex;
@@ -406,7 +411,7 @@ const hideAvatar = (e: Event) => {
 .roster-search {
   min-height: 38px;
   width: 100%;
-  background: #f7f8f9;
+  background: var(--color-bg);
   border: 1px solid var(--line);
   border-radius: 5px;
   padding: 8px 10px;
@@ -416,7 +421,7 @@ const hideAvatar = (e: Event) => {
 }
 .roster-add-input {
   flex: 1;
-  background: white;
+  background: var(--color-surface);
 }
 .roster-add-btn {
   display: grid;
@@ -425,7 +430,7 @@ const hideAvatar = (e: Event) => {
   flex-shrink: 0;
   color: var(--pitch-700);
   background: var(--green-soft);
-  border: 1px solid #c7dfd4;
+  border: 1px solid var(--color-border-strong);
   border-radius: 5px;
 }
 .roster-search-wrap {
@@ -471,7 +476,7 @@ const hideAvatar = (e: Event) => {
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: #aabbb4 transparent;
+  scrollbar-color: var(--color-border-strong) transparent;
   scroll-padding-block: 6px;
 }
 .expanded .roster-list {
@@ -481,7 +486,7 @@ const hideAvatar = (e: Event) => {
   column-gap: 10px;
 }
 .roster-list:focus-visible {
-  outline: 2px solid #287fbc;
+  outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
 .expanded .roster-item.editing {
@@ -489,10 +494,10 @@ const hideAvatar = (e: Event) => {
 }
 .roster-item {
   padding: 4px 6px;
-  border-bottom: 1px solid #f0f2f3;
+  border-bottom: 1px solid var(--color-border);
 }
 .roster-item:hover {
-  background: #f7f9f8;
+  background: var(--color-bg);
 }
 .roster-item.on {
   background: transparent;
@@ -551,7 +556,7 @@ const hideAvatar = (e: Event) => {
   inset: 0;
   display: grid;
   place-items: center;
-  color: white;
+  color: var(--color-on-brand);
   font-size: 14px;
 }
 .avatar-photo {
@@ -585,7 +590,7 @@ const hideAvatar = (e: Event) => {
   white-space: nowrap;
 }
 .status-badge {
-  color: white;
+  color: var(--color-on-brand);
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 10px;
@@ -596,7 +601,7 @@ const hideAvatar = (e: Event) => {
   min-width: 44px;
   padding: 3px 5px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--color-surface);
   color: var(--muted);
   border-radius: 4px;
   font-size: 11px;
@@ -632,7 +637,7 @@ const hideAvatar = (e: Event) => {
   color: var(--muted);
 }
 .detail-fields input,
-.detail-fields select {
+.detail-fields :deep(.ui-select-trigger) {
   min-width: 0;
   flex: 1;
   border: 1px solid var(--line);
@@ -641,7 +646,7 @@ const hideAvatar = (e: Event) => {
   min-height: 34px;
   font-size: 12px;
   color: var(--ink);
-  background: white;
+  background: var(--color-surface);
 }
 .position-field {
   display: grid;
@@ -674,9 +679,9 @@ const hideAvatar = (e: Event) => {
   color: var(--pitch-700);
 }
 .detail-delete {
-  border: 1px solid #ead0d1;
-  background: #fff7f7;
-  color: #b43d43;
+  border: 1px solid var(--color-danger-border);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
   min-height: 34px;
   border-radius: 4px;
   font-size: 12px;
@@ -693,7 +698,7 @@ const hideAvatar = (e: Event) => {
   padding: 7px 12px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
+  background: var(--color-surface);
   color: var(--pitch-700);
 }
 .roster-bottom {

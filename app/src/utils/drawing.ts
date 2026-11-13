@@ -1,3 +1,4 @@
+import { protectDrawingContrast } from "./displayContrast";
 import type { renderRoughDrawingvaVriable, renderRoughDrawingConfig } from "@/types/drawing";
 
 // 获取矩形的基本参数
@@ -124,11 +125,14 @@ export function renderShape(
   switch (type) {
     case "rectangle": {
       const { x, y, width, height } = getRectangleParams(vriable);
-      return rc.rectangle(x, y, width, height, style);
+      return protectDrawingContrast(rc.rectangle(x, y, width, height, style), styleConfig.strokeColor);
     }
     case "ellipse": {
       const { centerX, centerY, width, height } = getEllipseParams(vriable);
-      return rc.ellipse(centerX, centerY, Math.abs(width), Math.abs(height), style);
+      return protectDrawingContrast(
+        rc.ellipse(centerX, centerY, Math.abs(width), Math.abs(height), style),
+        styleConfig.strokeColor
+      );
     }
     case "arrow":
       return renderArrow(rc, vriable, styleConfig);
@@ -137,10 +141,10 @@ export function renderShape(
     case "pen": {
       if (!vriable.pathPoints || vriable.pathPoints.length < 2) return null;
       // 使用 rough.js 的 linearPath 方法连接点
-      return rc.linearPath(vriable.pathPoints, style);
+      return protectDrawingContrast(rc.linearPath(vriable.pathPoints, style), styleConfig.strokeColor);
     }
     case "text":
-      return renderText(vriable, styleConfig);
+      return protectDrawingContrast(renderText(vriable, styleConfig), styleConfig.strokeColor);
     default:
       return null;
   }

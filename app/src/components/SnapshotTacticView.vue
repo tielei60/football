@@ -6,12 +6,12 @@
     </p>
     <label v-if="stages.length" style="max-width: 320px; margin-bottom: 14px">
       战术演示步骤
-      <select v-model.number="stageIndex">
+      <UiSelect v-model.number="stageIndex">
         <option :value="-1">初始战术画布</option>
         <option v-for="(stage, index) in stages" :key="index" :value="index">
           {{ index + 1 }} · {{ stage.title || "未命名步骤" }}
         </option>
-      </select>
+      </UiSelect>
     </label>
     <p v-if="stageIndex >= 0" style="white-space: pre-wrap">{{ stages[stageIndex]?.note }}</p>
     <div class="club-actions" style="margin-bottom: 10px">
@@ -33,11 +33,24 @@
         viewBox="0 0 1250 826"
         role="img"
         :aria-label="`${tactic.title}已保存战术画布`"
-        style="display: block; background: #195539; border-radius: 8px"
+        style="display: block; background: var(--pitch-apron); border-radius: 8px"
       >
-        <rect x="68" y="62" width="1115" height="701" fill="#518c63" stroke="white" stroke-width="3" />
-        <path d="M625 62V763 M68 230H245V595H68 M1183 230H1006V595H1183" fill="none" stroke="white" stroke-width="3" />
-        <circle cx="625" cy="412" r="90" fill="none" stroke="white" stroke-width="3" />
+        <rect
+          x="68"
+          y="62"
+          width="1115"
+          height="701"
+          fill="var(--pitch-bg)"
+          stroke="var(--pitch-line)"
+          stroke-width="3"
+        />
+        <path
+          d="M625 62V763 M68 230H245V595H68 M1183 230H1006V595H1183"
+          fill="none"
+          stroke="var(--pitch-line)"
+          stroke-width="3"
+        />
+        <circle cx="625" cy="412" r="90" fill="none" stroke="var(--pitch-line)" stroke-width="3" />
         <g ref="markings" v-show="stageIndex < 0" />
         <g
           v-for="piece in pieces"
@@ -47,24 +60,45 @@
         >
           <circle
             :r="piece.kind === 'ball' ? 12 : piece.radius || 24"
-            :fill="piece.kind === 'ball' ? 'white' : piece.color || '#2465a8'"
-            stroke="white"
+            :fill="
+              piece.kind === 'ball'
+                ? 'var(--color-surface)'
+                : piece.color || (piece.team === 'away' ? 'var(--pitch-player-away)' : 'var(--pitch-player-home)')
+            "
+            :stroke="
+              contrastingInk(
+                piece.kind === 'ball'
+                  ? 'var(--color-surface)'
+                  : piece.color || (piece.team === 'away' ? 'var(--pitch-player-away)' : 'var(--pitch-player-home)')
+              )
+            "
             stroke-width="3"
           />
           <text
             v-if="piece.kind !== 'ball'"
             text-anchor="middle"
             dominant-baseline="central"
-            fill="white"
+            :fill="
+              contrastingInk(
+                piece.color || (piece.team === 'away' ? 'var(--pitch-player-away)' : 'var(--pitch-player-home)')
+              )
+            "
             font-size="21"
             font-weight="700"
           >
             {{ piece.shirtNumber ?? "?" }}
           </text>
-          <text v-if="piece.label" y="-34" text-anchor="middle" fill="white" font-size="22" font-weight="700">
+          <text
+            v-if="piece.label"
+            y="-34"
+            text-anchor="middle"
+            fill="var(--pitch-label)"
+            font-size="22"
+            font-weight="700"
+          >
             {{ piece.label }}
           </text>
-          <text v-if="piece.position" y="48" text-anchor="middle" fill="white" font-size="18">
+          <text v-if="piece.position" y="48" text-anchor="middle" fill="var(--pitch-label)" font-size="18">
             {{ piece.position }}
           </text>
         </g>
@@ -80,6 +114,7 @@
   </details>
 </template>
 <script setup lang="ts">
+import { contrastingInk } from "@/utils/displayContrast";
 import { computed, onMounted, ref, watch } from "vue";
 import rough from "roughjs";
 import type { Tactic } from "@/services/tacticLanguage";
@@ -144,7 +179,7 @@ watch(
   width: 150%;
 }
 .snapshot-canvas:focus-visible {
-  outline: 3px solid #89bc57;
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 
@@ -155,7 +190,7 @@ summary {
   overflow-wrap: anywhere;
 }
 summary:focus-visible {
-  outline: 3px solid #89bc57;
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 </style>

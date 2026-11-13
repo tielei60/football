@@ -1,6 +1,7 @@
 <template>
   <div class="club-heading">
     <div>
+      <span class="club-eyebrow">MATCHDAY / 比赛日程</span>
       <h1>球队比赛</h1>
       <p class="club-muted">发布比赛、报名与赛后记录，都在这里。</p>
     </div>
@@ -22,26 +23,26 @@
         </label>
         <label>
           比赛人数制
-          <select v-model="format">
+          <UiSelect v-model="format">
             <option :value="null">未知</option>
             <option v-for="count in [5, 6, 7, 8, 9, 11]" :key="count" :value="count">{{ count }} 人制</option>
-          </select>
+          </UiSelect>
         </label>
         <label>
           主客场
-          <select v-model="side">
+          <UiSelect v-model="side">
             <option value="unknown">未知</option>
             <option value="home">主场</option>
             <option value="away">客场</option>
             <option value="neutral">中立场</option>
-          </select>
+          </UiSelect>
         </label>
         <label>
           归属赛季
-          <select v-model="seasonId">
+          <UiSelect v-model="seasonId">
             <option :value="null">暂未归属赛季</option>
             <option v-for="season in seasons" :key="season.id" :value="season.id">{{ season.name }}</option>
-          </select>
+          </UiSelect>
         </label>
         <label>
           对手
@@ -60,24 +61,42 @@
           <input v-model="location" maxlength="200" />
         </label>
       </div>
-      <button class="primary" :disabled="busy">创建草稿</button>
+      <div class="club-actions">
+        <button class="primary" :disabled="busy">{{ busy ? "正在创建…" : "创建草稿" }}</button>
+        <button type="button" :disabled="busy" @click="creating = false">取消</button>
+      </div>
       <p class="club-muted" style="margin-top: 12px">草稿仅管理员可见，发布后球员即可报名。</p>
     </fieldset>
   </form>
-  <div class="club-actions" style="margin-bottom: 20px">
+  <section v-if="!loading && nextMatch && !creating" class="club-card club-next-match" aria-label="下一场比赛">
+    <div>
+      <span class="club-eyebrow">NEXT MATCH / 下一场</span>
+      <h2>vs {{ nextMatch.opponent }}</h2>
+      <p class="club-muted">
+        {{ nextMatch.date }} {{ nextMatch.kickoff || "时间待定" }} · {{ nextMatch.location || "地点待定" }}
+      </p>
+    </div>
+    <RouterLink class="club-button primary" :to="`/club/matches/${nextMatch.id}`">
+      {{ auth.isAdmin ? "准备这场比赛" : "查看本场与报名" }} →
+    </RouterLink>
+  </section>
+  <div class="club-filterbar">
     <label>
       筛选状态
-      <select v-model="filter">
+      <UiSelect v-model="filter">
         <option value="">全部比赛</option>
         <option v-for="(name, key) in matchStatuses" :key="key" :value="key">{{ name }}</option>
-      </select>
+      </UiSelect>
     </label>
+    <span class="club-muted">
+      {{ filtered.length }} 场比赛 · {{ auth.isAdmin ? "草稿仅管理员可见" : "报名意愿与实际出场分开记录" }}
+    </span>
   </div>
-  <p v-if="loading" role="status">正在载入比赛…</p>
+  <p v-if="loading" role="status" class="club-loading">正在载入比赛…</p>
   <div v-else class="club-grid">
-    <article v-for="m in filtered" :key="m.id" class="club-card">
+    <article v-for="m in filtered" :key="m.id" class="club-card club-match-card">
       <div class="club-heading" style="margin-bottom: 16px">
-        <span class="club-tag">{{ matchStatuses[m.status] }}</span>
+        <span class="club-tag" :data-status="m.status">{{ matchStatuses[m.status] }}</span>
         <span class="club-muted">{{ m.date }} {{ m.kickoff }}</span>
       </div>
       <h2>vs {{ m.opponent }}</h2>
@@ -129,6 +148,12 @@ const filter = ref("");
 const filtered = computed(() =>
   matches.value.filter((m) => !filter.value || m.status === filter.value).sort((a, b) => b.date.localeCompare(a.date))
 );
+const nextMatch = computed(() => {
+  const today = new Date().toLocaleDateString("sv-SE");
+  return matches.value
+    .filter((m) => m.status === "published" && m.date >= today)
+    .sort((a, b) => `${a.date} ${a.kickoff}`.localeCompare(`${b.date} ${b.kickoff}`))[0];
+});
 async function create() {
   if (busy.value) return;
   busy.value = true;

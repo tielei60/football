@@ -1,3 +1,4 @@
+import { selectUiOption, expectUiValue } from "./ui-select";
 import { readFile } from "node:fs/promises";
 import { type Page } from "@playwright/test";
 import { test, expect } from "./tactical-fixtures";
@@ -23,7 +24,7 @@ test("substitution keeps the outgoing position and can be undone and redone with
   await row(page, 8)
     .getByRole("button", { name: /队员详情/ })
     .click();
-  await row(page, 8).getByRole("combobox", { name: "换下队员" }).selectOption({ index: 1 });
+  await selectUiOption(row(page, 8).getByRole("combobox", { name: "换下队员" }), { index: 1 });
   await row(page, 8).getByRole("button", { name: "确认换人" }).click();
   await expect(row(page, 8).getByRole("button", { name: "下场", exact: true })).toBeVisible();
   await expect(row(page, 0).getByRole("button", { name: "上场", exact: true })).toBeVisible();
@@ -65,12 +66,12 @@ test("undo restores a player health status together with the pitch", async ({ pa
     .getByRole("button", { name: /队员详情/ })
     .click();
   const status = row(page, 0).getByRole("combobox", { name: "状态", exact: true });
-  await status.selectOption("injured");
+  await selectUiOption(status, "injured");
   await page.getByRole("button", { name: "撤销", exact: true }).click();
-  await expect(status).toHaveValue("ok");
+  await expectUiValue(status, "ok");
   await expect(page.locator(".roster-item.on")).toHaveCount(8);
   await page.getByRole("button", { name: "重做", exact: true }).click();
-  await expect(status).toHaveValue("injured");
+  await expectUiValue(status, "injured");
   await expect(page.locator(".roster-item.on")).toHaveCount(7);
 });
 

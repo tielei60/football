@@ -40,9 +40,9 @@ const formatMessage = (msg: any) => {
   bottom: 20px;
   right: 20px;
   z-index: 9999;
-  background: #1a1a1a;
+  background: var(--color-text);
   border-radius: 8px;
-  color: #fff;
+  color: var(--color-on-brand);
   font-size: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
@@ -57,7 +57,7 @@ const formatMessage = (msg: any) => {
   width: 300px;
   max-height: 50vh;
   overflow-y: auto;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-text);
   touch-action: pan-y;
   overscroll-behavior: contain;
 }
@@ -67,7 +67,7 @@ const formatMessage = (msg: any) => {
   justify-content: space-between;
   align-items: center;
   padding: 8px;
-  background: #2a2a2a;
+  background: var(--color-text);
 
   .debug-header-buttons {
     display: flex;
@@ -77,10 +77,10 @@ const formatMessage = (msg: any) => {
 
 .debug-header button {
   padding: 4px 8px;
-  background: #444;
+  background: var(--color-text-muted);
   border: none;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-on-brand);
   cursor: pointer;
 }
 
@@ -92,12 +92,12 @@ const formatMessage = (msg: any) => {
   margin-bottom: 8px;
   padding: 8px;
   border-radius: 4px;
-  background: #2a2a2a;
+  background: var(--color-text);
 }
 
 .time {
   font-size: 12px;
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 .content {
@@ -108,15 +108,15 @@ const formatMessage = (msg: any) => {
 }
 
 .log {
-  border-left: 3px solid #4caf50;
+  border-left: 3px solid var(--color-success);
 }
 .warn {
-  border-left: 3px solid #ffc107;
+  border-left: 3px solid var(--color-warning);
 }
 .error {
-  border-left: 3px solid #f44336;
+  border-left: 3px solid var(--color-danger);
 }
 .success {
-  border-left: 3px solid #2196f3;
+  border-left: 3px solid var(--color-info);
 }
 </style>

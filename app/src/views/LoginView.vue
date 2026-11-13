@@ -1,7 +1,22 @@
 <template>
   <main class="club-app club-login-wrap">
+    <aside class="club-login-intro">
+      <div class="club-wordmark">
+        TOUCH
+        <span>LINE</span>
+        <small>边线 · 俱乐部工作室</small>
+      </div>
+      <h2>
+        场上的默契，
+        <br />
+        从这里开始。
+      </h2>
+      <p>一起准备比赛，记录每次上场，让球队的每一步都有迹可循。</p>
+      <div class="club-login-detail">球队 · 比赛 · 战术 · 赛季</div>
+    </aside>
     <form class="club-card club-login" @submit.prevent="login">
       <img :src="defaultBadge" alt="球队徽章" />
+      <span class="club-eyebrow">WELCOME BACK / 欢迎回来</span>
       <h1>回到球队</h1>
       <p class="club-muted">比赛、队友与每一次进步。</p>
       <p v-if="error" class="club-error" role="alert">{{ error }}</p>
@@ -14,9 +29,7 @@
         <input v-model="password" type="password" autocomplete="current-password" :disabled="busy" required />
       </label>
       <button class="primary" :disabled="busy">{{ busy ? "正在登录…" : "登录" }}</button>
-      <p class="club-muted" style="margin-top: 18px; font-size: 13px">
-        管理端与球员端使用同一入口。球员账号由球队管理员创建。
-      </p>
+      <p class="club-muted club-login-note">管理端与球员端使用同一入口。球员账号由球队管理员创建。</p>
     </form>
   </main>
 </template>

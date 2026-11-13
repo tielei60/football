@@ -1,7 +1,10 @@
 <template>
   <div class="size-container">
     <div class="size-group">
-      <div
+      <button
+        type="button"
+        :aria-label="`线宽 ${size}`"
+        :aria-pressed="drawingConfig.size === size"
         v-for="(size, index) in sizes"
         :key="size"
         class="size-item"
@@ -9,7 +12,7 @@
         @click="chooseSize(size)"
       >
         <SvgIcon :name="`stroke-size-${index + 1}`" class="svg-icon"></SvgIcon>
-      </div>
+      </button>
     </div>
   </div>
 </template>
@@ -50,13 +53,12 @@ const chooseSize = (size: number) => {
     align-items: center;
     cursor: pointer;
     color: var(--text-dark-color);
-    box-shadow:
-      5px 7px 8px rgba(0, 0, 0, 0.08),
-      1px 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1.5px solid var(--pitch-500, #15803d);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    border: 1.5px solid var(--pitch-500);
 
     &:hover {
-      background: rgba(180, 255, 57, 0.25);
+      background: var(--color-brand-soft);
     }
 
     .svg-icon {
@@ -65,7 +67,7 @@ const chooseSize = (size: number) => {
     }
 
     &.active {
-      background: rgba(180, 255, 57, 0.25);
+      background: var(--color-brand-soft);
     }
   }
 }

@@ -66,7 +66,7 @@ const tabs = [
   background: var(--surface);
   border-top: 1px solid var(--line);
   border-radius: 8px 8px 0 0;
-  box-shadow: 0 -6px 20px #202b2914;
+  box-shadow: 0 -6px 20px color-mix(in srgb, var(--color-text) 8%, transparent);
   color: var(--ink);
   font-size: 14px;
   font-weight: 600;

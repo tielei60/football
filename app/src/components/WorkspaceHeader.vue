@@ -60,6 +60,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
     <div class="workspace-topline">
       <div class="club-identity">
         <RouterLink to="/club" class="club-home-link" aria-label="← 俱乐部" title="返回俱乐部">
+          <span class="back-to-club" aria-hidden="true">← 俱乐部</span>
           <img :src="teamBadge" :alt="`${teamName}队徽`" class="club-badge" />
         </RouterLink>
         <div>
@@ -67,22 +68,22 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
             {{ teamName }}
           </h1>
           <p>
-            教练工作台
+            战术工作室
             <span class="identity-dot">·</span>
             {{ playerCount }} 人制足球
           </p>
         </div>
       </div>
       <div v-if="compact" class="compact-match-settings">
-        <select
+        <UiSelect
           aria-label="比赛人数"
           :value="playerCount"
           :disabled="animation.isAnimationMode"
           @change="emit('playerCount', Number(($event.target as HTMLSelectElement).value) as MatchPlayerCount)"
         >
           <option v-for="count in MATCH_PLAYER_COUNTS" :key="count" :value="count">{{ count }} 人制</option>
-        </select>
-        <select
+        </UiSelect>
+        <UiSelect
           aria-label="主队阵型"
           title="阵型模板 · 一键落位（只决定起点，拖动微调后记得保存）"
           :value="activeFormation || ''"
@@ -91,7 +92,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         >
           <option value="" disabled>阵型模板</option>
           <option v-for="f in regular" :key="f.id" :value="f.id">{{ f.name }}</option>
-        </select>
+        </UiSelect>
       </div>
       <nav class="workspace-nav" aria-label="工作区">
         <button
@@ -159,14 +160,14 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
       <div class="formation-settings">
         <label v-if="!compact" class="opponent-select">
           <span class="config-label">比赛人数</span>
-          <select
+          <UiSelect
             aria-label="比赛人数"
             :value="playerCount"
             :disabled="animation.isAnimationMode"
             @change="emit('playerCount', Number(($event.target as HTMLSelectElement).value) as MatchPlayerCount)"
           >
             <option v-for="count in MATCH_PLAYER_COUNTS" :key="count" :value="count">{{ count }} 人制</option>
-          </select>
+          </UiSelect>
         </label>
         <span v-if="!compact" class="config-label" title="阵型模板只决定一键落位起点，拖动微调后记得保存到战术库">
           <Shield :size="15" aria-hidden="true" />
@@ -196,7 +197,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
           <Star :size="13" aria-hidden="true" />
           设为默认
         </button>
-        <select
+        <UiSelect
           v-if="setpieces.length && (!compact || settingsOpen)"
           aria-label="定位球阵型"
           title="定位球模板 · 一键落位"
@@ -206,10 +207,10 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         >
           <option value="" disabled>定位球</option>
           <option v-for="f in setpieces" :key="f.id" :value="f.id">{{ f.name }}</option>
-        </select>
+        </UiSelect>
         <label v-if="!compact || settingsOpen" class="opponent-select" title="对手摆阵与主队模板相互独立">
           <span class="config-label">对手摆阵</span>
-          <select
+          <UiSelect
             aria-label="对手阵型"
             :value="awayFormation || ''"
             :disabled="animation.isAnimationMode"
@@ -218,7 +219,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
             <option value="">不显示</option>
             <option v-if="awayFormation === 'custom'" value="custom" disabled>当前站位</option>
             <option v-for="f in regular" :key="f.id" :value="f.id">{{ f.name }}</option>
-          </select>
+          </UiSelect>
         </label>
       </div>
       <div class="display-settings">
@@ -262,13 +263,22 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
 </template>
 
 <style scoped>
+.back-to-club {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--color-brand);
+  white-space: nowrap;
+}
 .club-home-link {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   display: inline-flex;
   flex-shrink: 0;
   border-radius: 8px;
 }
 .club-home-link:focus-visible {
-  outline: 3px solid #a9d667;
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 .workspace-header {
@@ -371,7 +381,7 @@ p {
 .save-command {
   background: var(--pitch-700);
   border-color: var(--pitch-700);
-  color: white;
+  color: var(--color-on-brand);
 }
 .workspace-config {
   display: flex;
@@ -420,7 +430,7 @@ p {
   background: var(--surface);
   border-color: var(--line);
   color: var(--pitch-700);
-  box-shadow: 0 1px 2px #1827230a;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .formation-segment button.adjusted {
   border-style: dashed;
@@ -441,7 +451,7 @@ p {
   opacity: 0.45;
   cursor: not-allowed;
 }
-select {
+:deep(.ui-select-trigger) {
   max-width: 140px;
   min-height: 34px;
   border: 1px solid var(--line);
@@ -497,7 +507,7 @@ button:hover:not(:disabled) {
 }
 button.save-command:hover:not(:disabled) {
   background: var(--pitch-900);
-  color: white;
+  color: var(--color-on-brand);
 }
 @media (max-width: 1100px) {
   .workspace-topline {
@@ -593,7 +603,7 @@ button.save-command:hover:not(:disabled) {
     border: 0;
     padding: 0;
   }
-  select {
+  :deep(.ui-select-trigger) {
     min-height: 40px;
   }
   .display-settings {
@@ -613,6 +623,9 @@ button.save-command:hover:not(:disabled) {
   padding: 4px 8px;
   gap: 4px;
   flex-wrap: nowrap;
+}
+.compact .back-to-club {
+  font-size: 10px;
 }
 .compact .club-badge {
   width: 28px;
@@ -639,17 +652,17 @@ button.save-command:hover:not(:disabled) {
   min-width: 0;
   flex: 1;
 }
-.compact .compact-match-settings select {
+.compact .compact-match-settings :deep(.ui-select-trigger) {
   min-width: 0;
   min-height: 44px;
   padding-inline: 4px;
   font-size: 13px;
 }
-.compact-match-settings select:first-child {
+.compact-match-settings > .ui-select:first-child {
   width: 72px;
   flex-shrink: 0;
 }
-.compact-match-settings select:last-child {
+.compact-match-settings > .ui-select:last-child {
   width: 104px;
 }
 .compact .save-command {
@@ -707,7 +720,7 @@ button.save-command:hover:not(:disabled) {
   min-height: 48px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 6px 12px #20362b14;
+  box-shadow: 0 6px 12px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 .compact {
   position: relative;
@@ -727,7 +740,7 @@ button.save-command:hover:not(:disabled) {
 .compact .formation-settings > .opponent-select:first-child .config-label {
   display: none;
 }
-.compact select {
+.compact :deep(.ui-select-trigger) {
   min-height: 40px;
 }
 .compact .display-settings {

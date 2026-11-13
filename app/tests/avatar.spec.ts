@@ -35,7 +35,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
     await page.screenshot({ path: `test-results/visual-review/admin-player-avatar-${width}.png`, fullPage: true });
   }
   await page.getByRole("button", { name: "保存球员", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("球员资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球员资料已保存" })).toHaveText("球员资料已保存");
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBe(dataUrl);
   await expect(page.getByAltText("头像球员头像")).toHaveAttribute("src", dataUrl);
   await expect(page.getByAltText("头像球员头像")).toHaveJSProperty("naturalWidth", 256);
@@ -68,7 +68,7 @@ test("admin uploads saves and removes a portrait; player sees their own readonly
   await page.getByRole("button", { name: "移除头像", exact: true }).click();
   await expect(page.getByAltText("球员头像预览")).toHaveCount(0);
   await page.getByRole("button", { name: "保存球员", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("球员资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球员资料已保存" })).toHaveText("球员资料已保存");
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBeNull();
 });
 
@@ -107,7 +107,7 @@ test("invalid avatar files preserve the image and failed writes retain the remov
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBe(dataUrl);
   await page.unroute(`**/api/players/${player.id}`);
   await page.getByRole("button", { name: "保存球员", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("球员资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球员资料已保存" })).toHaveText("球员资料已保存");
   expect((await (await request.get(`/api/players/${player.id}`)).json()).avatar).toBeNull();
 });
 

@@ -36,7 +36,7 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
   <section class="animation-timeline" aria-label="动画编排">
     <div class="timeline-heading">
       <strong class="timeline-title">{{ currentAnimation?.name || "自定义战术" }}</strong>
-      <select
+      <UiSelect
         v-if="!presenting"
         aria-label="演示场景"
         :disabled="match.playerCount !== 8"
@@ -48,7 +48,7 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
         <option v-for="scenario in TACTICAL_SCENARIOS" :key="scenario.id" :value="scenario.id">
           {{ scenario.title }}
         </option>
-      </select>
+      </UiSelect>
       <span class="timeline-total">
         <Clock3 :size="14" aria-hidden="true" />
         {{ currentAnimationFrameCount }} 步 · {{ totalDuration.toFixed(1) }} 秒
@@ -95,11 +95,11 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
         @input="store.seek(Number(inputValue($event)))"
       />
       <output class="time-readout">{{ time(playhead) }} / {{ time(totalDuration) }}</output>
-      <select v-model.number="frameTime" aria-label="播放速度">
+      <UiSelect v-model.number="frameTime" aria-label="播放速度">
         <option :value="6">0.5x</option>
         <option :value="3">1x</option>
         <option :value="1.5">2x</option>
-      </select>
+      </UiSelect>
       <label class="toggle">
         <input v-model="loop" type="checkbox" />
         循环播放
@@ -233,7 +233,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 4px;
   color: var(--muted);
-  background: white;
+  background: var(--color-surface);
   cursor: pointer;
 }
 button:hover:not(:disabled) {
@@ -241,7 +241,7 @@ button:hover:not(:disabled) {
   color: var(--pitch-700);
 }
 button.play-button {
-  color: white;
+  color: var(--color-on-brand);
   background: var(--pitch-700);
   border-color: var(--pitch-700);
 }
@@ -263,13 +263,13 @@ button.play-button {
   text-align: center;
   white-space: nowrap;
 }
-select {
+:deep(.ui-select-trigger) {
   border: 1px solid var(--line);
   border-radius: 4px;
   min-height: 32px;
   padding: 3px 6px;
   color: var(--ink);
-  background: white;
+  background: var(--color-surface);
   font-size: 12px;
   max-width: 100%;
 }
@@ -301,7 +301,7 @@ button.timeline-step {
 }
 .timeline-step.selected {
   background: var(--green-soft);
-  border-color: #8bb9a5;
+  border-color: var(--color-brand);
   color: var(--pitch-700);
 }
 .step-number {
@@ -341,7 +341,7 @@ textarea {
   border-radius: 4px;
   padding: 6px 8px;
   color: var(--ink);
-  background: white;
+  background: var(--color-surface);
   font: 12px/1.5 var(--font-stack);
 }
 .step-editor input {

@@ -187,6 +187,7 @@
 </template>
 
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { computed, onMounted, ref, watch } from "vue";
 import { X, Plus, Save, Star, History, Printer, Trash2, CopyPlus, Play } from "lucide-vue-next";
 import { ElMessage, ElDrawer } from "element-plus";
@@ -197,6 +198,7 @@ import { useAnimationStore } from "@/stores/animationStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { findFormation } from "@/data/matchFormats";
 import { TACTIC_TAGS, type VersionRecord } from "@/db";
+import { prepareBoardExport } from "@/utils/boardExport";
 import { inlineImages } from "@/utils/inlineImages";
 import { fromBoard, toBoard } from "@/services/tacticLanguage";
 import { useCoachingDeskStore } from "@/stores/coachingDeskStore";
@@ -316,12 +318,14 @@ const onSave = async (asNew = false) => {
   }
 };
 
-// 打开战术时把它的比赛信息带入输入框，方便接着改
+// Initialize on route re-entry as well as first asynchronous refresh. Drawer
+// visibility and background list refreshes must not overwrite unsaved form edits.
 watch(
-  () => store.currentId,
+  () => [store.currentId, store.ready] as const,
   () => {
     if (!saving.value) syncForm();
-  }
+  },
+  { immediate: true }
 );
 
 const matchText = (t: { match?: { opponent?: string; date?: string; score?: string } }) => {
@@ -340,12 +344,12 @@ const currentFormationLabel = computed(() => {
   return `模板：${name}${suffix}${isDefault ? "（默认）" : ""}`;
 });
 
-const onNew = () => {
-  if (confirm("清空当前画布新建？（已保存的战术不受影响）")) store.newBoard();
+const onNew = async () => {
+  if (await confirmAction("清空当前画布新建？（已保存的战术不受影响）")) store.newBoard();
 };
 
 const onDelete = async (id: number) => {
-  if (confirm("删除这套战术及其全部历史版本？")) await runAction(() => store.deleteTactic(id));
+  if (await confirmAction("删除这套战术及其全部历史版本？")) await runAction(() => store.deleteTactic(id));
 };
 
 const toggleVersions = async (id: number) => {
@@ -472,13 +476,12 @@ const onImportFile = async (e: Event) => {
 const onExportSVG = async () => {
   const area = document.getElementById("board-area") as unknown as SVGGraphicsElement | null;
   if (!area) return;
-  const bbox = area.getBBox();
+  const { bounds: bbox, content: cloned } = prepareBoardExport(area);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", String(bbox.width));
   svg.setAttribute("height", String(bbox.height));
   svg.setAttribute("viewBox", `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
   svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  const cloned = area.cloneNode(true) as SVGElement;
   await inlineImages(cloned);
   svg.appendChild(cloned);
   const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
@@ -491,7 +494,7 @@ const onExportSVG = async () => {
 <style lang="scss" scoped>
 .tactics-drawer {
   width: 100%;
-  background: #fff;
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -509,12 +512,12 @@ const onExportSVG = async () => {
 .drawer-title {
   font-weight: 700;
   font-size: 15px;
-  color: var(--pitch-900, #0b2a1d);
+  color: var(--pitch-900);
 }
 
 .drawer-new {
-  border: 1px solid #d0d5cd;
-  background: #fff;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 12px;
@@ -525,14 +528,14 @@ const onExportSVG = async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #fff;
+  background: var(--color-surface);
   padding: 4px 0 20px;
-  border-bottom: 1px solid #e2e6e9;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .current-card {
-  background: #f2f6f2;
-  border: 1px solid #dce6dc;
+  background: var(--color-brand-soft);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
@@ -549,17 +552,17 @@ const onExportSVG = async () => {
 .current-label {
   font-weight: 700;
   font-size: 13px;
-  color: #202b29;
+  color: var(--color-text);
 }
 
 .current-dirty {
-  color: #b45309;
+  color: var(--color-warning);
   font-size: 12px;
   font-weight: 700;
 }
 
 .current-clean {
-  color: #26715a;
+  color: var(--color-brand);
   font-size: 12px;
   font-weight: 700;
 }
@@ -567,7 +570,7 @@ const onExportSVG = async () => {
 .current-name {
   font-size: 14px;
   font-weight: 700;
-  color: #202b29;
+  color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -575,26 +578,26 @@ const onExportSVG = async () => {
 
 .current-meta {
   font-size: 12px;
-  color: #26715a;
+  color: var(--color-brand);
   font-weight: 700;
 }
 
 .current-hint {
   margin: 0;
   font-size: 12px;
-  color: #65716e;
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
 .tactic-formation {
   font-size: 12px;
-  color: var(--pitch-700, #14532d);
+  color: var(--pitch-700);
 }
 
 .save-title,
 .save-note,
 .drawer-search {
-  border: 1px solid #dfe5dc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 13px;
@@ -610,8 +613,8 @@ const onExportSVG = async () => {
 }
 
 .tag-btn {
-  border: 1px solid #d0d5cd;
-  background: #fff;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 20px;
   padding: 2px 10px;
   font-size: 12px;
@@ -619,14 +622,14 @@ const onExportSVG = async () => {
 }
 
 .tag-btn.active {
-  background: var(--pitch-700, #14532d);
-  border-color: var(--pitch-700, #14532d);
-  color: #fff;
+  background: var(--pitch-700);
+  border-color: var(--pitch-700);
+  color: var(--color-on-brand);
 }
 
 .save-btn {
-  background: var(--pitch-700, #14532d);
-  color: #fff;
+  background: var(--pitch-700);
+  color: var(--color-on-brand);
   border: none;
   border-radius: 8px;
   padding: 8px;
@@ -642,8 +645,8 @@ const onExportSVG = async () => {
 
 .io-btn {
   flex: 1;
-  border: 1px solid #d0d5cd;
-  background: #fff;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 8px;
   padding: 6px 4px;
   font-size: 12px;
@@ -651,13 +654,13 @@ const onExportSVG = async () => {
 }
 
 .io-btn:hover {
-  border-color: var(--pitch-500, #15803d);
-  color: var(--pitch-700, #14532d);
+  border-color: var(--pitch-500);
+  color: var(--pitch-700);
 }
 
 .seed-btn {
-  border-color: var(--pitch-500, #15803d);
-  color: var(--pitch-700, #14532d);
+  border-color: var(--pitch-500);
+  color: var(--pitch-700);
   font-weight: 700;
 }
 
@@ -673,8 +676,8 @@ const onExportSVG = async () => {
 .tactic-item {
   display: flex;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #e5eae2;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 8px;
   transition: all 0.15s;
@@ -685,8 +688,8 @@ const onExportSVG = async () => {
 }
 
 .tactic-item.current {
-  border-color: var(--pitch-500, #15803d);
-  box-shadow: 0 0 0 1px var(--pitch-500, #15803d);
+  border-color: var(--pitch-500);
+  box-shadow: 0 0 0 1px var(--pitch-500);
 }
 
 .tactic-thumb {
@@ -695,7 +698,7 @@ const onExportSVG = async () => {
   object-fit: cover;
   border-radius: 6px;
   flex-shrink: 0;
-  background: #eee;
+  background: var(--color-bg);
 }
 
 .tactic-thumb.empty {
@@ -703,7 +706,7 @@ const onExportSVG = async () => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: #999;
+  color: var(--color-text-muted);
 }
 
 .tactic-info {
@@ -728,18 +731,18 @@ const onExportSVG = async () => {
 
 .tactic-match {
   font-size: 12px;
-  color: var(--pitch-700, #14532d);
+  color: var(--pitch-700);
   font-weight: 700;
 }
 .tactic-objective {
   margin: 3px 0;
-  color: #65716e;
+  color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .animation-count {
-  color: #287fbc;
+  color: var(--color-focus);
   font-size: 11px;
 }
 
@@ -765,8 +768,8 @@ const onExportSVG = async () => {
   justify-content: center;
   min-width: 30px;
   min-height: 30px;
-  border: 1px solid #d0d5cd;
-  background: #fff;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 12px;
@@ -774,15 +777,15 @@ const onExportSVG = async () => {
 }
 
 .tactic-actions button.danger {
-  color: #c0392b;
-  border-color: #e5b4ad;
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
 }
 
 .version-list {
   list-style: none;
   margin: 4px 0 0;
   padding: 6px;
-  background: #f2f5f0;
+  background: var(--color-brand-soft);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -798,8 +801,8 @@ const onExportSVG = async () => {
 }
 
 .version-item button {
-  border: 1px solid #d0d5cd;
-  background: #fff;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 6px;
   padding: 1px 8px;
   font-size: 12px;
@@ -809,18 +812,18 @@ const onExportSVG = async () => {
 
 .empty-tip {
   text-align: center;
-  color: #999;
+  color: var(--color-text-muted);
   font-size: 12px;
   padding: 12px 0;
 }
 .drawer-title {
   font-size: 20px;
-  color: #202b29;
+  color: var(--color-text);
 }
 .drawer-title small {
   font-size: 12px;
   font-weight: 400;
-  color: #65716e;
+  color: var(--color-text-muted);
   margin-left: 6px;
 }
 .drawer-new {
@@ -835,7 +838,7 @@ const onExportSVG = async () => {
   place-items: center;
   border: 0;
   background: transparent;
-  color: #65716e;
+  color: var(--color-text-muted);
   width: 36px;
   height: 36px;
   margin-left: 8px;
@@ -846,13 +849,13 @@ const onExportSVG = async () => {
   flex-direction: column;
   gap: 7px;
   font-size: 12px;
-  color: #65716e;
+  color: var(--color-text-muted);
   min-width: 0;
 }
 .field-label input {
   width: 100%;
   min-height: 38px;
-  color: #202b29;
+  color: var(--color-text);
 }
 .match-row {
   display: grid;
@@ -864,7 +867,7 @@ const onExportSVG = async () => {
   align-items: center;
   gap: 8px;
   min-height: 40px;
-  background: #26715a;
+  background: var(--color-brand);
 }
 .save-copy {
   display: flex;
@@ -872,15 +875,15 @@ const onExportSVG = async () => {
   justify-content: center;
   gap: 8px;
   min-height: 40px;
-  border: 1px solid #b9ccc2;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
-  background: #fff;
-  color: #26715a;
+  background: var(--color-surface);
+  color: var(--color-brand);
   font-size: 13px;
   cursor: pointer;
 }
 .save-copy:hover:not(:disabled) {
-  background: #edf5f0;
+  background: var(--color-brand-soft);
 }
 .save-copy:disabled,
 .save-btn:disabled {
@@ -893,11 +896,11 @@ const onExportSVG = async () => {
   align-items: center;
 }
 .tag-btn.active {
-  background: #26715a;
-  border-color: #26715a;
+  background: var(--color-brand);
+  border-color: var(--color-brand);
 }
 .library-heading {
-  color: #202b29;
+  color: var(--color-text);
   font-weight: 650;
   gap: 12px;
 }
@@ -907,7 +910,7 @@ const onExportSVG = async () => {
 }
 .tactic-meta {
   opacity: 1;
-  color: #65716e;
+  color: var(--color-text-muted);
 }
 @media (max-width: 500px) {
   .tactic-actions button {

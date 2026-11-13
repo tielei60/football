@@ -1,15 +1,15 @@
 <template>
-  <RouterLink to="/club" style="color: #326143">← 全部比赛</RouterLink>
+  <RouterLink to="/club" class="club-back-link">← 全部比赛</RouterLink>
   <div v-if="error" role="alert" class="club-error" style="margin-top: 16px">
     <p>{{ error }}</p>
     <button type="button" :disabled="busy || loading" @click="load">重新载入比赛（放弃未保存修改）</button>
   </div>
   <p v-if="success" role="status" class="club-success">{{ success }}</p>
-  <p v-if="loading" role="status">正在载入比赛…</p>
+  <p v-if="loading" role="status" class="club-loading">正在载入比赛…</p>
   <template v-if="match">
     <div class="club-heading club-match-heading" style="margin-top: 24px">
       <div>
-        <span class="club-tag">{{ matchStatuses[match.status] }}</span>
+        <span class="club-tag" :data-status="match.status">{{ matchStatuses[match.status] }}</span>
         <h1 style="margin-top: 10px">{{ auth.session?.team.name }} vs {{ match.opponent }}</h1>
         <p class="club-muted">
           {{ match.competition || "赛事未指定" }} · {{ match.format ? `${match.format} 人制` : "人数制未知" }} ·
@@ -21,6 +21,12 @@
         {{ unknown(match.homeScore) }} : {{ unknown(match.awayScore) }}
       </span>
     </div>
+    <nav class="club-section-nav" aria-label="比赛详情分区">
+      <a v-if="auth.isAdmin" href="#match-information">信息与分析</a>
+      <a href="#match-registration">报名情况</a>
+      <a href="#match-roster">名单与出场</a>
+      <a href="#match-tactics">战术快照</a>
+    </nav>
     <section v-if="auth.session?.user.playerId" class="club-card">
       <h2>我的报名</h2>
       <p class="club-muted">
@@ -32,6 +38,7 @@
           :key="response"
           :class="{ primary: ownRsvp === response }"
           :disabled="busy"
+          :aria-pressed="ownRsvp === response"
           @click="rsvp(response)"
         >
           {{ label }}
@@ -39,9 +46,12 @@
       </div>
       <p v-else class="club-muted">当前比赛状态不开放报名。</p>
     </section>
-    <form v-if="auth.isAdmin && form" class="club-card" @submit.prevent="saveMatch">
+    <form v-if="auth.isAdmin && form" id="match-information" class="club-card" @submit.prevent="saveMatch">
       <fieldset :disabled="busy || loading">
-        <h2>比赛信息与分析</h2>
+        <div class="club-heading">
+          <h2>比赛信息与分析</h2>
+          <span v-if="informationDirty" class="club-tag">信息有未保存修改</span>
+        </div>
         <div class="club-fields">
           <label>
             赛事名称
@@ -49,26 +59,26 @@
           </label>
           <label>
             比赛人数制
-            <select v-model="form.format">
+            <UiSelect v-model="form.format">
               <option :value="null">未知</option>
               <option v-for="count in [5, 6, 7, 8, 9, 11]" :key="count" :value="count">{{ count }} 人制</option>
-            </select>
+            </UiSelect>
           </label>
           <label>
             主客场
-            <select v-model="form.side">
+            <UiSelect v-model="form.side">
               <option value="unknown">未知</option>
               <option value="home">主场</option>
               <option value="away">客场</option>
               <option value="neutral">中立场</option>
-            </select>
+            </UiSelect>
           </label>
           <label>
             归属赛季
-            <select v-model="form.seasonId">
+            <UiSelect v-model="form.seasonId">
               <option :value="null">暂未归属赛季</option>
               <option v-for="season in seasons" :key="season.id" :value="season.id">{{ season.name }}</option>
-            </select>
+            </UiSelect>
           </label>
           <label>
             对手
@@ -88,9 +98,9 @@
           </label>
           <label>
             发布状态
-            <select v-model="form.status">
+            <UiSelect v-model="form.status">
               <option v-for="(label, value) in matchStatuses" :key="value" :value="value">{{ label }}</option>
-            </select>
+            </UiSelect>
           </label>
           <label>
             本队比分
@@ -116,11 +126,17 @@
           </label>
         </div>
         <p v-if="!tacticOptions.length" class="club-muted">暂无战术，请先在战术板保存战术。</p>
-        <button style="margin-top: 18px" class="primary" :disabled="busy">保存比赛信息</button>
+        <div class="club-actions" style="margin-top: 18px">
+          <button class="primary" :disabled="busy">保存比赛信息</button>
+          <button v-if="informationDirty" type="button" :disabled="busy" @click="resetInformation">撤销信息修改</button>
+        </div>
       </fieldset>
     </form>
-    <section class="club-card">
-      <h2>报名情况</h2>
+    <section id="match-registration" class="club-card">
+      <h2>
+        <span class="club-section-kicker" aria-hidden="true">01</span>
+        报名情况
+      </h2>
       <div class="club-grid">
         <div v-for="(label, response) in rsvpLabels" :key="response">
           <h3>{{ label }} · {{ match.rsvps.filter((r) => r.response === response).length }}</h3>
@@ -135,11 +151,14 @@
         </div>
       </div>
     </section>
-    <section class="club-card">
+    <section id="match-roster" class="club-card">
       <fieldset :disabled="busy || loading">
         <div class="club-heading">
           <div>
-            <h2>比赛名单与实际出场</h2>
+            <h2>
+              <span class="club-section-kicker" aria-hidden="true">02</span>
+              比赛名单与实际出场
+            </h2>
             <p class="club-muted">
               报名与名单独立，未记录的数据保持“未知”。
               <template v-if="auth.isAdmin">如需增加进球或助攻总数，请先更新并保存本队比分。</template>
@@ -149,12 +168,12 @@
         <div v-if="auth.isAdmin" class="club-actions" style="margin-bottom: 16px">
           <label>
             添加至名单
-            <select v-model="addPlayerId">
+            <UiSelect v-model="addPlayerId">
               <option value="">选择球员</option>
               <option v-for="p in availablePlayers" :key="p.id" :value="p.id">
                 {{ p.name }}{{ p.status === "inactive" ? "（已归档）" : "" }}
               </option>
-            </select>
+            </UiSelect>
           </label>
           <button :disabled="!addPlayerId" @click="addPlayer">添加球员</button>
           <button @click="addRegistered">加入已报名参加者</button>
@@ -193,18 +212,18 @@
                     <input v-model="r.position" :aria-label="`${rosterName(r)}比赛位置`" placeholder="未知" />
                   </td>
                   <td>
-                    <select v-model="r.selection" :aria-label="`${rosterName(r)}首发替补`">
+                    <UiSelect v-model="r.selection" :aria-label="`${rosterName(r)}首发替补`">
                       <option value="unknown">未知</option>
                       <option value="starter">首发</option>
                       <option value="bench">替补</option>
-                    </select>
+                    </UiSelect>
                   </td>
                   <td>
-                    <select v-model="r.appeared" :aria-label="`${rosterName(r)}实际出场`" @change="clearUnplayed(r)">
+                    <UiSelect v-model="r.appeared" :aria-label="`${rosterName(r)}实际出场`" @change="clearUnplayed(r)">
                       <option :value="null">未知</option>
                       <option :value="true">已出场</option>
                       <option :value="false">未出场</option>
-                    </select>
+                    </UiSelect>
                   </td>
                   <td>
                     <input
@@ -240,13 +259,17 @@
           </table>
         </ClubTableWrap>
         <p v-if="!roster.length" class="club-empty">尚未录入比赛名单</p>
+        <p v-if="auth.isAdmin && rosterDirty" class="club-muted">名单有未保存修改，请独立保存名单与出场数据。</p>
         <button v-if="auth.isAdmin" class="primary" style="margin-top: 18px" :disabled="busy" @click="saveRoster">
           保存名单与出场数据
         </button>
       </fieldset>
     </section>
-    <section class="club-card" aria-label="已保存比赛战术">
-      <h2>比赛分析与战术快照</h2>
+    <section id="match-tactics" class="club-card" aria-label="已保存比赛战术">
+      <h2>
+        <span class="club-section-kicker" aria-hidden="true">03</span>
+        比赛分析与战术快照
+      </h2>
       <p v-if="!auth.isAdmin" style="white-space: pre-wrap">{{ match.analysis || "暂无分析记录" }}</p>
       <p class="club-muted">这里查看的是保存到本场比赛的内容，模板和球员资料的后续修改不会改变这些快照。</p>
       <p v-if="hasMigratedSnapshots" class="club-muted">
@@ -264,8 +287,9 @@
   </template>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from "vue-router";
+import { confirmAction } from "@/components/ui/confirmAction";
 import SnapshotTacticView from "@/components/SnapshotTacticView.vue";
 import ClubTableWrap from "@/components/ClubTableWrap.vue";
 import { useAuthStore } from "@/stores/authStore";
@@ -315,6 +339,59 @@ const hasMigratedSnapshots = computed(
 );
 const playerName = (id: string) => players.value.find((p) => p.id === id)?.name || id;
 const rosterName = (r: Appearance) => r.playerSnapshot?.name || playerName(r.playerId);
+const informationFields = [
+  "competition",
+  "format",
+  "side",
+  "seasonId",
+  "opponent",
+  "date",
+  "kickoff",
+  "location",
+  "status",
+  "homeScore",
+  "awayScore",
+  "analysis",
+  "tacticIds",
+] as const;
+const informationDirty = computed(
+  () =>
+    !!match.value &&
+    !!form.value &&
+    informationFields.some((key) => JSON.stringify(form.value?.[key]) !== JSON.stringify(match.value?.[key]))
+);
+const rosterDirty = computed(
+  () => !!match.value && JSON.stringify(roster.value) !== JSON.stringify(match.value.roster)
+);
+const hasUnsaved = computed(() => auth.isAdmin && (informationDirty.value || rosterDirty.value));
+async function resetInformation() {
+  if (busy.value || !match.value) return;
+  if (
+    await confirmAction("撤销尚未保存的比赛信息修改？名单与出场数据不会改变。", {
+      title: "撤销信息修改",
+      confirmText: "撤销修改",
+    })
+  )
+    form.value = JSON.parse(JSON.stringify(match.value));
+}
+async function confirmLeavingDraft() {
+  if (!hasUnsaved.value) return true;
+  return confirmAction("比赛信息或名单尚未保存。离开会丢失当前修改。", {
+    title: "离开未保存的比赛？",
+    confirmText: "放弃修改并离开",
+    cancelText: "继续编辑",
+    danger: true,
+  });
+}
+onBeforeRouteLeave(confirmLeavingDraft);
+onBeforeRouteUpdate((to, from) => to.path === from.path || confirmLeavingDraft());
+function warnUnsaved(event: BeforeUnloadEvent) {
+  if (!hasUnsaved.value) return;
+  event.preventDefault();
+  event.returnValue = "";
+}
+onMounted(() => window.addEventListener("beforeunload", warnUnsaved));
+onUnmounted(() => window.removeEventListener("beforeunload", warnUnsaved));
 const numberOrNull = (value: unknown) => (value === "" || value == null ? null : Number(value));
 function apply(m: ClubMatch) {
   match.value = m;

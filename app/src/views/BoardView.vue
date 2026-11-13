@@ -131,7 +131,9 @@
                       :key="tr.id"
                       :d="tr.d"
                       fill="none"
-                      :stroke="tr.ball ? '#287fbc' : tr.away ? '#7c8590' : '#bf5a45'"
+                      :stroke="
+                        tr.ball ? 'var(--color-info)' : tr.away ? 'var(--color-text-muted)' : 'var(--color-brand)'
+                      "
                       :stroke-width="tr.ball ? 4 : 2.5"
                       stroke-linecap="round"
                       :stroke-dasharray="tr.ball ? undefined : '8 7'"
@@ -298,6 +300,7 @@
 </template>
 
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import type { Component } from "vue";
 import { storeToRefs } from "pinia";
@@ -473,20 +476,20 @@ const tacticsOpen = ref(false);
 const coachingOpen = ref(false);
 
 // 场上有走位线条时一键落位可能让线条错位（可撤销），先确认；纯换模板不打扰。
-const confirmRelayout = (kind: string) => {
+const confirmRelayout = async (kind: string) => {
   if (drawStore.drawings.getDrawings().length === 0) return true;
-  return confirm(`${kind}一键落位将重排场上球员站位，现有线条保留但可能错位（可撤销），继续？`);
+  return await confirmAction(`${kind}一键落位将重排场上球员站位，现有线条保留但可能错位（可撤销），继续？`);
 };
-const onApplyFormation = (id: string) => {
+const onApplyFormation = async (id: string) => {
   // 模板状态干净时重复点击是纯 no-op；已微调后点击则按就近落位收敛到模板网格。
   if (id === currentFormationId.value && !formationCustomized.value) return;
-  if (!confirmRelayout("主队")) return;
+  if (!(await confirmRelayout("主队"))) return;
   applyFormation(id);
 };
 
-const onApplyOpponent = (id: string) => {
+const onApplyOpponent = async (id: string) => {
   if (id === awayFormationId.value) return;
-  if (!confirmRelayout("对手")) return;
+  if (!(await confirmRelayout("对手"))) return;
   applyOpponent(id);
   awayFormationId.value = id;
 };
@@ -544,12 +547,12 @@ watch(
 );
 
 // 一键动态演示：名单前 8 人真名，边路套路自动播放
-const onDemoAnimation = (id = "cross") => {
+const onDemoAnimation = async (id = "cross") => {
   if (matchStore.playerCount !== 8) {
     ElMessage({ message: "预置动态演示适用于 8 人制，请先切换比赛人数。", type: "info" });
     return;
   }
-  if (currentAnimation.value && !confirm("载入场景将替换当前动画和训练计划，是否继续？")) return;
+  if (currentAnimation.value && !(await confirmAction("载入场景将替换当前动画和训练计划，是否继续？"))) return;
   const healthy = rosterStore.players.filter((p) => !p.status || p.status === "ok");
   const selected = healthy.filter((p) => p.fieldId !== null);
   const squad = [...selected, ...healthy.filter((p) => p.fieldId === null)].slice(0, 8);

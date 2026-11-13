@@ -23,8 +23,9 @@ const hideBadge = (e: Event) => {
   gap: 10px;
   padding: 1.5rem 1rem 2rem;
   font-size: 0.85rem;
-  opacity: 0.65;
-  color: var(--paper, #f8faf5);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .footer-badge {

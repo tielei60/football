@@ -21,12 +21,12 @@ const confirmSubstitution = () => {
   <div class="substitution-control">
     <label>
       换下队员
-      <select v-model="outgoingId" aria-label="换下队员" :disabled="animation.isAnimationMode">
+      <UiSelect v-model="outgoingId" aria-label="换下队员" :disabled="animation.isAnimationMode">
         <option value="" disabled>选择场上队员</option>
         <option v-for="player in starters" :key="player.id" :value="player.id">
           {{ player.number }}号 · {{ player.name }}
         </option>
-      </select>
+      </UiSelect>
     </label>
     <button :disabled="!valid" @click="confirmSubstitution">
       <ArrowLeftRight :size="15" aria-hidden="true" />
@@ -51,12 +51,12 @@ label {
   font-size: 12px;
   color: var(--muted);
 }
-select {
+:deep(.ui-select-trigger) {
   width: 100%;
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: white;
+  background: var(--color-surface);
   color: var(--ink);
   padding: 6px 8px;
 }

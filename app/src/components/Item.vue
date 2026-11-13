@@ -117,11 +117,11 @@
               <input type="text" placeholder="名称" v-model="item.text" />
             </div>
             <div class="input-group">
-              <select v-model="item.playerPosition" @change="onRoleChange" class="role-select">
+              <UiSelect v-model="item.playerPosition" aria-label="球员位置" @change="onRoleChange" class="role-select">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
-              </select>
+              </UiSelect>
             </div>
             <div class="input-group color">
               <input type="color" v-model="item.color" @pointerdown.stop />
@@ -378,15 +378,15 @@ useClickOutside({
 <style lang="scss" scoped>
 .popup {
   pointer-events: all;
-  background: var(--paper, #f8faf5);
-  border: 1px solid rgba(20, 83, 45, 0.2);
+  background: var(--paper);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
-  box-shadow: var(--shadow-lg, 0 12px 40px rgba(11, 42, 29, 0.28));
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 
   .popup-content {
     height: 100%;
-    background: var(--paper, #f8faf5);
+    background: var(--paper);
     border-radius: 14px;
   }
 
@@ -403,7 +403,7 @@ useClickOutside({
         height: 56px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid var(--pitch-500, #15803d);
+        border: 2px solid var(--pitch-500);
       }
     }
 
@@ -414,13 +414,13 @@ useClickOutside({
 
       label {
         width: 55px;
-        color: #4b5563;
+        color: var(--color-text-muted);
         font-size: 14px;
       }
 
       input {
         padding: 6px 12px;
-        border: 1px solid var(--pitch-500, #15803d);
+        border: 1px solid var(--pitch-500);
         border-radius: 6px;
         transition: all 0.2s;
         font-size: 20px;
@@ -429,22 +429,22 @@ useClickOutside({
 
         &:focus {
           outline: none;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+          box-shadow: 0 0 0 2px var(--color-brand-soft);
         }
       }
 
       .role-select {
         padding: 6px 12px;
-        border: 1px solid var(--pitch-500, #15803d);
+        border: 1px solid var(--pitch-500);
         border-radius: 6px;
         font-size: 20px;
         width: 100%;
         text-align: center;
-        background: #fff;
+        background: var(--color-surface);
 
         &:focus {
           outline: none;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+          box-shadow: 0 0 0 2px var(--color-brand-soft);
         }
       }
 
@@ -459,7 +459,7 @@ useClickOutside({
       width: 100%;
       font-size: 20px;
       padding: 4px 12px;
-      color: white;
+      color: var(--color-on-brand);
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -491,7 +491,7 @@ useClickOutside({
 .number-badge {
   font-size: 13px;
   font-weight: 800;
-  fill: #fff;
+  fill: var(--color-on-brand);
   user-select: none;
 }
 </style>

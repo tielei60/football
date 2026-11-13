@@ -76,7 +76,7 @@ const normalizeDuration = () => {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  color: #202b29;
+  color: var(--color-text);
 }
 header {
   display: flex;
@@ -98,7 +98,7 @@ h2 {
   height: 40px;
   border: 0;
   background: transparent;
-  color: #65716e;
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 label {
@@ -106,16 +106,16 @@ label {
   flex-direction: column;
   gap: 9px;
   font-size: 13px;
-  color: #65716e;
+  color: var(--color-text-muted);
 }
 textarea,
 input {
   width: 100%;
   min-height: 40px;
-  border: 1px solid #dce3df;
+  border: 1px solid var(--color-border);
   border-radius: 5px;
   padding: 10px 12px;
-  color: #202b29;
+  color: var(--color-text);
   font: 14px/1.6 var(--font-stack);
 }
 textarea {
@@ -130,8 +130,8 @@ input {
   align-items: center;
   justify-content: center;
   min-height: 42px;
-  background: #26715a;
-  color: white;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
   border: 0;
   border-radius: 5px;
   cursor: pointer;
@@ -141,7 +141,7 @@ input {
   cursor: not-allowed;
 }
 :is(button, input, textarea):focus-visible {
-  outline: 2px solid #287fbc;
+  outline: 2px solid var(--color-focus);
   outline-offset: 3px;
 }
 </style>

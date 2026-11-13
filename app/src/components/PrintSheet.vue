@@ -20,11 +20,25 @@
           <Drawing v-for="d in drawings" :key="d.id" :drawing="d" />
         </g>
         <g v-for="p in players" :key="p.id">
-          <circle :cx="p.x" :cy="p.y" :r="24" :fill="p.color" stroke="#fff" stroke-width="3" />
+          <circle
+            :cx="p.x"
+            :cy="p.y"
+            :r="24"
+            :fill="p.color || (p.team === 'away' ? 'var(--pitch-player-away)' : 'var(--pitch-player-home)')"
+            stroke="var(--color-surface)"
+            stroke-width="3"
+          />
           <circle :cx="p.x" :cy="p.y" :r="24" fill="none" :stroke="p.color" stroke-width="3" />
           <text :x="p.x" :y="p.y - 32" text-anchor="middle" class="ps-name">{{ p.text }}</text>
           <text :x="p.x" :y="p.y + 40" text-anchor="middle" class="ps-pos">{{ positionOf(p) }}</text>
-          <circle :cx="p.x + 17" :cy="p.y + 17" r="11" fill="#101828" stroke="#fff" stroke-width="2" />
+          <circle
+            :cx="p.x + 17"
+            :cy="p.y + 17"
+            r="11"
+            fill="var(--color-text)"
+            stroke="var(--color-surface)"
+            stroke-width="2"
+          />
           <text :x="p.x + 17" :y="p.y + 17" text-anchor="middle" dominant-baseline="central" class="ps-num">
             {{ p.number ?? "—" }}
           </text>
@@ -136,36 +150,36 @@ const matchLine = computed(() => {
 .ps-titles h1 {
   font-size: 20px;
   margin: 0;
-  color: #0b2a1d;
+  color: var(--color-text);
 }
 .ps-titles p {
   font-size: 12px;
-  color: #555;
+  color: var(--color-text-muted);
   margin: 2px 0 0;
 }
 
 .ps-match {
   font-weight: 700;
-  color: #0b2a1d !important;
+  color: var(--color-text) !important;
 }
 .ps-pitch {
   width: 100%;
   height: auto;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-strong);
 }
 .ps-name {
   font-size: 20px;
   font-weight: 700;
-  fill: #111;
+  fill: var(--color-text);
 }
 .ps-pos {
   font-size: 16px;
-  fill: #333;
+  fill: var(--color-text);
 }
 .ps-num {
   font-size: 13px;
   font-weight: 800;
-  fill: #fff;
+  fill: var(--color-on-brand);
 }
 .ps-lineups {
   display: flex;
@@ -175,7 +189,7 @@ const matchLine = computed(() => {
 .ps-team h2 {
   font-size: 15px;
   margin: 0 0 4px;
-  color: #0b2a1d;
+  color: var(--color-text);
 }
 .ps-team ol {
   margin: 0;
@@ -186,17 +200,17 @@ const matchLine = computed(() => {
 .ps-foot {
   margin-top: 8px;
   font-size: 13px;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border-strong);
   padding-top: 6px;
 }
 
 .ps-snapshot-note {
   margin-top: 6px;
   font-size: 13px;
-  color: #c0392b;
+  color: var(--color-danger);
 }
 .ps-training {
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border-strong);
   margin-top: 12px;
   padding-top: 8px;
   break-inside: avoid;
@@ -219,7 +233,7 @@ const matchLine = computed(() => {
 <style>
 @media print {
   body.coach {
-    background: #fff !important;
+    background: var(--color-surface) !important;
   }
   body * {
     visibility: hidden;
