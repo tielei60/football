@@ -404,7 +404,7 @@ test("failed match save retains the draft and retry sends only one new request",
 });
 test("deleting a template preserves the match tactic snapshot", async ({ page, request }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.getByRole("button", { name: "战术库", exact: true }).click();
   await page.getByRole("textbox", { name: "战术名称", exact: true }).fill("关联比赛不能误删的战术");
   await page.getByRole("button", { name: "保存当前战术", exact: true }).click();

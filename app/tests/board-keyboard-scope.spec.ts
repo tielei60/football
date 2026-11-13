@@ -1,10 +1,12 @@
 import type { Page } from "@playwright/test";
+import { openAnimationDetails } from "./animation-editor";
 import { test, expect } from "./tactical-fixtures";
 
 async function openAnimation(page: Page) {
   await page.goto("/board");
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
   await page.getByRole("button", { name: "添加帧", exact: true }).click();
+  await openAnimationDetails(page);
 }
 const isPlaying = (page: Page) =>
   page.evaluate(
@@ -41,9 +43,12 @@ test("canvas retains Space and arrow shortcuts while input editing and Ctrl+S re
   await page.keyboard.press("Space");
   expect(await isPlaying(page)).toBe(false);
   await page.keyboard.press("ArrowLeft");
+  await openAnimationDetails(page);
   await expect(page.getByRole("spinbutton", { name: "当前帧" })).toHaveValue("1");
   await page.keyboard.press("ArrowRight");
+  await openAnimationDetails(page);
   await expect(page.getByRole("spinbutton", { name: "当前帧" })).toHaveValue("2");
+  await openAnimationDetails(page);
   const title = page.getByRole("textbox", { name: "步骤名称" });
   await title.fill("键盘 编辑");
   await title.press("Space");
@@ -63,7 +68,7 @@ test("confirmation dialogs block background shortcuts and workspace fields still
   await expect.poll(async () => (await (await request.get("/api/tactics")).json()).length).toBe(1);
   await page.getByRole("button", { name: "关闭训练计划", exact: true }).click();
   await page.getByRole("button", { name: "清空画布", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "请确认操作" });
+  const dialog = page.getByRole("dialog", { name: "清空当前画布" });
   await expect(dialog).toBeVisible();
   await page.keyboard.press("t");
   await page.keyboard.press("Control+z");

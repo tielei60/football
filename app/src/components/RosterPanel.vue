@@ -1,5 +1,6 @@
 <template>
   <aside class="roster-panel" :class="{ expanded }" v-if="open" aria-label="球队名单">
+    <p v-if="animationStore.isPlaying" class="playback-notice" role="status">动画播放中，暂停后可编辑队员资料。</p>
     <div class="roster-head">
       <div class="roster-heading">
         <h2>球队名单</h2>
@@ -41,10 +42,16 @@
         v-model="newName"
         placeholder="新队员姓名"
         aria-label="新队员姓名"
-        maxlength="8"
+        maxlength="200"
         @keyup.enter="onAdd"
       />
-      <button class="roster-add-btn" @click="onAdd" :disabled="!newName.trim()" title="新增队员" aria-label="新增队员">
+      <button
+        class="roster-add-btn"
+        @click="onAdd"
+        :disabled="!newName.trim() || animationStore.isPlaying"
+        title="新增队员"
+        aria-label="新增队员"
+      >
         <UserPlus :size="17" />
       </button>
     </div>
@@ -96,7 +103,7 @@
           <button
             class="roster-btn"
             :class="{ off: onPitch(p) }"
-            :disabled="!onPitch(p) && !!p.status && p.status !== 'ok'"
+            :disabled="animationStore.isPlaying || (!onPitch(p) && !!p.status && p.status !== 'ok')"
             :title="!onPitch(p) && p.status && p.status !== 'ok' ? '伤停中，恢复健康后可上场' : ''"
             @click.stop="onPitch(p) ? roster.playerOff(p.id) : roster.playerOn(p.id)"
           >
@@ -112,18 +119,38 @@
           <div class="detail-fields">
             <label>
               姓名
-              <input type="text" :value="p.name" maxlength="8" @change="onName(p.id, $event)" />
+              <input
+                type="text"
+                :value="nameDrafts[p.id] ?? p.name"
+                maxlength="200"
+                :disabled="animationStore.isPlaying"
+                :aria-invalid="!!nameErrors[p.id]"
+                :aria-describedby="nameErrors[p.id] ? `name-error-${p.id}` : undefined"
+                @input="nameDrafts[p.id] = ($event.target as HTMLInputElement).value"
+                @change="onName(p.id, $event)"
+              />
+              <span v-if="nameErrors[p.id]" :id="`name-error-${p.id}`" class="field-error" role="alert">
+                {{ nameErrors[p.id] }}
+              </span>
             </label>
             <label>
               号码
               <input
                 type="number"
-                :value="p.number"
+                :value="numberDrafts[p.id] ?? p.number"
                 min="0"
-                max="999"
+                max="9999"
+                step="1"
+                :disabled="animationStore.isPlaying"
+                :aria-invalid="!!numberErrors[p.id]"
+                :aria-describedby="numberErrors[p.id] ? `number-error-${p.id}` : undefined"
+                @input="numberDrafts[p.id] = ($event.target as HTMLInputElement).value"
                 placeholder="未知"
                 @change="onNumber(p.id, $event)"
               />
+              <span v-if="numberErrors[p.id]" :id="`number-error-${p.id}`" class="field-error" role="alert">
+                {{ numberErrors[p.id] }}
+              </span>
             </label>
             <fieldset class="position-field">
               <legend>位置</legend>
@@ -131,6 +158,7 @@
                 <input
                   type="checkbox"
                   :checked="p.positions.includes(opt.value)"
+                  :disabled="animationStore.isPlaying"
                   @change="onPosition(p.id, p.positions, opt.value, $event)"
                 />
                 {{ opt.label }}
@@ -138,19 +166,30 @@
             </fieldset>
             <label>
               备注
-              <input type="text" :value="p.note" placeholder="如：主教练 / 左脚" @change="onNote(p.id, $event)" />
+              <input
+                :disabled="animationStore.isPlaying"
+                type="text"
+                :value="p.note"
+                placeholder="如：主教练 / 左脚"
+                @change="onNote(p.id, $event)"
+              />
             </label>
             <label>
               状态
-              <UiSelect :value="p.status || 'ok'" @change="onStatus(p.id, $event)">
+              <UiSelect :disabled="animationStore.isPlaying" :value="p.status || 'ok'" @change="onStatus(p.id, $event)">
                 <option value="ok">健康</option>
                 <option value="injured">伤</option>
                 <option value="suspended">停</option>
               </UiSelect>
             </label>
             <div class="detail-status">{{ onPitch(p) ? "状态：在场上" : "状态：替补席" }}</div>
-            <SubstitutionControl v-if="!onPitch(p) && (!p.status || p.status === 'ok')" :incoming-id="p.id" />
-            <button class="detail-delete" @click="onRemove(p.id, p.name)">归档该队员</button>
+            <SubstitutionControl
+              v-if="!animationStore.isPlaying && !onPitch(p) && (!p.status || p.status === 'ok')"
+              :incoming-id="p.id"
+            />
+            <button :disabled="animationStore.isPlaying" class="detail-delete" @click="onRemove(p.id, p.name)">
+              归档该队员
+            </button>
           </div>
         </div>
       </li>
@@ -175,10 +214,10 @@
 </template>
 
 <script setup lang="ts">
-import { confirmAction } from "@/components/ui/confirmAction";
 import { computed, ref, nextTick, watch } from "vue";
 import { Search, SearchX, UserPlus, Maximize2, Minimize2 } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
+import { confirmAction } from "@/components/ui/confirmAction";
 import { useRosterStore } from "@/stores/rosterStore";
 import SubstitutionControl from "./SubstitutionControl.vue";
 import {
@@ -190,6 +229,7 @@ import {
   type PlayerStatus,
 } from "@/data/berlinGarden";
 
+import { useAnimationStore } from "@/stores/animationStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useTeamIdentity } from "@/composables/useTeamIdentity";
 
@@ -197,6 +237,7 @@ const { teamName } = useTeamIdentity();
 
 defineProps<{ open: boolean }>();
 const match = useMatchStore();
+const animationStore = useAnimationStore();
 
 const roster = useRosterStore();
 const { players } = storeToRefs(roster);
@@ -212,6 +253,10 @@ const filters = [
 ];
 const detailId = ref<string | null>(null);
 const newName = ref("");
+const nameDrafts = ref<Record<string, string>>({});
+const numberDrafts = ref<Record<string, string>>({});
+const nameErrors = ref<Record<string, string>>({});
+const numberErrors = ref<Record<string, string>>({});
 const positionOptions = PLAYER_POSITION_OPTIONS;
 const revealPlayer = async (id: string) => {
   await nextTick();
@@ -225,66 +270,83 @@ watch([keyword, availability], () => {
 });
 
 const onAdd = () => {
+  if (animationStore.isPlaying) return;
   const id = roster.addPlayer(newName.value);
   if (id) {
     keyword.value = "";
     availability.value = "all";
     newName.value = "";
     detailId.value = id;
-    void revealPlayer(id);
+    revealPlayer(id).catch(() => {});
   }
 };
 
 const onRemove = async (id: string, name: string) => {
+  if (animationStore.isPlaying) return;
   if (
     await confirmAction(
       `归档队员 ${name}？场上棋子将移除，球员账号将停用，历史比赛记录保留。可在俱乐部球员管理中重新设为在队。`
     )
   ) {
+    if (animationStore.isPlaying) return;
     roster.removePlayer(id);
     if (detailId.value === id) detailId.value = null;
   }
 };
 
 const onName = (id: string, e: Event) => {
+  if (animationStore.isPlaying) return;
   const value = (e.target as HTMLInputElement).value.trim();
-  if (value) roster.updatePlayer(id, { name: value });
+  if (!value || value.length > 200) {
+    nameErrors.value[id] = "请输入 1–200 字的姓名；尚未保存。";
+    return;
+  }
+  if (roster.players.find((p) => p.id === id)?.name !== value) roster.updatePlayer(id, { name: value });
+  delete nameDrafts.value[id];
+  delete nameErrors.value[id];
 };
 
 const toggleDetail = (id: string) => {
   detailId.value = detailId.value === id ? null : id;
-  if (detailId.value) void revealPlayer(id);
+  if (detailId.value) revealPlayer(id).catch(() => {});
 };
 const focusPlayer = (id: string) => {
   keyword.value = "";
   availability.value = "all";
   detailId.value = id;
-  void revealPlayer(id);
+  revealPlayer(id).catch(() => {});
 };
 defineExpose({ focusPlayer });
 
 const onNumber = (id: string, e: Event) => {
-  const raw = (e.target as HTMLInputElement).value;
+  if (animationStore.isPlaying) return;
+  const input = e.target as HTMLInputElement;
+  const raw = input.value;
   const value = raw === "" ? null : Number(raw);
-  if (value === null || (Number.isInteger(value) && value >= 0 && value <= 999))
-    roster.updatePlayer(id, { number: value });
+  if (input.validity.badInput || (value !== null && (!Number.isInteger(value) || value < 0 || value > 9999))) {
+    numberErrors.value[id] = "号码须为 0–9999 的整数，留空表示未知；尚未保存。";
+    return;
+  }
+  if (roster.players.find((p) => p.id === id)?.number !== value) roster.updatePlayer(id, { number: value });
+  delete numberDrafts.value[id];
+  delete numberErrors.value[id];
 };
 
 const onPosition = (id: string, positions: PlayerPosition[], position: PlayerPosition, event: Event) => {
+  if (animationStore.isPlaying) return;
   const checked = (event.target as HTMLInputElement).checked;
-  const next = checked
-    ? position === "待定"
-      ? [position]
-      : [...positions.filter((value) => value !== "待定"), position]
-    : positions.filter((value) => value !== position);
+  let next = positions.filter((value) => value !== position);
+  if (checked) next = position === "待定" ? [position] : [...positions.filter((value) => value !== "待定"), position];
   roster.updatePlayer(id, { positions: normalizePlayerPositions(next) });
 };
 
 const onNote = (id: string, e: Event) => {
+  if (animationStore.isPlaying) return;
   roster.updatePlayer(id, { note: (e.target as HTMLInputElement).value.trim() });
 };
 
 const onStatus = (id: string, e: Event) => {
+  if (animationStore.isPlaying) return;
   roster.setStatus(id, (e.target as HTMLSelectElement).value as PlayerStatus);
 };
 
@@ -314,6 +376,18 @@ const hideAvatar = (e: Event) => {
 </script>
 
 <style scoped>
+.playback-notice {
+  padding: 8px 14px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.field-error {
+  display: block;
+  color: var(--color-danger, #a32940);
+  font-size: 12px;
+  margin-top: 5px;
+}
 .roster-panel {
   width: 320px;
   flex-shrink: 0;
@@ -382,11 +456,12 @@ const hideAvatar = (e: Event) => {
 }
 .squad-summary > div {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 .squad-summary strong {
+  white-space: nowrap;
   font: 600 18px var(--font-num);
   color: var(--ink);
 }

@@ -128,7 +128,7 @@ test("a fresh browser restores the roster, board, training plan and animation fr
 
 test("a failed desk write reports failure and keeps the previous server state", async ({ page, request }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   const before = await (await request.get("/api/coaching-desk")).json();
   await page.route("**/api/coaching-desk", (route) => {
     if (route.request().method() === "PUT") {
@@ -142,7 +142,7 @@ test("a failed desk write reports failure and keeps the previous server state", 
   });
   await page.getByRole("button", { name: "训练计划", exact: true }).click();
   await page.getByRole("textbox", { name: "训练目标" }).fill("尚未写入后端的目标");
-  await expect(page.getByLabel("保存状态")).toContainText("保存失败");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿同步失败");
   expect((await (await request.get("/api/coaching-desk")).json()).desk).toEqual(before.desk);
   await expect(page.locator(".el-message--success")).toHaveCount(0);
 });
@@ -191,13 +191,13 @@ test("concurrent desks report conflicts without overwriting another browser's ch
   request,
 }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   const otherContext = await browser.newContext();
   try {
     await authenticateAdmin(otherContext.request, page.url());
     const other = await otherContext.newPage();
     await other.goto(new URL("/board", page.url()).href);
-    await expect(other.getByLabel("保存状态")).toContainText("已保存");
+    await expect(other.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
     await page.getByRole("button", { name: "训练计划", exact: true }).click();
     await page.getByRole("textbox", { name: "训练目标" }).fill("先保存的训练目标");
     await expect
@@ -218,7 +218,7 @@ test("concurrent desks report conflicts without overwriting another browser's ch
 
 test("save status fits desktop and mobile workspaces", async ({ page }, testInfo) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   for (const viewport of [
     { width: 1440, height: 960 },
     { width: 390, height: 844 },
@@ -257,7 +257,7 @@ test("deleting the selected tactic elsewhere detaches it and preserves subsequen
       return desk?.board.trainingPlan.objective;
     })
     .toBe("战术删除后继续训练");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   const { desk } = await (await request.get("/api/coaching-desk")).json();
   expect(desk.selectedTacticId).toBeNull();
   expect(desk.players).toEqual(before.desk.players);
@@ -266,7 +266,7 @@ test("deleting the selected tactic elsewhere detaches it and preserves subsequen
 
 test("formation metadata survives tactic save, versions and backup conversion", async ({ page, request }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.evaluate(async () => {
     const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
     const store = useTacticsStore();
@@ -288,7 +288,7 @@ test("formation metadata survives tactic save, versions and backup conversion", 
 
 test("metadata-only edits autosave and remain customized after reload", async ({ page, request }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.evaluate(async () => {
     const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
     useTacticsStore().applyFormationState("2-3-2", "3-3-1");
@@ -309,7 +309,7 @@ test("metadata-only edits autosave and remain customized after reload", async ({
 
 test("editing during a tactic save keeps the newer draft dirty", async ({ page }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;

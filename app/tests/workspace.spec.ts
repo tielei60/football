@@ -1,3 +1,4 @@
+import { openAnimationDetails } from "./animation-editor";
 import { selectUiOption } from "./ui-select";
 import { test, expect } from "./tactical-fixtures";
 
@@ -43,7 +44,7 @@ test("roster loads explicitly seeded multi-position profiles and supports select
   await expect(player.getByRole("checkbox", { name: "后腰", exact: true })).toBeChecked();
   await player.getByRole("checkbox", { name: "前腰", exact: true }).check();
   await expect(player.locator(".roster-pos")).toHaveText("中后卫、后腰、前腰");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.reload();
   await expect(player.locator(".roster-pos")).toHaveText("中后卫、后腰、前腰");
 });
@@ -129,6 +130,7 @@ test("animation frames play and export produces a PNG", async ({ page }) => {
   await page.goto("/board");
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
   await page.getByRole("button", { name: "添加帧", exact: true }).click();
+  await openAnimationDetails(page);
   await expect(page.getByRole("spinbutton", { name: "当前帧" })).toHaveValue("2");
   await page.getByRole("button", { name: "播放动画", exact: true }).click();
   await expect(page.getByRole("button", { name: "暂停动画", exact: true })).toBeVisible();

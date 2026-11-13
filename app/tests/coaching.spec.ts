@@ -85,7 +85,7 @@ test("training plan persists, belongs to its tactic, and is included in export a
   await page.getByRole("textbox", { name: "执教要点" }).fill("弱侧前锋攻击后点\n丢球后立即反抢");
   await page.getByRole("spinbutton", { name: "训练时长（分钟）" }).fill("25");
   await page.getByRole("button", { name: "关闭训练计划" }).click();
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.reload();
   await page.getByRole("button", { name: "训练计划", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "训练目标" })).toHaveValue("边路推进后完成倒三角传中");

@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch, onScopeDispose, useId } from "vue";
+import { useMediaQuery } from "@vueuse/core";
+import { ElMessage } from "element-plus";
 import { storeToRefs } from "pinia";
 import { Play, Pause, SkipBack, SkipForward, RotateCcw, Plus, Trash2, Save, Clock3 } from "lucide-vue-next";
+import { confirmAction } from "@/components/ui/confirmAction";
 import { useMatchStore } from "@/stores/matchStore";
 import { useAnimationStore } from "@/stores/animationStore";
 import { TACTICAL_SCENARIOS } from "@/data/tacticalScenarios";
@@ -24,6 +27,64 @@ const {
 } = storeToRefs(store);
 const frame = computed(() => currentAnimation.value?.frames[currentFrameIndex.value]);
 const scenarioId = computed(() => TACTICAL_SCENARIOS.find((s) => s.title === currentAnimation.value?.name)?.id ?? "");
+const deleting = ref(false);
+const compactEditor = useMediaQuery("(max-width: 700px), (max-width: 1100px) and (orientation: portrait)");
+const detailsOpen = ref(false);
+const showDetails = computed(() => compactEditor.value || detailsOpen.value);
+const editorId = useId();
+let selectionRevision = 0;
+watch(
+  [currentAnimation, currentFrameIndex, isPlaying],
+  () => {
+    selectionRevision += 1;
+  },
+  { flush: "sync" }
+);
+onScopeDispose(() => {
+  selectionRevision += 1;
+});
+const editHint = computed(() => {
+  if (isPlaying.value) return "播放中，请先暂停并选择步骤后编辑";
+  if (!canEdit.value) return "当前位于过渡途中，请选择一个步骤后编辑";
+  if (currentFrameIndex.value === 0) return "初始站位没有过渡时长；选择后续步骤可设置";
+  return "步骤修改随工作台草稿同步，存入战术库后保留版本";
+});
+const changeDuration = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const value = Number(input.value);
+  if (!input.value.trim() || !Number.isFinite(value) || value < 0.5 || value > 30) {
+    input.value = String(frame.value?.duration ?? 3);
+    ElMessage.warning("过渡时长须为 0.5–30 秒，已恢复原值");
+    return;
+  }
+  store.updateFrame({ duration: value });
+  input.value = String(frame.value?.duration ?? 3);
+};
+const deleteStep = async () => {
+  if (deleting.value || !canEdit.value || currentAnimationFrameCount.value <= 1) return;
+  const animation = currentAnimation.value;
+  const selected = frame.value;
+  const index = currentFrameIndex.value;
+  const revision = selectionRevision;
+  deleting.value = true;
+  try {
+    if (!(await confirmAction(`删除步骤「${selected?.title || `步骤 ${index + 1}`}」及其动作？此操作不可撤销。`)))
+      return;
+    if (
+      revision !== selectionRevision ||
+      animation !== currentAnimation.value ||
+      selected !== frame.value ||
+      index !== currentFrameIndex.value ||
+      !canEdit.value
+    ) {
+      ElMessage.info("当前步骤或播放状态已变化，未删除任何步骤");
+      return;
+    }
+    store.deleteFrame(index);
+  } finally {
+    deleting.value = false;
+  }
+};
 const inputValue = (event: Event) => (event.target as HTMLInputElement).value;
 const selectFrame = (event: Event) =>
   store.switchFrame(
@@ -33,7 +94,7 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
 </script>
 
 <template>
-  <section class="animation-timeline" aria-label="动画编排">
+  <section class="animation-timeline" :data-details-open="showDetails" aria-label="动画编排">
     <div class="timeline-heading">
       <strong class="timeline-title">{{ currentAnimation?.name || "自定义战术" }}</strong>
       <UiSelect
@@ -53,6 +114,39 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
         <Clock3 :size="14" aria-hidden="true" />
         {{ currentAnimationFrameCount }} 步 · {{ totalDuration.toFixed(1) }} 秒
       </span>
+      <div v-if="!presenting" class="timeline-edit-toolbar">
+        <button
+          v-if="!compactEditor"
+          class="edit-step-toggle"
+          :aria-expanded="detailsOpen"
+          :aria-controls="editorId"
+          @click="detailsOpen = !detailsOpen"
+        >
+          {{ detailsOpen ? "收起详情" : "编辑步骤" }}
+        </button>
+        <div class="step-actions">
+          <button
+            aria-label="添加帧"
+            title="在当前步骤后添加"
+            :disabled="!canEdit || currentAnimationFrameCount >= 120"
+            @click="store.addFrame()"
+          >
+            <Plus :size="18" />
+          </button>
+          <button
+            aria-label="删除当前步骤"
+            title="删除当前步骤"
+            :disabled="!canEdit || currentAnimationFrameCount <= 1"
+            :aria-disabled="deleting || !canEdit || currentAnimationFrameCount <= 1"
+            @click="deleteStep"
+          >
+            <Trash2 :size="17" />
+          </button>
+          <button aria-label="保存动画" title="保存动画与战术" :disabled="saving" @click="emit('save')">
+            <Save :size="18" />
+          </button>
+        </div>
+      </div>
     </div>
     <div class="timeline-transport">
       <div class="transport-buttons">
@@ -109,84 +203,66 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
         轨迹
       </label>
     </div>
-    <div class="timeline-steps" aria-label="战术步骤">
-      <button
-        v-for="(step, index) in currentAnimation?.frames"
-        :key="index"
-        class="timeline-step"
-        :class="{ selected: index === currentFrameIndex }"
-        :aria-pressed="index === currentFrameIndex"
-        @click="store.switchFrame(index)"
-      >
-        <span class="step-number">{{ String(index + 1).padStart(2, "0") }}</span>
-        <span class="step-name">{{ step.title || `步骤 ${index + 1}` }}</span>
-        <small>{{ index === 0 ? "起点" : `${step.duration ?? 3} 秒` }}</small>
-      </button>
-    </div>
-    <p v-if="presenting" class="step-brief">{{ frame?.note }}</p>
-    <div v-else class="step-editor">
-      <label class="step-index">
-        当前帧
-        <input
-          type="number"
-          aria-label="当前帧"
-          min="1"
-          :max="currentAnimationFrameCount"
-          :value="currentFrameIndex + 1"
-          @change="selectFrame"
-        />
-      </label>
-      <label class="step-title">
-        步骤名称
-        <input
-          :value="frame?.title"
-          maxlength="60"
-          :disabled="!canEdit"
-          @input="store.updateFrame({ title: inputValue($event) })"
-        />
-      </label>
-      <label class="step-duration">
-        过渡时长（秒）
-        <input
-          type="number"
-          :value="frame?.duration ?? 3"
-          min="0.5"
-          max="30"
-          step="0.5"
-          :disabled="!canEdit || currentFrameIndex === 0"
-          @change="store.updateFrame({ duration: Number(inputValue($event)) })"
-        />
-      </label>
-      <label class="step-note">
-        步骤要点
-        <textarea
-          :value="frame?.note"
-          maxlength="1000"
-          rows="2"
-          :disabled="!canEdit"
-          @input="store.updateFrame({ note: inputValue($event) })"
-        />
-      </label>
-      <div class="step-actions">
+    <div class="timeline-details">
+      <div class="timeline-steps" aria-label="战术步骤">
         <button
-          aria-label="添加帧"
-          title="在当前步骤后添加"
-          :disabled="!canEdit || currentAnimationFrameCount >= 120"
-          @click="store.addFrame()"
+          v-for="(step, index) in currentAnimation?.frames"
+          :key="index"
+          class="timeline-step"
+          :class="{ selected: index === currentFrameIndex }"
+          :aria-pressed="index === currentFrameIndex"
+          @click="store.switchFrame(index)"
         >
-          <Plus :size="18" />
+          <span class="step-number">{{ String(index + 1).padStart(2, "0") }}</span>
+          <span class="step-name">{{ step.title || `步骤 ${index + 1}` }}</span>
+          <small>{{ index === 0 ? "起点" : `${step.duration ?? 3} 秒` }}</small>
         </button>
-        <button
-          aria-label="删除当前步骤"
-          title="删除当前步骤"
-          :disabled="!canEdit || currentAnimationFrameCount <= 1"
-          @click="store.deleteFrame()"
-        >
-          <Trash2 :size="17" />
-        </button>
-        <button aria-label="保存动画" title="保存动画与战术" :disabled="saving" @click="emit('save')">
-          <Save :size="18" />
-        </button>
+      </div>
+      <p v-if="presenting" class="step-brief">{{ frame?.note }}</p>
+      <p v-if="!presenting && (showDetails || !canEdit)" class="edit-hint" role="status">{{ editHint }}</p>
+      <div v-if="!presenting" v-show="showDetails" :id="editorId" class="step-editor">
+        <label class="step-index">
+          当前帧
+          <input
+            type="number"
+            aria-label="当前帧"
+            min="1"
+            :max="currentAnimationFrameCount"
+            :value="currentFrameIndex + 1"
+            @change="selectFrame"
+          />
+        </label>
+        <label class="step-title">
+          步骤名称
+          <input
+            :value="frame?.title"
+            maxlength="60"
+            :disabled="!canEdit"
+            @input="store.updateFrame({ title: inputValue($event) })"
+          />
+        </label>
+        <label class="step-duration">
+          过渡时长（秒）
+          <input
+            type="number"
+            :value="frame?.duration ?? 3"
+            min="0.5"
+            max="30"
+            step="0.5"
+            :disabled="!canEdit || currentFrameIndex === 0"
+            @change="changeDuration"
+          />
+        </label>
+        <label class="step-note">
+          步骤要点
+          <textarea
+            :value="frame?.note"
+            maxlength="1000"
+            rows="2"
+            :disabled="!canEdit"
+            @input="store.updateFrame({ note: inputValue($event) })"
+          />
+        </label>
       </div>
     </div>
   </section>
@@ -195,13 +271,17 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).
 <style scoped>
 .animation-timeline {
   flex-shrink: 0;
-  padding: 14px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px 16px;
   border-top: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
 }
 .timeline-heading,
 .timeline-transport {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -320,7 +400,7 @@ button.timeline-step {
 }
 .step-editor {
   display: grid;
-  grid-template-columns: 60px minmax(110px, 1fr) 95px minmax(180px, 2fr) auto;
+  grid-template-columns: 60px minmax(110px, 1fr) 95px minmax(180px, 2fr);
   gap: 10px;
   align-items: end;
 }
@@ -413,6 +493,59 @@ textarea {
   }
   .timeline-step {
     min-width: 155px;
+  }
+}
+.timeline-details {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.edit-hint {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+@media (min-width: 1001px) {
+  .timeline-steps {
+    padding-block: 6px;
+  }
+  button.timeline-step {
+    height: 38px;
+  }
+  .timeline-heading {
+    margin-bottom: 6px;
+  }
+  .step-editor {
+    gap: 8px;
+  }
+  .step-editor textarea {
+    height: 42px;
+  }
+}
+.timeline-edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 0;
+}
+.timeline-edit-toolbar .step-actions {
+  margin-left: auto;
+}
+.edit-step-toggle {
+  color: var(--color-brand);
+  font-weight: 600;
+}
+@media (min-width: 1001px) {
+  .animation-timeline:not([data-details-open="true"]) .timeline-heading {
+    margin-bottom: 4px;
+  }
+  .timeline-edit-toolbar {
+    margin-top: 0;
+  }
+  .animation-timeline:not([data-details-open="true"]) .timeline-steps {
+    padding-bottom: 0;
   }
 }
 </style>

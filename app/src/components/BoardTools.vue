@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { confirmAction } from "@/components/ui/confirmAction";
 import { storeToRefs } from "pinia";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   MousePointer2,
   Type,
@@ -19,12 +18,14 @@ import {
   Square,
 } from "lucide-vue-next";
 import { ElMessage } from "element-plus";
+import { confirmAction } from "@/components/ui/confirmAction";
 import { captureScreenshot } from "@/utils/index";
 import { useItemStore } from "@/stores/itemStore";
 import { useGlobalStore } from "@/stores/globalStore";
 import { useBoardStore } from "@/stores/boardStore";
 import { useDrawStore } from "@/stores/drawStore";
 import { useAnimationStore } from "@/stores/animationStore";
+import { useTacticsStore } from "@/stores/tacticsStore";
 import { useHistory } from "@/composables/useHistory";
 import Shape from "./drawings/Shape.vue";
 import { RUN_LINE_CONFIG, PASS_LINE_CONFIG } from "@/constants";
@@ -38,6 +39,30 @@ const { handleUndo, handleRedo, canUndo, canRedo, pushHistory } = useHistory();
 const { currentTool } = storeToRefs(globalStore);
 const { isAnimationMode } = storeToRefs(animationStore);
 const exporting = ref(false);
+const clearing = ref(false);
+const drawingSelected = (kind: "run" | "pass" | "zone") => {
+  const config = drawStore.drawingConfig;
+  if (currentTool.value !== "shape") return false;
+  if (kind === "zone") return config.type === "rectangle";
+  const preset = kind === "run" ? RUN_LINE_CONFIG : PASS_LINE_CONFIG;
+  return config.type === preset.shape && config.dashed === preset.dashed && config.strokeColor === preset.strokeColor;
+};
+const toolCaption = computed(() => {
+  if (isAnimationMode.value) return animationStore.canEdit ? "调整走位" : "动画预览";
+  if (currentTool.value === "text") return "文字标注";
+  if (currentTool.value === "eraser") return "擦除线条";
+  if (currentTool.value === "shape") {
+    const names: Record<string, string> = {
+      pen: "自由画笔",
+      line: "直线",
+      arrow: "箭头",
+      rectangle: "矩形",
+      ellipse: "椭圆",
+    };
+    return names[drawStore.drawingConfig.type] || "绘图";
+  }
+  return "选择拖动";
+});
 defineProps<{ fullscreen: boolean; fullscreenBusy: boolean; compact?: boolean }>();
 const emit = defineEmits<{ fullscreen: [] }>();
 const chooseDrawing = (kind: "run" | "pass" | "zone") => {
@@ -55,10 +80,30 @@ const openAnimation = () => {
   animationStore.openAnimationFromBoard(elements);
 };
 const clearBoard = async () => {
-  if (!(await confirmAction("清空场上全部球员与线条？（可撤销）"))) return;
-  pushHistory();
-  itemStore.clearElements();
-  drawStore.clearDrawings();
+  if (clearing.value) return;
+  clearing.value = true;
+  const tactics = useTacticsStore();
+  const owner = tactics.currentId;
+  const before = JSON.stringify(tactics.snapshotBoard());
+  try {
+    if (
+      !(await confirmAction("清空当前画布的全部球员与线条？战术库存档和球员档案不受影响，清空后可撤销。", {
+        title: "清空当前画布",
+        confirmText: "清空画布",
+        danger: true,
+      }))
+    )
+      return;
+    if (isAnimationMode.value || tactics.currentId !== owner || JSON.stringify(tactics.snapshotBoard()) !== before) {
+      ElMessage.info("画布已改变，未执行清空。请在当前画布重新操作。");
+      return;
+    }
+    pushHistory();
+    itemStore.clearElements();
+    drawStore.clearDrawings();
+  } finally {
+    clearing.value = false;
+  }
 };
 const exportImage = async () => {
   if (!boardStore.boardArea || exporting.value) return;
@@ -75,6 +120,7 @@ const exportImage = async () => {
 
 <template>
   <div class="board-tools" role="toolbar" aria-label="战术绘图工具">
+    <p class="tool-caption" role="status" :class="{ destructive: currentTool === 'eraser' }">{{ toolCaption }}</p>
     <div class="tool-section">
       <button
         class="tbtn"
@@ -88,13 +134,34 @@ const exportImage = async () => {
       </button>
       <Shape v-if="!isAnimationMode" />
       <template v-if="compact && !isAnimationMode">
-        <button class="tbtn" title="跑位线" aria-label="跑位线" @click="chooseDrawing('run')">
+        <button
+          class="tbtn"
+          :class="{ active: drawingSelected('run') }"
+          :aria-pressed="drawingSelected('run')"
+          title="跑位线"
+          aria-label="跑位线"
+          @click="chooseDrawing('run')"
+        >
           <ArrowUpRight :size="19" />
         </button>
-        <button class="tbtn" title="传球线" aria-label="传球线" @click="chooseDrawing('pass')">
+        <button
+          class="tbtn"
+          :class="{ active: drawingSelected('pass') }"
+          :aria-pressed="drawingSelected('pass')"
+          title="传球线"
+          aria-label="传球线"
+          @click="chooseDrawing('pass')"
+        >
           <Send :size="19" />
         </button>
-        <button class="tbtn" title="区域" aria-label="区域" @click="chooseDrawing('zone')">
+        <button
+          class="tbtn"
+          :class="{ active: drawingSelected('zone') }"
+          :aria-pressed="drawingSelected('zone')"
+          title="区域"
+          aria-label="区域"
+          @click="chooseDrawing('zone')"
+        >
           <Square :size="19" />
         </button>
       </template>
@@ -128,7 +195,14 @@ const exportImage = async () => {
       <button class="tbtn" :disabled="!canRedo" @click="handleRedo" title="重做" aria-label="重做">
         <Redo2 :size="19" />
       </button>
-      <button class="tbtn danger" @click="clearBoard" title="清空画布" aria-label="清空画布">
+      <button
+        class="tbtn danger"
+        :aria-disabled="clearing"
+        :aria-busy="clearing"
+        @click="clearBoard"
+        title="清空画布"
+        aria-label="清空画布"
+      >
         <Trash2 :size="18" />
       </button>
     </div>
@@ -143,6 +217,7 @@ const exportImage = async () => {
         v-if="!isAnimationMode"
         class="tbtn"
         :disabled="exporting"
+        :aria-busy="exporting"
         @click="exportImage"
         :title="exporting ? '正在导出' : '导出 PNG'"
         aria-label="导出 PNG"
@@ -164,6 +239,27 @@ const exportImage = async () => {
 </template>
 
 <style scoped>
+.tool-caption {
+  margin: 0;
+  padding: 2px 0;
+  text-align: center;
+  color: var(--color-brand);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 650;
+  max-width: 44px;
+  grid-column: 1 / -1;
+}
+.tool-caption.destructive {
+  color: var(--color-danger);
+}
+@media (max-width: 900px) {
+  .tool-caption {
+    max-width: none;
+    width: 100%;
+    text-align: left;
+  }
+}
 .board-tools {
   display: flex;
   flex-direction: column;

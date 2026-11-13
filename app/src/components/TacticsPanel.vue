@@ -8,13 +8,13 @@
     class="tactics-shell"
     @close="emit('close')"
   >
-    <aside class="tactics-drawer" v-if="open">
+    <aside class="tactics-drawer" v-if="open" :aria-busy="busy">
       <div class="drawer-head">
         <span class="drawer-title">
           战术库
           <small>{{ tactics.length }} 套</small>
         </span>
-        <button class="drawer-new" @click="onNew">
+        <button class="drawer-new" :aria-disabled="busy" @click="onNew">
           <Plus :size="14" />
           新建空白板
         </button>
@@ -23,6 +23,12 @@
         </button>
       </div>
 
+      <p v-if="pending" role="status" class="panel-status">{{ pending }} 关闭面板不会取消已提交的操作。</p>
+      <div v-if="actionError" role="alert" class="panel-error">
+        <p>{{ actionError }}</p>
+        <button class="io-btn" v-if="retryRead" :disabled="busy" @click="retryRead()">重试读取</button>
+        <button class="io-btn" v-else :disabled="busy" @click="refreshLibrary">刷新战术库核对</button>
+      </div>
       <section class="current-card" aria-label="当前战术草稿">
         <div class="current-title-row">
           <span class="current-label">当前画布 · 草稿</span>
@@ -38,20 +44,20 @@
       <div class="save-box">
         <label class="field-label">
           战术名称
-          <input class="save-title" v-model="title" placeholder="如：vs 红星 · 高位逼抢" />
+          <input class="save-title" v-model="title" :disabled="!!pending" placeholder="如：vs 红星 · 高位逼抢" />
         </label>
         <div class="match-row">
           <label class="field-label">
             对手
-            <input class="save-title match-input" v-model="opponent" placeholder="对手名称" />
+            <input class="save-title match-input" :disabled="!!pending" v-model="opponent" placeholder="对手名称" />
           </label>
           <label class="field-label">
             日期
-            <input class="save-title match-input" v-model="matchDate" type="date" />
+            <input class="save-title match-input" :disabled="!!pending" v-model="matchDate" type="date" />
           </label>
           <label class="field-label">
             比分
-            <input class="save-title match-input" v-model="score" placeholder="0 : 0" />
+            <input class="save-title match-input" :disabled="!!pending" v-model="score" placeholder="0 : 0" />
           </label>
         </div>
         <div class="tag-row">
@@ -61,6 +67,7 @@
             class="tag-btn"
             :class="{ active: tags.includes(t) }"
             :aria-pressed="tags.includes(t)"
+            :disabled="!!pending"
             @click="toggleTag(t)"
           >
             {{ t }}
@@ -68,20 +75,20 @@
         </div>
         <label class="field-label">
           版本备注
-          <input class="save-note" v-model="note" placeholder="可选" />
+          <input class="save-note" :disabled="!!pending" v-model="note" placeholder="可选" />
         </label>
-        <button class="save-btn" @click="onSave(false)" :disabled="saving">
+        <button class="save-btn" @click="onSave(false)" :disabled="busy">
           <Save :size="16" />
           {{ saving ? "保存中…" : "保存当前战术" }}
         </button>
-        <button class="save-copy" @click="onSave(true)" :disabled="saving || currentId === null">
+        <button class="save-copy" @click="onSave(true)" :disabled="busy || currentId === null">
           <CopyPlus :size="16" aria-hidden="true" />
           另存为新战术
         </button>
         <div class="io-row">
-          <button class="io-btn" @click="onExportJSON">导出JSON</button>
-          <button class="io-btn" @click="triggerImport">导入JSON</button>
-          <button class="io-btn" @click="runAction(onExportSVG)">导出SVG</button>
+          <button class="io-btn" :disabled="busy" @click="onExportJSON">导出JSON</button>
+          <button class="io-btn" :disabled="busy" @click="triggerImport">导入JSON</button>
+          <button class="io-btn" :disabled="busy" @click="runAction(onExportSVG, '导出图片中…', true)">导出SVG</button>
           <input
             ref="fileRef"
             type="file"
@@ -91,8 +98,8 @@
           />
         </div>
         <div class="io-row">
-          <button class="io-btn" @click="onBackup">备份全部</button>
-          <button class="io-btn" @click="triggerRestore">恢复备份</button>
+          <button class="io-btn" :disabled="busy" @click="onBackup">备份全部</button>
+          <button class="io-btn" :disabled="busy" @click="triggerRestore">恢复备份</button>
           <input
             ref="backupRef"
             type="file"
@@ -102,7 +109,7 @@
           />
         </div>
         <div class="io-row">
-          <button class="io-btn seed-btn" @click="onSeed" :disabled="importingSeeds">导入进阶预置（10 套）</button>
+          <button class="io-btn seed-btn" @click="onSeed" :disabled="busy">导入进阶预置（10 套）</button>
         </div>
       </div>
 
@@ -111,7 +118,14 @@
         <input class="drawer-search" type="search" aria-label="搜索战术" v-model="keyword" placeholder="搜索战术名称" />
       </label>
       <div class="tag-row filter">
-        <button class="tag-btn" :class="{ active: filterTag === '' }" @click="filterTag = ''">全部</button>
+        <button
+          class="tag-btn"
+          :class="{ active: filterTag === '' }"
+          :aria-pressed="filterTag === ''"
+          @click="filterTag = ''"
+        >
+          全部
+        </button>
         <button class="tag-btn" :class="{ active: onlyFav }" :aria-pressed="onlyFav" @click="onlyFav = !onlyFav">
           <Star :size="12" />
           收藏
@@ -121,6 +135,7 @@
           :key="t"
           class="tag-btn"
           :class="{ active: filterTag === t }"
+          :aria-pressed="filterTag === t"
           @click="filterTag = filterTag === t ? '' : t"
         >
           {{ t }}
@@ -143,9 +158,10 @@
               {{ t.snapshot.animation.frames.length }} 步动画
             </span>
             <div class="tactic-actions">
-              <button @click="onLoad(t.id!)">打开</button>
+              <button :disabled="busy" @click="onLoad(t.id!)">打开</button>
               <button
                 v-if="(t.snapshot.animation?.frames.length ?? 0) > 1"
+                :disabled="busy"
                 @click="onPlay(t.id!)"
                 title="播放战术动画"
                 aria-label="播放战术动画"
@@ -153,6 +169,7 @@
                 <Play :size="14" />
               </button>
               <button
+                :disabled="busy"
                 @click="runAction(() => store.toggleFav(t.id!))"
                 :aria-label="t.fav ? '取消收藏' : '收藏战术'"
                 :title="t.fav ? '取消收藏' : '收藏战术'"
@@ -160,26 +177,58 @@
               >
                 <Star :size="14" :fill="t.fav ? 'currentColor' : 'none'" />
               </button>
-              <button @click="toggleVersions(t.id!)" title="版本历史" aria-label="版本历史">
+              <button
+                @click="toggleVersions(t.id!)"
+                :aria-expanded="expanded === t.id"
+                :aria-controls="`tactic-versions-${t.id}`"
+                title="版本历史"
+                aria-label="版本历史"
+              >
                 <History :size="14" />
               </button>
-              <button @click="runAction(() => store.requestPrint(t.id!))" title="打印战术" aria-label="打印战术">
+              <button
+                :disabled="busy"
+                @click="runAction(() => store.requestPrint(t.id!), '准备打印中…', true)"
+                title="打印战术"
+                aria-label="打印战术"
+              >
                 <Printer :size="14" />
               </button>
-              <button class="danger" @click="onDelete(t.id!)" title="删除战术" aria-label="删除战术">
+              <button
+                class="danger"
+                :aria-disabled="busy"
+                @click="onDelete(t.id!)"
+                title="删除战术"
+                aria-label="删除战术"
+              >
                 <Trash2 :size="14" />
               </button>
             </div>
-            <ul v-if="expanded === t.id" class="version-list">
-              <li v-for="v in versions[t.id!] || []" :key="v.id" class="version-item">
+            <ul
+              v-if="expanded === t.id"
+              :id="`tactic-versions-${t.id}`"
+              class="version-list"
+              :aria-busy="historyLoading === t.id"
+            >
+              <li v-if="historyLoading === t.id" role="status">读取历史中…</li>
+              <li v-else-if="historyError" role="alert">
+                {{ historyError }}
+                <button class="io-btn" @click="toggleVersions(t.id!, true)">重试历史读取</button>
+              </li>
+              <li v-else-if="!versions[t.id!]?.length">暂无历史版本</li>
+              <li
+                v-for="v in historyLoading === t.id || historyError ? [] : versions[t.id!] || []"
+                :key="v.id"
+                class="version-item"
+              >
                 <span>{{ fmtTime(v.createdAt) }} · {{ v.note }}</span>
-                <button @click="onRollback(v)">回滚</button>
+                <button :disabled="busy" @click="onRollback(v)">回滚</button>
               </li>
             </ul>
           </div>
         </li>
       </ul>
-      <div v-if="filtered.length === 0" class="empty-tip">
+      <div v-if="filtered.length === 0 && !pending && !actionError" class="empty-tip">
         {{ tactics.length ? "没有匹配的战术" : "暂无已保存的战术" }}
       </div>
     </aside>
@@ -187,12 +236,12 @@
 </template>
 
 <script setup lang="ts">
-import { confirmAction } from "@/components/ui/confirmAction";
 import { computed, onMounted, ref, watch } from "vue";
 import { X, Plus, Save, Star, History, Printer, Trash2, CopyPlus, Play } from "lucide-vue-next";
 import { ElMessage, ElDrawer } from "element-plus";
 import "element-plus/es/components/drawer/style/css";
 import { storeToRefs } from "pinia";
+import { confirmAction } from "@/components/ui/confirmAction";
 import { useTacticsStore } from "@/stores/tacticsStore";
 import { useAnimationStore } from "@/stores/animationStore";
 import { useMatchStore } from "@/stores/matchStore";
@@ -206,10 +255,29 @@ import { useTeamIdentity } from "@/composables/useTeamIdentity";
 
 const { teamFileName } = useTeamIdentity();
 
-defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
 const saving = ref(false);
-const importingSeeds = ref(false);
+const pending = ref("");
+const busy = computed(() => saving.value || !!pending.value || store.savingTactic);
+const actionError = ref("");
+const retryRead = ref<(() => Promise<unknown>) | null>(null);
+let panelEpoch = 0;
+let historyRequest = 0;
+const historyLoading = ref<number | null>(null);
+const historyError = ref("");
+watch(
+  () => props.open,
+  () => {
+    panelEpoch++;
+    historyRequest++;
+    expanded.value = null;
+    historyLoading.value = null;
+    historyError.value = "";
+    actionError.value = "";
+    retryRead.value = null;
+  }
+);
 
 const store = useTacticsStore();
 const { tactics, versions, currentId, currentFormationId, formationCustomized, boardDirty } = storeToRefs(store);
@@ -227,16 +295,40 @@ const filterTag = ref("");
 const onlyFav = ref(false);
 const expanded = ref<number | null>(null);
 
-const reportError = (error: unknown) => ElMessage.error(error instanceof Error ? error.message : "操作失败，请重试");
-const runAction = async (action: () => Promise<unknown>) => {
+const reportError = (
+  error: unknown,
+  uncertain = false,
+  uncertainty = "写入可能已完成，请先刷新战术库核对结果，再决定是否重新操作。"
+) => {
+  const message = error instanceof Error ? error.message : "操作失败";
+  actionError.value = message + (uncertain ? `。${uncertainty}` : "，可重试读取。");
+  ElMessage.error(message);
+};
+const runAction = async (
+  action: () => Promise<unknown>,
+  label = "处理中…",
+  readOnly = false,
+  uncertainty = "写入可能已完成，请先刷新战术库核对结果，再决定是否重新操作。"
+) => {
+  if (busy.value) return;
+  const epoch = panelEpoch;
+  pending.value = label;
+  actionError.value = "";
+  retryRead.value = null;
   try {
     await action();
   } catch (error) {
-    reportError(error);
+    if (epoch === panelEpoch) {
+      reportError(error, !readOnly, uncertainty);
+      if (readOnly) retryRead.value = () => runAction(action, label, true);
+    }
+  } finally {
+    pending.value = "";
   }
 };
-onMounted(() => {
-  if (!store.ready) void runAction(store.refresh);
+const refreshLibrary = () => runAction(store.refresh, "刷新战术库中…", true);
+onMounted(async () => {
+  if (!store.ready) await refreshLibrary();
 });
 
 const toggleTag = (t: string) => {
@@ -253,41 +345,49 @@ const syncForm = () => {
   note.value = "";
 };
 
-const onLoad = async (id: number) => {
-  try {
-    if (!(await store.loadTactic(id))) return;
-    syncForm();
-  } catch (error) {
-    reportError(error);
-  }
-};
+const onLoad = (id: number) =>
+  runAction(
+    async () => {
+      if (!(await store.loadTactic(id))) return;
+      syncForm();
+    },
+    "打开战术中…",
+    true
+  );
 
-const onPlay = async (id: number) => {
-  try {
-    if (!(await store.loadTactic(id))) return;
-    syncForm();
-    const animation = useAnimationStore();
-    animation.openAnimation();
-    animation.startAutoPlay();
-    emit("close");
-  } catch (error) {
-    reportError(error);
-  }
-};
+const onPlay = (id: number) =>
+  runAction(
+    async () => {
+      const epoch = panelEpoch;
+      if (!(await store.loadTactic(id))) return;
+      syncForm();
+      if (epoch !== panelEpoch || !props.open) return;
+      const animation = useAnimationStore();
+      animation.openAnimation();
+      animation.startAutoPlay();
+      emit("close");
+    },
+    "读取动画中…",
+    true
+  );
 
-const onRollback = async (version: VersionRecord) => {
-  try {
-    if (!(await store.rollback(version))) return;
-    syncForm();
-    ElMessage.success("已恢复历史版本，保存后更新战术");
-  } catch (error) {
-    reportError(error);
-  }
-};
+const onRollback = (version: VersionRecord) =>
+  runAction(
+    async () => {
+      if (!(await store.rollback(version))) return;
+      syncForm();
+      ElMessage.success("已恢复历史版本，保存后更新战术");
+    },
+    "回滚历史版本中…",
+    false,
+    "回滚前自动备份可能已保存，当前草稿尚未确认恢复。请先刷新战术库并查看版本历史核对，勿直接重复回滚。"
+  );
 
 const onSave = async (asNew = false) => {
-  if (saving.value) return;
+  if (busy.value) return;
   saving.value = true;
+  actionError.value = "";
+  retryRead.value = null;
   const formContent = () =>
     JSON.stringify([title.value, tags.value, note.value, opponent.value, matchDate.value, score.value]);
   const submittedForm = formContent();
@@ -312,18 +412,20 @@ const onSave = async (asNew = false) => {
     if (formContent() === submittedForm) syncForm();
     ElMessage.success(asNew ? "已另存为新战术" : "战术已保存");
   } catch (error) {
-    reportError(error);
+    reportError(error, true);
   } finally {
     saving.value = false;
   }
 };
+
+defineExpose({ saveCurrent: () => onSave(false) });
 
 // Initialize on route re-entry as well as first asynchronous refresh. Drawer
 // visibility and background list refreshes must not overwrite unsaved form edits.
 watch(
   () => [store.currentId, store.ready] as const,
   () => {
-    if (!saving.value) syncForm();
+    if (!saving.value && !store.savingTactic) syncForm();
   },
   { immediate: true }
 );
@@ -344,23 +446,37 @@ const currentFormationLabel = computed(() => {
   return `模板：${name}${suffix}${isDefault ? "（默认）" : ""}`;
 });
 
-const onNew = async () => {
-  if (await confirmAction("清空当前画布新建？（已保存的战术不受影响）")) store.newBoard();
-};
+const onNew = () =>
+  runAction(
+    async () => {
+      if (await confirmAction("清空当前画布新建？（已保存的战术不受影响）")) store.newBoard();
+    },
+    "等待新建确认…",
+    true
+  );
 
-const onDelete = async (id: number) => {
-  if (await confirmAction("删除这套战术及其全部历史版本？")) await runAction(() => store.deleteTactic(id));
-};
+const onDelete = (id: number) =>
+  runAction(async () => {
+    if (await confirmAction("删除这套战术及其全部历史版本？")) await store.deleteTactic(id);
+  }, "删除战术中…");
 
-const toggleVersions = async (id: number) => {
-  if (expanded.value === id) {
+const toggleVersions = async (id: number, retry = false) => {
+  const request = ++historyRequest;
+  if (!retry && expanded.value === id) {
     expanded.value = null;
+    historyLoading.value = null;
     return;
   }
-  await runAction(async () => {
+  expanded.value = id;
+  historyLoading.value = id;
+  historyError.value = "";
+  try {
     await store.loadVersions(id);
-    expanded.value = id;
-  });
+  } catch (error) {
+    if (request === historyRequest) historyError.value = error instanceof Error ? error.message : "历史读取失败";
+  } finally {
+    if (request === historyRequest) historyLoading.value = null;
+  }
 };
 
 const filtered = computed(() => {
@@ -396,47 +512,45 @@ const download = (name: string, href: string) => {
 const stamp = () => new Date().toISOString().slice(0, 10);
 
 const onBackup = async () => {
-  await runAction(async () => {
-    const json = await store.exportBackup();
-    const count = store.tactics.length;
-    if (count === 0) {
-      alert("战术库是空的，无需备份");
-      return;
-    }
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    download(`${teamFileName.value}_战术库备份_${stamp()}.json`, url);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-  });
+  await runAction(
+    async () => {
+      const json = await store.exportBackup();
+      const count = (JSON.parse(json) as { tactics: unknown[] }).tactics.length;
+      if (count === 0) {
+        ElMessage.info("战术库是空的，无需备份");
+        return;
+      }
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      download(`${teamFileName.value}_战术库备份_${stamp()}.json`, url);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    },
+    "准备备份中…",
+    true
+  );
 };
 
 const triggerRestore = () => backupRef.value?.click();
 
 const onRestoreFile = async (e: Event) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
   if (!file) return;
   try {
-    const count = await store.importBackup(JSON.parse(await file.text()));
-    alert(`恢复成功，共导入 ${count} 套战术（追加，不覆盖现有）`);
-  } catch (error) {
-    reportError(error);
+    await runAction(async () => {
+      const count = await store.importBackup(JSON.parse(await file.text()));
+      ElMessage.success(`恢复成功，共导入 ${count} 套战术（追加，不覆盖现有）`);
+    }, "恢复备份中…");
   } finally {
-    (e.target as HTMLInputElement).value = "";
+    input.value = "";
   }
 };
 
-const onSeed = async () => {
-  if (importingSeeds.value) return;
-  importingSeeds.value = true;
-  try {
-    await runAction(async () => {
-      const count = await store.importSeedTactics();
-      alert(count > 0 ? `已导入 ${count} 套预置战术` : "预置战术已全部导入，无新增");
-    });
-  } finally {
-    importingSeeds.value = false;
-  }
-};
+const onSeed = () =>
+  runAction(async () => {
+    const count = await store.importSeedTactics();
+    ElMessage.success(count > 0 ? `已导入 ${count} 套预置战术` : "预置战术已全部导入，无新增");
+  }, "导入预置中…");
 
 const onExportJSON = () => {
   const snapshot = store.snapshotBoard();
@@ -459,14 +573,20 @@ const onImportFile = async (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   try {
-    const payload = JSON.parse(await file.text());
-    if (!payload || typeof payload !== "object" || (!payload.board && !payload.snapshot))
-      throw new Error("不是有效的战术文件");
-    const name = typeof payload.title === "string" && payload.title ? payload.title : file.name.replace(/\.json$/i, "");
-    const tagList = Array.isArray(payload.tags) ? payload.tags.filter((t: unknown) => typeof t === "string") : [];
-    await store.importTactic(name, tagList, payload.board ? fromBoard(payload.board) : payload.snapshot, payload.match);
-  } catch (error) {
-    reportError(error);
+    await runAction(async () => {
+      const payload = JSON.parse(await file.text());
+      if (!payload || typeof payload !== "object" || (!payload.board && !payload.snapshot))
+        throw new Error("不是有效的战术文件");
+      const name =
+        typeof payload.title === "string" && payload.title ? payload.title : file.name.replace(/\.json$/i, "");
+      const tagList = Array.isArray(payload.tags) ? payload.tags.filter((t: unknown) => typeof t === "string") : [];
+      await store.importTactic(
+        name,
+        tagList,
+        payload.board ? fromBoard(payload.board) : payload.snapshot,
+        payload.match
+      );
+    }, "导入战术中…");
   } finally {
     (e.target as HTMLInputElement).value = "";
   }
@@ -491,6 +611,27 @@ const onExportSVG = async () => {
 </script>
 
 <style lang="scss" scoped>
+.panel-status,
+.panel-error {
+  padding: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  background: var(--color-brand-soft);
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.panel-error {
+  border-color: var(--color-danger-border);
+}
+.panel-error p {
+  margin: 0 0 8px;
+}
+button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .tactics-drawer {
   width: 100%;
   background: var(--color-surface);

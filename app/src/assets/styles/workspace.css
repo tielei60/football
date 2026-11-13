@@ -625,13 +625,51 @@ body.coach .wrapper .board.compact-workspace {
   }
 }
 
-/* Desktop timeline must not consume the pitch's entire viewport allocation.
-   Keep a usable editing canvas and scroll the workspace to reach its timeline. */
-.board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-workspace {
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
+/* Desktop: keep transport in view; only the timeline detail list owns overflow. */
+@media (min-width: 1001px) {
+  .board:not(.compact-workspace) .pitch-heading {
+    padding: 10px 18px 6px;
+    gap: 10px;
+  }
+  .board:not(.compact-workspace) .pitch-heading > div:first-child {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    min-width: 0;
+  }
+  .board:not(.compact-workspace) .pitch-heading h2 {
+    margin: 0;
+    font-size: 16px;
+    max-width: 30ch;
+  }
+  .board:not(.compact-workspace) .board-badges {
+    margin: 0;
+  }
+  .board:not(.compact-workspace) .pitch-stage {
+    padding: 4px 16px;
+  }
+  .board:not(.compact-workspace) .pitch-footer {
+    padding: 6px 16px;
+  }
+  .board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-workspace {
+    overflow: hidden;
+  }
+  .board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-stage {
+    flex: 1 1 240px;
+    min-height: 200px;
+  }
+  .board.animation-workspace:not(.compact-workspace):not(.presenting) .animation-timeline {
+    flex: 0 1 auto;
+    max-height: min(310px, 43dvh);
+    min-height: 145px;
+  }
 }
-.board.animation-workspace:not(.compact-workspace):not(.presenting) .pitch-stage {
-  flex: 0 0 380px;
-  min-height: 380px;
+
+@media (min-width: 1001px) and (min-height: 720px) {
+  .board.animation-workspace:not(.compact-workspace):not(.presenting)
+    .pitch-workspace:has(.animation-timeline[data-details-open="false"])
+    .pitch-stage {
+    min-height: 328px;
+  }
 }

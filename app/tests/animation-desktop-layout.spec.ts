@@ -1,3 +1,4 @@
+import { openAnimationDetails } from "./animation-editor";
 import { selectUiOption } from "./ui-select";
 import { mkdir } from "node:fs/promises";
 import { test, expect } from "./tactical-fixtures";
@@ -19,14 +20,17 @@ test("1180 by 757 desktop animation retains a usable pitch and exposes eight-a-s
   const canvas = page.locator("svg#field");
   const box = await canvas.boundingBox();
   expect(box!.width).toBeGreaterThan(450);
-  expect(box!.height).toBeGreaterThan(320);
+  expect(box!.height).toBeGreaterThanOrEqual(320);
   const workspace = page.getByRole("region", { name: "战术画布", exact: true });
-  expect(await workspace.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  expect(await workspace.evaluate((el) => getComputedStyle(el).overflowY)).toBe("hidden");
+  await expect(page.locator(".timeline-transport")).toBeInViewport({ ratio: 1 });
   const presets = page.getByRole("combobox", { name: "演示场景", exact: true });
   await expect(presets).toBeDisabled();
   await expect(presets).toContainText("预置演示仅限 8 人制");
   await page.getByRole("button", { name: "添加帧", exact: true }).click();
+  await openAnimationDetails(page);
   await expect(page.getByRole("spinbutton", { name: "当前帧" })).toHaveValue("2");
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤名称" }).fill("七人制自定义前插");
   expect(dialogs).toBe(0);
   await expect(page.getByRole("dialog", { name: "请确认操作" })).toHaveCount(0);

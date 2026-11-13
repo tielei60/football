@@ -1,4 +1,5 @@
 import { ref, watch } from "vue";
+import { nanoid } from "nanoid";
 import { defineStore } from "pinia";
 import {
   avatarPath,
@@ -145,9 +146,9 @@ export const useRosterStore = defineStore(
       pushHistory();
       const maxNumber = players.value.reduce((m, p) => Math.max(m, p.number ?? 0), 0);
       const entry: RosterEntry = {
-        id: `bg-${Date.now()}`,
+        id: `bg-${nanoid()}`,
         name: clean,
-        number: maxNumber + 1,
+        number: maxNumber < 9999 ? maxNumber + 1 : null,
         positions: ["待定"],
         foot: "",
         status: "ok",

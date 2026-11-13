@@ -63,7 +63,7 @@ test("match formats resize both teams and survive undo, save and reload", async 
   await expectUiValue(page.getByRole("combobox", { name: "对手阵型" }), "4-4-2");
   await page.getByRole("button", { name: "保存战术", exact: true }).click();
   await expect.poll(async () => (await (await request.get("/api/tactics")).json())[0]?.board.playerCount).toBe(11);
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.reload();
   await expectUiValue(count, "11");
   await expectUiValue(page.getByRole("combobox", { name: "对手阵型" }), "4-4-2");

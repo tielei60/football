@@ -2,7 +2,7 @@ import { test, expect } from "./tactical-fixtures";
 
 test("opening and importing a tactic restores its exact formation metadata", async ({ page }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   const restored = await page.evaluate(async () => {
     const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
     const store = useTacticsStore();
@@ -25,7 +25,7 @@ test("training edits and a restored older version remain unsaved to the tactic l
   page,
 }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.evaluate(async () => {
     const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
     await useTacticsStore().saveTactic("训练草稿", []);

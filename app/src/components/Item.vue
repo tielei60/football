@@ -5,11 +5,16 @@
       <g
         @pointerdown="handlePointerDown"
         @contextmenu.prevent
-        :style="{ filter: animationStore.isPlaying ? 'none' : 'drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35))' }"
+        role="button"
+        :tabindex="!animationStore.isAnimationMode && !globalStore.presenting ? 0 : -1"
+        :aria-label="`${item.text || '自由球员'}，号码${item.number ?? '未知'}，打开棋子详情`"
+        @keydown.enter.stop.prevent="handleKeyboardOpen"
+        @keydown.space.stop.prevent="handleKeyboardOpen"
       >
+        <title>{{ item.text || "自由球员" }} · {{ displayedPosition }} · {{ item.number ?? "号码未知" }}</title>
         <!-- 名称（教练栏开关控制） -->
         <text v-if="showNames" :x="namePosition.x" :y="namePosition.y" text-anchor="middle" class="player-name">
-          {{ item.text }}
+          {{ shortLabel(item.text, 8) }}
         </text>
         <!-- 位置（教练栏开关控制） -->
         <text
@@ -23,7 +28,7 @@
           text-anchor="middle"
           class="player-position"
         >
-          {{ displayedPosition }}
+          {{ shortLabel(displayedPosition, 9) }}
         </text>
 
         <defs>
@@ -111,22 +116,49 @@
               <img :src="rosterAvatar" alt="" @error="hidePopupAvatar" />
             </div>
             <div class="input-group">
-              <input type="text" placeholder="号码" v-model="item.number" maxlength="2" />
+              <label>
+                号码
+                <input
+                  type="number"
+                  placeholder="未知"
+                  aria-label="棋子号码"
+                  min="0"
+                  max="9999"
+                  step="1"
+                  v-model="numberDraft"
+                  :aria-invalid="!!numberError"
+                  @change="commitNumber"
+                />
+              </label>
+              <span v-if="numberError" role="alert" class="field-error">{{ numberError }}</span>
             </div>
             <div class="input-group">
-              <input type="text" placeholder="名称" v-model="item.text" />
+              <label>
+                名称
+                <input
+                  type="text"
+                  placeholder="仅当前棋子，可留空"
+                  aria-label="棋子名称"
+                  maxlength="200"
+                  v-model="nameDraft"
+                  :aria-invalid="!!nameError"
+                  @change="commitName"
+                />
+              </label>
+              <span v-if="nameError" role="alert" class="field-error">{{ nameError }}</span>
             </div>
             <div class="input-group">
-              <UiSelect v-model="item.playerPosition" aria-label="球员位置" @change="onRoleChange" class="role-select">
+              <UiSelect :value="item.playerPosition" aria-label="球员位置" @change="onRoleChange" class="role-select">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
               </UiSelect>
             </div>
             <div class="input-group color">
-              <input type="color" v-model="item.color" @pointerdown.stop />
+              <input type="color" :value="item.color" aria-label="棋子颜色" @change="commitColor" @pointerdown.stop />
             </div>
-            <button class="delete-btn" v-if="item.id" @pointerdown="handleDelete(item.id)">删除</button>
+            <p class="edit-scope-note">仅修改当前战术棋子，不修改球员档案。名称可留空。</p>
+            <button class="delete-btn" v-if="item.id" @click="handleDelete(item.id)">删除</button>
           </div>
         </div>
       </foreignObject>
@@ -141,6 +173,11 @@
         :r="ELEMENT_RADIUS_OBJECT.player"
         fill="transparent"
         stroke="transparent"
+        role="button"
+        :tabindex="!animationStore.isAnimationMode && !globalStore.presenting ? 0 : -1"
+        aria-label="足球，打开棋子详情"
+        @keydown.enter.stop.prevent="handleKeyboardOpen"
+        @keydown.space.stop.prevent="handleKeyboardOpen"
         @pointerdown="handlePointerDown"
         @contextmenu.prevent
       />
@@ -156,7 +193,7 @@
       <foreignObject class="popup" ref="popupRef" :x="popupX" :y="popupY" width="200" height="65" v-if="showPopup">
         <div xmlns="http://www.w3.org/1999/xhtml" class="popup-content">
           <div class="popup-body">
-            <button class="delete-btn" v-if="item.id" @pointerdown="handleDelete(item.id)">删除</button>
+            <button class="delete-btn" v-if="item.id" @click="handleDelete(item.id)">删除</button>
           </div>
         </div>
       </foreignObject>
@@ -218,13 +255,61 @@ const rosterPlayer = computed(() =>
     team: playerTeam.value,
   })
 );
-const displayedPosition = computed(
-  () => rosterPlayer.value?.positions?.join("、") || posLabel(props.item.playerPosition)
+const displayedPosition = computed(() =>
+  props.item.playerPosition ? posLabel(props.item.playerPosition) : rosterPlayer.value?.positions?.join("、") || "待定"
 );
 
-// 换位置时自动跟随职责色
-const onRoleChange = () => {
-  props.item.color = posColor(props.item.playerPosition || "待定");
+const shortLabel = (value: string | undefined, limit: number) => {
+  const chars = Array.from(value || "");
+  return chars.length > limit ? `${chars.slice(0, limit).join("")}…` : value;
+};
+const nameDraft = ref("");
+const numberDraft = ref<string | number>("");
+const nameError = ref("");
+const numberError = ref("");
+const canEditPiece = () => !animationStore.isAnimationMode && !globalStore.presenting;
+const commitPiece = (patch: Partial<FieldElement>) => {
+  const target = props.item.id === undefined ? null : itemStore.items.findById(props.item.id);
+  if (!target || !canEditPiece()) return;
+  pushHistory();
+  Object.assign(target, patch);
+};
+const commitName = () => {
+  const value = nameDraft.value.trim();
+  if (value.length > 200) {
+    nameError.value = "名称最多 200 字，可留空；尚未保存。";
+    return;
+  }
+  if (!canEditPiece()) return;
+  if (props.item.text !== value) {
+    commitPiece({ text: value });
+  }
+  nameDraft.value = value;
+  nameError.value = "";
+};
+const commitNumber = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const value = input.value === "" ? undefined : Number(input.value);
+  if (input.validity.badInput || (value !== undefined && (!Number.isInteger(value) || value < 0 || value > 9999))) {
+    numberError.value = "请输入 0–9999 的整数，留空表示未知；尚未保存。";
+    return;
+  }
+  if (!canEditPiece()) return;
+  if (props.item.number !== value) {
+    commitPiece({ number: value });
+  }
+  numberError.value = "";
+};
+const onRoleChange = (event: Event) => {
+  if (!canEditPiece()) return;
+  const value = (event.target as HTMLSelectElement).value;
+  if (props.item.playerPosition === value) return;
+  commitPiece({ playerPosition: value, color: posColor(value || "待定") });
+};
+const commitColor = (event: Event) => {
+  const value = (event.target as HTMLInputElement).value;
+  if (!canEditPiece() || props.item.color === value) return;
+  commitPiece({ color: value });
 };
 
 // 名单头像：rosterId → 姓名 → 号码三级匹配，改名改号不丢照片
@@ -345,12 +430,22 @@ const handlePointerDown = (event: PointerEvent) => {
   startDrag(props.item, event, { onDragMove: handleDragMove, onClick: handleClickItem, onDragStart: pushHistory });
 };
 
+const handleKeyboardOpen = () => {
+  if (canEditPiece()) handleClickItem();
+};
+
 const handleClickItem = () => {
   if (animationStore.isAnimationMode) return;
   if (props.compact && rosterPlayer.value) {
     closePopup();
     emit("select-player", rosterPlayer.value.id);
     return;
+  }
+  if (!showPopup.value) {
+    nameDraft.value = props.item.text || "";
+    numberDraft.value = props.item.number ?? "";
+    nameError.value = "";
+    numberError.value = "";
   }
   showPopup.value = !showPopup.value;
   nextTick(() => {
@@ -363,6 +458,7 @@ const handleClickItem = () => {
 const closePopup = () => {
   showPopup.value = false;
 };
+watch(() => [animationStore.isAnimationMode, globalStore.presenting], closePopup);
 
 const handleDelete = (id: string | number) => {
   pushHistory();
@@ -376,6 +472,29 @@ useClickOutside({
 </script>
 
 <style lang="scss" scoped>
+.field-error {
+  display: block;
+  font-size: 12px;
+  color: var(--color-danger, #a32940);
+}
+.edit-scope-note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  margin: 6px 0;
+}
+g[role="button"]:focus-visible {
+  outline: none;
+}
+circle[role="button"]:focus-visible {
+  outline: none;
+  stroke: var(--color-brand);
+  stroke-width: 3;
+}
+g[role="button"]:focus-visible > circle {
+  stroke: var(--color-brand);
+  stroke-width: 5;
+}
 .popup {
   pointer-events: all;
   background: var(--paper);
@@ -386,6 +505,7 @@ useClickOutside({
 
   .popup-content {
     height: 100%;
+    overflow-y: auto;
     background: var(--paper);
     border-radius: 14px;
   }
@@ -410,10 +530,11 @@ useClickOutside({
     .input-group {
       margin-bottom: 14px;
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: stretch;
 
       label {
-        width: 55px;
+        width: 100%;
         color: var(--color-text-muted);
         font-size: 14px;
       }

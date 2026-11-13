@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { openAnimationDetails } from "./animation-editor";
 import { test, expect } from "./tactical-fixtures";
 
 async function snapshot(page: Page) {
@@ -17,8 +18,11 @@ async function makeTwoSteps(page: Page) {
   await expect(page.locator(".roster-item").first()).toBeVisible();
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
   await page.getByRole("button", { name: "添加帧", exact: true }).click();
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤名称" }).fill("虚构斜插第二步");
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤要点" }).fill("保持宽度，观察后前插");
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤要点" }).press("Tab");
   await expect(page.locator(".timeline-step")).toHaveCount(2);
   await page.getByRole("button", { name: "返回战术板", exact: true }).click();
@@ -46,9 +50,13 @@ test("new blank board undo and redo preserve complete custom animation instead o
   await undoRedo(page, before, null);
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
   await expect(page.locator(".timeline-step")).toHaveCount(2);
+  await openAnimationDetails(page);
   await page.getByRole("spinbutton", { name: "当前帧" }).fill("2");
+  await openAnimationDetails(page);
   await page.getByRole("spinbutton", { name: "当前帧" }).press("Tab");
+  await openAnimationDetails(page);
   await expect(page.getByRole("textbox", { name: "步骤名称" })).toHaveValue("虚构斜插第二步");
+  await openAnimationDetails(page);
   await expect(page.getByRole("textbox", { name: "步骤要点" })).toHaveValue("保持宽度，观察后前插");
 });
 
@@ -122,9 +130,13 @@ test("ordinary drawing undo does not silently undo later animation edits", async
   await page.mouse.click(box.x + box.width * 0.72, box.y + box.height * 0.25);
   await expect(page.locator("#field .text-drawing text")).toHaveCount(1);
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
+  await openAnimationDetails(page);
   await page.getByRole("spinbutton", { name: "当前帧" }).fill("2");
+  await openAnimationDetails(page);
   await page.getByRole("spinbutton", { name: "当前帧" }).press("Tab");
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤名称" }).fill("后续动画编辑必须保留");
+  await openAnimationDetails(page);
   await page.getByRole("textbox", { name: "步骤名称" }).press("Tab");
   await page.getByRole("button", { name: "返回战术板", exact: true }).click();
   const edited = await snapshot(page);

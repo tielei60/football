@@ -34,6 +34,7 @@ const props = defineProps<{
   defaultFormation: string;
   formationCustomized: boolean;
   boardDirty: boolean;
+  archived: boolean;
 }>();
 const emit = defineEmits<{
   roster: [];
@@ -130,6 +131,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         </button>
       </nav>
       <div class="workspace-actions">
+        <CoachingSaveStatus v-if="!compact" />
         <button
           v-if="compact"
           class="workspace-icon"
@@ -147,7 +149,15 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
           class="workspace-command save-command"
           :disabled="saving"
           aria-label="保存战术"
-          :title="saving ? '保存中' : boardDirty ? '有未保存修改，点击保存到战术库' : '已保存'"
+          :title="
+            saving
+              ? '正在存入战术库'
+              : !archived
+                ? '将当前草稿存入战术库'
+                : boardDirty
+                  ? '有未存档修改，点击更新战术库'
+                  : '已存入战术库'
+          "
           @click="emit('save')"
         >
           <Save :size="17" aria-hidden="true" />
@@ -155,7 +165,7 @@ const setpieces = computed(() => MATCH_FORMATIONS[props.playerCount].filter((f) 
         </button>
       </div>
     </div>
-    <CoachingSaveStatus />
+    <CoachingSaveStatus v-if="compact" />
     <div v-show="!compact || settingsOpen" class="workspace-config">
       <div class="formation-settings">
         <label v-if="!compact" class="opponent-select">
@@ -749,5 +759,48 @@ button.save-command:hover:not(:disabled) {
 .compact.settings-open .display-settings {
   display: flex;
   flex-wrap: wrap;
+}
+/* Keep the desktop chrome compact without changing compact workspace controls. */
+@media (min-width: 1001px) {
+  .workspace-header:not(.compact) .workspace-topline {
+    min-height: 64px;
+    padding: 8px 18px;
+    gap: 18px;
+  }
+  .workspace-header:not(.compact) .club-badge {
+    width: 34px;
+    height: 36px;
+  }
+  .workspace-header:not(.compact) .club-identity {
+    gap: 8px;
+    max-width: 24vw;
+  }
+  .workspace-header:not(.compact) h1 {
+    font-size: 18px;
+  }
+  .workspace-header:not(.compact) .workspace-nav {
+    gap: 4px;
+  }
+  .workspace-header:not(.compact) .workspace-nav button {
+    padding-inline: 10px;
+  }
+  .workspace-header:not(.compact) .workspace-config {
+    padding: 8px 18px;
+    gap: 10px;
+  }
+  .workspace-header:not(.compact) .formation-settings {
+    gap: 8px;
+  }
+  .workspace-header:not(.compact) .formation-segment button {
+    padding-inline: 8px;
+  }
+  .workspace-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .workspace-actions :deep(.coaching-save-status) {
+    max-width: 220px;
+    font-size: 11px;
+  }
 }
 </style>

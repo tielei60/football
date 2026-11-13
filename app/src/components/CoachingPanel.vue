@@ -2,17 +2,51 @@
 import { ElDrawer } from "element-plus";
 import "element-plus/es/components/drawer/style/css";
 import { storeToRefs } from "pinia";
+import { ref, watch } from "vue";
 import { ClipboardList, X, Save } from "lucide-vue-next";
 import { useCoachingStore } from "@/stores/coachingStore";
 import { useHistory } from "@/composables/useHistory";
 import { normalizeTrainingPlan } from "@/types/coaching";
 
-defineProps<{ open: boolean; saving: boolean }>();
+const props = defineProps<{ open: boolean; saving: boolean }>();
 const emit = defineEmits<{ close: []; save: [] }>();
 const { plan } = storeToRefs(useCoachingStore());
 const { pushHistory } = useHistory();
-const normalizeDuration = () => {
-  plan.value = normalizeTrainingPlan(plan.value);
+const edited = ref(false);
+const durationFeedback = ref("");
+const endEdit = () => {
+  edited.value = false;
+};
+watch(() => props.open, endEdit);
+const editPlan = (field: "objective" | "instructions" | "durationMinutes", event: Event) => {
+  const input = event.target as HTMLInputElement | HTMLTextAreaElement;
+  const value =
+    field === "durationMinutes"
+      ? normalizeTrainingPlan({ ...plan.value, durationMinutes: input.value === "" ? undefined : Number(input.value) })
+          .durationMinutes
+      : input.value;
+  if (plan.value[field] === value) return;
+  if (!edited.value) {
+    pushHistory();
+    edited.value = true;
+  }
+  plan.value = { ...plan.value, [field]: value };
+};
+const normalizeDuration = (event?: Event) => {
+  const normalized = normalizeTrainingPlan(plan.value);
+  if (JSON.stringify(normalized) !== JSON.stringify(plan.value)) {
+    if (!edited.value) pushHistory();
+    plan.value = normalized;
+  }
+  const input = event?.target;
+  if (input instanceof HTMLInputElement) {
+    const shown = input.value;
+    const actual = String(plan.value.durationMinutes);
+    durationFeedback.value = shown !== actual ? `时长范围为 1–180 分钟，已调整为 ${actual} 分钟。` : "";
+    // Normalization can keep the model unchanged (e.g. 181 while it is 180).
+    // Explicitly reconcile the native input rather than wait for a Vue rerender.
+    input.value = actual;
+  }
 };
 </script>
 
@@ -38,23 +72,39 @@ const normalizeDuration = () => {
       </header>
       <label>
         训练目标
-        <textarea v-model="plan.objective" rows="3" maxlength="200" @focus="pushHistory" />
+        <textarea
+          :value="plan.objective"
+          rows="3"
+          maxlength="200"
+          @input="editPlan('objective', $event)"
+          @blur="endEdit"
+        />
       </label>
       <label>
         训练时长（分钟）
         <input
-          v-model.number="plan.durationMinutes"
+          :value="plan.durationMinutes"
           type="number"
           min="1"
           max="180"
           step="1"
-          @focus="pushHistory"
+          @input="editPlan('durationMinutes', $event)"
+          @blur="endEdit"
+          aria-label="训练时长（分钟）"
+          aria-describedby="coaching-duration-feedback"
           @change="normalizeDuration"
         />
+        <small id="coaching-duration-feedback" role="status">{{ durationFeedback }}</small>
       </label>
       <label>
         执教要点
-        <textarea v-model="plan.instructions" rows="10" maxlength="4000" @focus="pushHistory" />
+        <textarea
+          :value="plan.instructions"
+          rows="10"
+          maxlength="4000"
+          @input="editPlan('instructions', $event)"
+          @blur="endEdit"
+        />
       </label>
       <button
         class="save-plan"

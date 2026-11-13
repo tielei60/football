@@ -20,6 +20,7 @@
       :default-formation="matchStore.getDefaultFormation(matchStore.playerCount)"
       :formation-customized="formationCustomized"
       :board-dirty="boardDirty"
+      :archived="tacticsStore.currentId !== null"
       :player-count="matchStore.playerCount"
       @player-count="onPlayerCountChange"
       @roster="compactLayout ? selectMobileTab('roster') : (rosterOpen = !rosterOpen)"
@@ -56,12 +57,11 @@
       <section class="pitch-workspace" aria-label="战术画布" :tabindex="isAnimationMode && !stacked ? 0 : undefined">
         <div v-if="!presenting" class="pitch-heading">
           <div>
-            <span class="section-eyebrow">TACTICS BOARD · 模板 → 草稿 → 存档</span>
             <h2>{{ currentTacticTitle }}</h2>
             <div class="board-badges">
-              <span v-if="tacticsStore.currentId === null" class="board-badge draft">未存档草稿</span>
-              <span v-else-if="boardDirty" class="board-badge dirty">● 有未保存修改</span>
-              <span v-else class="board-badge clean">✓ 已保存</span>
+              <span v-if="tacticsStore.currentId === null" class="board-badge draft">战术尚未存档</span>
+              <span v-else-if="boardDirty" class="board-badge dirty">● 有未存档修改</span>
+              <span v-else class="board-badge clean">✓ 已存入战术库</span>
               <span class="board-badge template" :title="formationTooltip">{{ formationBadge }}</span>
             </div>
           </div>
@@ -288,7 +288,7 @@
         <button @click="stepPresent(1)" aria-label="下一套战术" title="下一套战术"><ChevronRight :size="20" /></button>
       </div>
     </div>
-    <TacticsPanel :open="tacticsOpen && !presenting" @close="tacticsOpen = false" />
+    <TacticsPanel ref="tacticsPanelRef" :open="tacticsOpen && !presenting" @close="tacticsOpen = false" />
     <CoachingPanel
       :open="coachingOpen && !presenting"
       :saving="saving"
@@ -384,6 +384,7 @@ const toggleMobileTab = (tab: WorkspaceTab) => {
   else selectMobileTab(tab);
 };
 const rosterPanelRef = ref<InstanceType<typeof RosterPanel> | null>(null);
+const tacticsPanelRef = ref<InstanceType<typeof TacticsPanel> | null>(null);
 const onSelectPlayer = async (id: string) => {
   selectMobileTab("roster");
   await nextTick();
@@ -604,6 +605,11 @@ const stepPresent = async (delta: number) => {
 // 快捷键：V选择 / A跑位虚线 / S传球实线 / Z区域 / T文字 / F演示 / Esc回选择 / Ctrl+S保存
 const saving = ref(false);
 const quickSaveFlow = async () => {
+  // An open library owns its metadata draft and shared save/busy guard.
+  if (tacticsOpen.value && !presenting.value) {
+    await tacticsPanelRef.value?.saveCurrent();
+    return;
+  }
   if (saving.value) return;
   saving.value = true;
   try {

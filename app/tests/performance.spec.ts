@@ -66,7 +66,7 @@ test("editing a tactic name during a slow save keeps the newer input", async ({ 
 
 test("autosave defers full board snapshots until editing settles", async ({ page }) => {
   await page.goto("/board");
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   const result = await page.evaluate(async () => {
     const { useTacticsStore } = await import("/src/stores/tacticsStore.ts");
     const { useItemStore } = await import("/src/stores/itemStore.ts");
@@ -152,7 +152,7 @@ test("rapid drag events are coalesced and releasing preserves the final position
     });
   expect(result.beforeFrame).toBe(result.previous);
   expect(result.final).not.toBe(result.previous);
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.reload();
   await expect(page.locator(`#players circle[cx="${result.final}"]`).first()).toBeAttached();
 });

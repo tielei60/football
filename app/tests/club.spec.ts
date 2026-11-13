@@ -201,7 +201,7 @@ test("autosave preserves board undo and redo history", async ({ page, request })
   );
   await selectUiOption(status, "injured");
   await saved;
-  await expect(page.getByLabel("保存状态")).toContainText("已保存");
+  await expect(page.getByLabel("保存状态")).toContainText("草稿已同步到服务器");
   await page.getByRole("button", { name: "撤销", exact: true }).click();
   await expectUiValue(status, "ok");
   await page.getByRole("button", { name: "重做", exact: true }).click();
