@@ -317,6 +317,20 @@ test("player positions support multiple enumerated values and survive reopening 
   assert.deepEqual(normalized.body.desk.players[0].positions, ["前锋"]);
 });
 
+// Build the pre-club schema explicitly: modern records are not legacy data.
+function makeLegacyFixture(database) {
+  database.exec("PRAGMA foreign_keys=OFF");
+  for (const { name } of database
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'club_%'",
+    )
+    .all())
+    database.exec(`DROP TABLE "${name}"`);
+  database.exec(
+    "DELETE FROM app_migrations WHERE migration_name LIKE 'club-%' OR migration_name LIKE 'berlin-garden-%'",
+  );
+}
+
 test("legacy Berlin Garden roster and lineup migrate once from the CSV roster", async (t) => {
   const app = await fixture(t);
   const legacyPlayer = {
@@ -350,6 +364,7 @@ test("legacy Berlin Garden roster and lineup migrate once from the CSV roster", 
   );
   await app.close();
   const database = new DatabaseSync(app.databasePath);
+  makeLegacyFixture(database);
   database
     .prepare("UPDATE team_players SET position = ? WHERE player_id = ?")
     .run("待定", "bg-6");
@@ -448,6 +463,9 @@ test("Berlin Garden starters migrate from roster order to position-matched forma
   assert.equal(preset.status, 201);
 
   await app.close();
+  const legacyDatabase = new DatabaseSync(app.databasePath);
+  makeLegacyFixture(legacyDatabase);
+  legacyDatabase.close();
   await app.start();
   const migrated = (await app.request("/api/coaching-desk")).body.desk;
   const pieceByPlayer = new Map(

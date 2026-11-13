@@ -523,6 +523,47 @@ export function openFootballStore(databasePath) {
       throw error;
     }
   }
+  // These migrations corrected bundled legacy demo data, not arbitrary future
+  // imports. Close their eligibility on first initialization, including empty
+  // databases. Already-modern club databases must never reinterpret later data
+  // as legacy merely because it happens to use bg-* IDs or preset metadata.
+  const modernClub =
+    !!database
+      .prepare(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='club_teams'",
+      )
+      .get() ||
+    !!database
+      .prepare(
+        "SELECT 1 FROM app_migrations WHERE migration_name='club-management-v1'",
+      )
+      .get();
+  const finishLegacySkip = (name, hasLegacyData) => {
+    if (modernClub || !hasLegacyData)
+      database
+        .prepare(
+          "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES (?,?)",
+        )
+        .run(name, Date.now());
+  };
+  finishLegacySkip(
+    "berlin-garden-roster-csv-positions-v2",
+    database
+      .prepare("SELECT 1 FROM team_players WHERE player_id LIKE 'bg-%' LIMIT 1")
+      .get(),
+  );
+  finishLegacySkip(
+    "berlin-garden-position-matched-lineup-v3",
+    database
+      .prepare("SELECT 1 FROM team_players WHERE player_id LIKE 'bg-%' LIMIT 1")
+      .get(),
+  );
+  finishLegacySkip(
+    "berlin-garden-formation-matched-lineups-v6",
+    database
+      .prepare("SELECT 1 FROM tactics WHERE preset_name IS NOT NULL LIMIT 1")
+      .get(),
+  );
   const rosterMigration = "berlin-garden-roster-csv-positions-v2";
   const migrationApplied = database
     .prepare("SELECT 1 FROM app_migrations WHERE migration_name = ?")
