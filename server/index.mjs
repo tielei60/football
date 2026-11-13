@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { FootballError, openFootballStore } from "./football-store.mjs";
 import { createClubStore } from "./club-store.mjs";
 import { validateMatchPhotoUploads } from "./match-photo-decode.mjs";
+import { tencentMapConfig } from "./map-config.mjs";
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../app");
 const contentTypes = {
@@ -159,6 +160,7 @@ export function createFootballServer({
       }
     : undefined,
   publicOrigin = process.env.FOOTBALL_PUBLIC_ORIGIN,
+  tencentMapKey = process.env.FOOTBALL_TENCENT_MAP_KEY || "",
   trustedProxyAddresses = (process.env.FOOTBALL_TRUSTED_PROXY_ADDRESSES || "")
     .split(",")
     .map((value) => value.trim())
@@ -166,6 +168,7 @@ export function createFootballServer({
   secureCookies = process.env.FOOTBALL_COOKIE_SECURE === "true" ||
     publicOrigin?.startsWith("https:"),
 } = {}) {
+  const mapConfig = tencentMapConfig(tencentMapKey);
   if (
     !Array.isArray(trustedProxyAddresses) ||
     trustedProxyAddresses.some((ip) => !isIP(ip))
@@ -260,6 +263,10 @@ export function createFootballServer({
       const body = () => parsedBody;
       if (pathname === "/api/auth/me" && method === "GET")
         return send(response, 200, club.sessionView(user));
+      if (pathname === "/api/maps/config" && method === "GET") {
+        admin();
+        return send(response, 200, mapConfig);
+      }
       if (pathname === "/api/auth/password" && method === "PUT") {
         club.changePassword(user, body());
         response.setHeader("Set-Cookie", cookie("", true));

@@ -343,6 +343,21 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-matchday-v6',?)",
     ).run(Date.now());
   });
+  tx(() => {
+    const columns = new Set(
+      q("PRAGMA table_info(club_venues)")
+        .all()
+        .map((c) => c.name),
+    );
+    if (!columns.has("coordinate_system"))
+      database.exec(
+        "ALTER TABLE club_venues ADD COLUMN coordinate_system TEXT NOT NULL DEFAULT 'wgs84' CHECK(coordinate_system IN ('wgs84','gcj02'))",
+      );
+    // Adding the tag never moves coordinates, changes revisions, or rewrites old match JSON.
+    q(
+      "INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-venue-coordinate-system-v7',?)",
+    ).run(Date.now());
+  });
   function checkRevision(input, current) {
     if (!Number.isSafeInteger(input.revision) || input.revision < 1)
       fail(428, "请携带当前版本号保存，重新加载后再试。");
@@ -802,6 +817,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     address: r.address,
     latitude: r.latitude,
     longitude: r.longitude,
+    coordinateSystem: r.coordinate_system,
     note: r.note,
     status: r.status,
   });
@@ -815,19 +831,36 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   }
   function saveVenue(teamId, id, input) {
     object(input);
+    const previous = id ? getVenue(teamId, id) : null;
     const v = {
-      ...(id
-        ? getVenue(teamId, id)
-        : {
-            name: "",
-            address: "",
-            latitude: null,
-            longitude: null,
-            note: "",
-            status: "active",
-          }),
+      ...(previous ?? {
+        name: "",
+        address: "",
+        latitude: null,
+        longitude: null,
+        coordinateSystem: "wgs84",
+        note: "",
+        status: "active",
+      }),
       ...input,
     };
+    oneOf(v.coordinateSystem, ["wgs84", "gcj02"]);
+    if (
+      previous &&
+      previous.latitude !== null &&
+      previous.coordinateSystem !== v.coordinateSystem &&
+      (!Object.hasOwn(input, "latitude") || !Object.hasOwn(input, "longitude"))
+    )
+      fail(400, "更换坐标系时须明确提供完整经纬度，或同时清空经纬度。");
+    if (
+      previous?.coordinateSystem === "gcj02" &&
+      !Object.hasOwn(input, "coordinateSystem") &&
+      (v.latitude !== previous.latitude || v.longitude !== previous.longitude)
+    )
+      fail(
+        400,
+        "修改 GCJ-02 经纬度时须明确提供坐标系，请更新客户端或重新选择坐标系。",
+      );
     v.name = text(v.name, 200, true);
     v.address = text(v.address, 500);
     v.note = text(v.note, 2000);
@@ -843,17 +876,18 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           Math.abs(v.longitude) <= 180)
       )
     )
-      fail(400, "经纬度须同时填写有效的 WGS84 坐标，或同时留空。");
+      fail(400, "经纬度须同时填写与所选坐标系一致的有效坐标，或同时留空。");
     return tx(() => {
       if (id) {
         checkRevision(input, getVenue(teamId, id));
         q(
-          "UPDATE club_venues SET name=?,address=?,latitude=?,longitude=?,note=?,status=?,revision=revision+1 WHERE team_id=? AND id=?",
+          "UPDATE club_venues SET name=?,address=?,latitude=?,longitude=?,coordinate_system=?,note=?,status=?,revision=revision+1 WHERE team_id=? AND id=?",
         ).run(
           v.name,
           v.address,
           v.latitude,
           v.longitude,
+          v.coordinateSystem,
           v.note,
           v.status,
           teamId,
@@ -862,13 +896,14 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       } else
         id = Number(
           q(
-            "INSERT INTO club_venues(team_id,name,address,latitude,longitude,note,status) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO club_venues(team_id,name,address,latitude,longitude,coordinate_system,note,status) VALUES (?,?,?,?,?,?,?,?)",
           ).run(
             teamId,
             v.name,
             v.address,
             v.latitude,
             v.longitude,
+            v.coordinateSystem,
             v.note,
             v.status,
           ).lastInsertRowid,
@@ -975,7 +1010,9 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       durationMinutes: r.duration_minutes,
       notice: r.notice,
       venueId: r.venue_id,
-      venueSnapshot: r.venue_snapshot ? JSON.parse(r.venue_snapshot) : null,
+      venueSnapshot: r.venue_snapshot
+        ? { coordinateSystem: "wgs84", ...JSON.parse(r.venue_snapshot) }
+        : null,
       coverPhotoId: r.cover_photo_id,
       coverPhotoUrl: r.cover_photo_id ? photoUrl(id, r.cover_photo_id) : null,
       photoCount: q(
@@ -1114,10 +1151,16 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     return tx(() => {
       const current = id ? getMatch(u, id) : null;
       if (id) checkRevision(input, current);
+      let venueSnapshotJson = null;
       if (m.venueId === null) m.venueSnapshot = null;
-      else if (current?.venueId === m.venueId && current.venueSnapshot)
+      else if (current?.venueId === m.venueId && current.venueSnapshot) {
         m.venueSnapshot = current.venueSnapshot;
-      else {
+        // Preserve the exact stored historical JSON. The read-only WGS84 fallback
+        // above is not a migration and must not be persisted by unrelated edits.
+        venueSnapshotJson = q(
+          "SELECT venue_snapshot FROM club_matches WHERE team_id=? AND id=?",
+        ).get(u.team_id, id).venue_snapshot;
+      } else {
         const venue = getVenue(u.team_id, m.venueId);
         if (venue.status !== "active")
           fail(400, "已归档球场不能用于新关联，请选择其他球场。");
@@ -1126,7 +1169,9 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           address: venue.address,
           latitude: venue.latitude,
           longitude: venue.longitude,
+          coordinateSystem: venue.coordinateSystem,
         };
+        venueSnapshotJson = JSON.stringify(m.venueSnapshot);
       }
       if (m.venueSnapshot) m.location = m.venueSnapshot.name;
       if (m.seasonId !== null) {
@@ -1153,7 +1198,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           m.durationMinutes,
           m.notice,
           m.venueId,
-          m.venueSnapshot ? JSON.stringify(m.venueSnapshot) : null,
+          venueSnapshotJson,
           id,
           u.team_id,
         );
@@ -1178,7 +1223,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             m.durationMinutes,
             m.notice,
             m.venueId,
-            m.venueSnapshot ? JSON.stringify(m.venueSnapshot) : null,
+            venueSnapshotJson,
           ).lastInsertRowid,
         );
       const wanted = new Set(m.tacticIds);

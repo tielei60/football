@@ -67,3 +67,7 @@ npm run test:e2e
 先阅读 [部署与备份](docs/deployment.md)。现有 SQLite 会保留原表，新建 `club_*` 表并迁移已有名单 ID。禁止删除数据库、用测试库覆盖或在运行中只复制 SQLite 主文件。
 
 API 见 [接口说明](docs/club-api.md)。旧战术 API 保持数据格式，但现在必须登录，写入仅限管理员。原浏览器 IndexedDB 战术导入仍通过管理端保留。
+
+### 国内球场地图
+
+球场选点使用腾讯官方 JavaScript API GL，默认未配置时不加载外部地图，地址和手填坐标仍可使用。浏览器 Key、权限和旧 WGS84 / 新 GCJ-02 兼容方式见 [腾讯地图配置说明](docs/tencent-map-setup.md)。不要把 Key 或签名秘密提交到仓库；本轮没有代注册、购买地图服务或部署。

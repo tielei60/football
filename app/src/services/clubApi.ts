@@ -45,6 +45,7 @@ export interface Appearance {
   assists: number | null;
 }
 export interface Venue {
+  coordinateSystem: "wgs84" | "gcj02";
   id: number;
   revision: number;
   name: string;
@@ -74,7 +75,7 @@ export interface ClubMatch {
   durationMinutes: number | null;
   notice: string;
   venueId: number | null;
-  venueSnapshot: Pick<Venue, "name" | "address" | "latitude" | "longitude"> | null;
+  venueSnapshot: Pick<Venue, "name" | "address" | "latitude" | "longitude" | "coordinateSystem"> | null;
   photos: MatchPhoto[];
   coverPhotoId: string | null;
   coverPhotoUrl: string | null;

@@ -21,7 +21,7 @@
         </p>
         <p v-if="match.venueSnapshot" class="club-muted">
           {{ match.venueSnapshot.name }} · {{ match.venueSnapshot.address || "地址未填写" }}
-          <a v-if="venueMapUrl" :href="venueMapUrl" target="_blank" rel="noopener noreferrer">地图查看球场 ↗</a>
+          <span v-if="venueCoordinates" class="venue-coordinate-copy">{{ venueCoordinates }}（可选中复制）</span>
         </p>
       </div>
       <span v-if="match.status === 'completed'" class="club-score">
@@ -416,10 +416,10 @@ const opponentOptions = computed(() => [...new Set(allMatches.value.map((m) => m
 const selectableVenues = computed(() =>
   venues.value.filter((v) => v.status === "active" || v.id === match.value?.venueId)
 );
-const venueMapUrl = computed(() => {
+const venueCoordinates = computed(() => {
   const v = match.value?.venueSnapshot;
   return v && v.latitude != null && v.longitude != null
-    ? `https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=16/${v.latitude}/${v.longitude}`
+    ? `坐标 ${v.coordinateSystem === "gcj02" ? "GCJ-02" : "WGS84"}（纬度、经度）：${v.latitude}, ${v.longitude}`
     : null;
 });
 const unansweredPlayers = computed(() =>
@@ -680,3 +680,10 @@ async function load() {
 }
 onMounted(load);
 </script>
+<style scoped>
+.venue-coordinate-copy {
+  display: block;
+  user-select: text;
+  overflow-wrap: anywhere;
+}
+</style>

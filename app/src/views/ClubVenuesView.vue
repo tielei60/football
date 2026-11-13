@@ -37,7 +37,13 @@
         球场备注
         <textarea v-model="form.note" maxlength="2000" rows="3" placeholder="例如入口、场地类型、停车提示" />
       </label>
-      <VenueMapPicker v-model:latitude="form.latitude" v-model:longitude="form.longitude" :disabled="busy" />
+      <VenueMapPicker
+        :key="editorKey"
+        v-model:latitude="form.latitude"
+        v-model:longitude="form.longitude"
+        v-model:coordinate-system="form.coordinateSystem"
+        :disabled="busy"
+      />
       <div class="club-actions">
         <button class="primary" :disabled="busy">{{ busy ? "保存中…" : "保存球场" }}</button>
         <button type="button" :disabled="busy" @click="cancel">取消</button>
@@ -68,7 +74,11 @@
       </div>
       <p>{{ venue.address || "地址待补充" }}</p>
       <p class="club-muted">
-        {{ venue.latitude === null ? "坐标待补充" : `WGS84：${venue.latitude}, ${venue.longitude}` }}
+        {{
+          venue.latitude === null
+            ? "坐标待补充"
+            : `${venue.coordinateSystem === "gcj02" ? "GCJ-02" : "WGS84"}：${venue.latitude}, ${venue.longitude}`
+        }}
       </p>
       <p v-if="venue.note" class="venue-note">{{ venue.note }}</p>
       <div v-if="auth.isAdmin" class="club-actions">
@@ -94,6 +104,7 @@ const auth = useAuthStore();
 const venues = ref<Venue[]>([]);
 const form = ref<Venue | null>(null);
 const baseline = ref("");
+const editorKey = ref(0);
 const search = ref("");
 const filter = ref("active");
 const error = ref("");
@@ -122,9 +133,20 @@ async function discard() {
 }
 async function edit(venue?: Venue) {
   if (busy.value || !(await discard())) return;
+  editorKey.value++;
   form.value = venue
     ? JSON.parse(JSON.stringify(venue))
-    : { id: 0, revision: 0, name: "", address: "", latitude: null, longitude: null, note: "", status: "active" };
+    : {
+        id: 0,
+        revision: 0,
+        name: "",
+        address: "",
+        latitude: null,
+        longitude: null,
+        coordinateSystem: "wgs84",
+        note: "",
+        status: "active",
+      };
   baseline.value = JSON.stringify(form.value);
   error.value = "";
   success.value = "";

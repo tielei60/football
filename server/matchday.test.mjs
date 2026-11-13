@@ -172,6 +172,7 @@ test("venue and match schedule preserve legacy unknowns, immutable location snap
     address: venue.address,
     latitude: 31.2,
     longitude: 121.4,
+    coordinateSystem: "wgs84",
   });
   const snap = m.venueSnapshot;
   venue = (

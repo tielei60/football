@@ -4,6 +4,7 @@ import { test, expect } from "./fixtures";
 import { openManualMatchDate, setMatchSchedule } from "./match-schedule";
 import { selectUiOption, expectUiValue } from "./ui-select";
 import { fixturePng } from "./fixture-png";
+import { mockTencentMap } from "./tencent-map";
 
 const evidence = "test-results/visual-review";
 async function loginAs(page: Page, username: string, password: string) {
@@ -111,32 +112,30 @@ test("venues support opt-in map click, coordinate fallback and immutable archive
   page,
   request,
 }) => {
-  let tileRequests = 0;
-  await page.route("https://tile.openstreetmap.org/**", async (route) => {
-    tileRequests += 1;
-    await route.fulfill({ status: 200, contentType: "image/png", body: fixturePng() });
-  });
+  const mapRequests = await mockTencentMap(page);
   await page.goto("/club/venues");
   await page.getByRole("button", { name: "新增球场", exact: true }).click();
   await page.getByLabel("球场名称", { exact: true }).fill("河岸球场（虚构）");
   await page.getByLabel("球场地址", { exact: true }).fill("虚构公共路 12 号");
-  expect(tileRequests).toBe(0);
+  expect(mapRequests.sdkRequests).toBe(0);
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
-  await expect.poll(() => tileRequests).toBeGreaterThan(0);
+  await expect.poll(() => mapRequests.sdkRequests).toBe(1);
   const map = page.locator(".venue-map");
-  await expect(map.locator(".leaflet-tile").first()).toBeVisible();
+  await expect(map).toHaveAttribute("data-sdk-fixture", "tencent-offline");
+  await expect(map).not.toHaveClass(/venue-map-disabled/);
   await map.click({ position: { x: 150, y: 100 } });
-  await expect(page.getByLabel("纬度（WGS84）", { exact: true })).not.toHaveValue("");
-  await expect(page.getByLabel("经度（WGS84）", { exact: true })).not.toHaveValue("");
+  await expect(page.getByLabel(/^纬度（/)).not.toHaveValue("");
+  await expect(page.getByLabel(/^经度（/)).not.toHaveValue("");
   await page.getByRole("button", { name: "清除坐标", exact: true }).click();
-  await page.getByLabel("纬度（WGS84）", { exact: true }).fill("31.23");
-  await page.getByLabel("经度（WGS84）", { exact: true }).fill("121.47");
+  await page.getByLabel(/^纬度（/).fill("31.23");
+  await page.getByLabel(/^经度（/).fill("121.47");
   await mkdir(evidence, { recursive: true });
   await page.screenshot({ path: `${evidence}/matchday-map-fixture.png`, fullPage: true });
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "球场资料已保存" })).toBeVisible();
   const venue = (await (await request.get("/api/venues")).json())[0];
-  expect([venue.latitude, venue.longitude]).toEqual([31.23, 121.47]);
+  expect([venue.latitude, venue.longitude, venue.coordinateSystem]).toEqual([31.23, 121.47, "gcj02"]);
+  expect(mapRequests.unexpectedRequests).toEqual([]);
   await page.goto("/club");
   await page.getByRole("button", { name: "新建比赛", exact: true }).click();
   await page.getByLabel("对手", { exact: true }).fill("场地历史虚构对手");
@@ -165,6 +164,8 @@ test("venues support opt-in map click, coordinate fallback and immutable archive
   const match = await (await request.get(`/api/matches/${id}`)).json();
   expect(match.venueSnapshot.name).toBe("河岸球场（虚构）");
   expect([match.venueSnapshot.latitude, match.venueSnapshot.longitude]).toEqual([31.23, 121.47]);
+  expect(match.venueSnapshot.coordinateSystem).toBe("gcj02");
+  await expect(page.getByText("坐标 GCJ-02（纬度、经度）：31.23, 121.47（可选中复制）", { exact: true })).toBeVisible();
 });
 
 test("match album saves separately from information drafts and player choices update counts without legal consent", async ({
@@ -298,17 +299,23 @@ test("avatar shortcut and true multi-position choices retain explicit save, filt
 });
 
 test("map network failure keeps manual coordinate saving usable without geolocation", async ({ page, request }) => {
-  await page.route("https://tile.openstreetmap.org/**", (route) => route.abort("internetdisconnected"));
+  await mockTencentMap(page, "script-error");
   await page.goto("/club/venues");
   await page.getByRole("button", { name: "新增球场", exact: true }).click();
   await page.getByLabel("球场名称", { exact: true }).fill("离线备用虚构球场");
   await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "地图瓦片暂时无法加载" })).toBeVisible();
-  await page.getByLabel("纬度（WGS84）", { exact: true }).fill("31.23");
+  await expect(page.getByRole("status").filter({ hasText: /地图.*(不可用|失败|无法)/ })).toBeVisible();
+  await page.getByLabel(/^纬度（/).fill("31.23");
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("成对");
   await expect(page.getByLabel("球场名称", { exact: true })).toHaveValue("离线备用虚构球场");
-  await page.getByLabel("经度（WGS84）", { exact: true }).fill("121.47");
+  await page.getByLabel(/^经度（/).fill("121.47");
+  await mockTencentMap(page);
+  await page.getByRole("button", { name: "重试加载地图", exact: true }).click();
+  await expect(page.locator(".venue-map")).toHaveAttribute("data-sdk-fixture", "tencent-offline");
+  await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
+  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
+  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
   await page.getByRole("button", { name: "保存球场", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "球场资料已保存" })).toBeVisible();
   expect(
@@ -414,4 +421,181 @@ test("pending match creation blocks navigation and successful write navigates ex
   await expect(page).toHaveURL(new RegExp(`/club/matches/${match.id}$`));
   expect(writes).toBe(1);
   expect(await (await request.get("/api/matches")).json()).toHaveLength(1);
+});
+
+test("unconfigured Tencent maps make no external request and address-only venues remain usable", async ({
+  page,
+  request,
+}) => {
+  const calls = await mockTencentMap(page, "disabled");
+  await page.goto("/club/venues");
+  await page.getByRole("button", { name: "新增球场", exact: true }).click();
+  await page.getByLabel("球场名称", { exact: true }).fill("无地图配置虚构球场");
+  await page.getByLabel("球场地址", { exact: true }).fill("虚构球场地址 18 号");
+  await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "腾讯地图尚未配置浏览器 Key" })).toBeVisible();
+  await expect(page.locator(".venue-map")).toHaveCount(0);
+  await page.getByRole("button", { name: "保存球场", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "球场资料已保存" })).toBeVisible();
+  const venues = await (await request.get("/api/venues")).json();
+  expect(venues).toHaveLength(1);
+  expect([venues[0].address, venues[0].latitude, venues[0].longitude]).toEqual(["虚构球场地址 18 号", null, null]);
+  expect(calls.sdkRequests).toBe(0);
+  expect(calls.unexpectedRequests).toEqual([]);
+});
+
+test("legacy WGS84 venues are not silently reinterpreted and opening the map alone stays clean", async ({
+  page,
+  request,
+}) => {
+  const calls = await mockTencentMap(page);
+  const original = await (
+    await request.post("/api/venues", {
+      data: {
+        name: "历史 WGS84 虚构球场",
+        address: "虚构旧地址",
+        latitude: 31.23,
+        longitude: 121.47,
+        coordinateSystem: "wgs84",
+      },
+    })
+  ).json();
+  await page.goto("/club/venues");
+  await page.getByRole("button", { name: "编辑球场", exact: true }).click();
+  await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+  await expect(page.locator(".venue-map")).toHaveAttribute("data-sdk-fixture", "tencent-offline");
+  const rendered = await page.evaluate(() => {
+    const fixture = (window as any).__mapFixture;
+    return {
+      centers: fixture.maps.map((m: any) => [m.options.center.lat, m.options.center.lng]),
+      markers: fixture.markers.flatMap((m: any) => m.geometries),
+    };
+  });
+  expect(rendered.centers).not.toContainEqual([31.23, 121.47]);
+  expect(rendered.markers).toEqual([]);
+  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
+  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "放弃球场修改", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "保存球场", exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.destroyed)).toBe(1);
+  expect((await (await request.get("/api/venues")).json())[0]).toEqual(original);
+  expect(calls.unexpectedRequests).toEqual([]);
+});
+
+test("coordinate system changes require clearing confirmation and map reselection explicitly writes GCJ-02", async ({
+  page,
+  request,
+}) => {
+  await mockTencentMap(page);
+  const original = await (
+    await request.post("/api/venues", {
+      data: { name: "坐标系虚构球场", latitude: 31.23, longitude: 121.47, coordinateSystem: "wgs84" },
+    })
+  ).json();
+  await page.goto("/club/venues");
+  await page.getByRole("button", { name: "编辑球场", exact: true }).click();
+  const system = page.getByRole("combobox", { name: "坐标系", exact: true });
+  await selectUiOption(system, "gcj02");
+  const confirm = page.getByRole("dialog", { name: "切换坐标系并清空？", exact: true });
+  await confirm.getByRole("button", { name: "保留原坐标", exact: true }).click();
+  await expectUiValue(system, "wgs84");
+  await expect(page.getByLabel("纬度（WGS84）", { exact: true })).toHaveValue("31.23");
+  await expect(page.getByLabel("经度（WGS84）", { exact: true })).toHaveValue("121.47");
+  expect((await (await request.get("/api/venues")).json())[0]).toEqual(original);
+  await selectUiOption(system, "gcj02");
+  await confirm.getByRole("button", { name: "清空并切换", exact: true }).click();
+  await expectUiValue(system, "gcj02");
+  await expect(page.getByLabel("纬度（GCJ-02）", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("经度（GCJ-02）", { exact: true })).toHaveValue("");
+  // Return to an original-coordinate state before explicitly reselecting on the map.
+  await selectUiOption(system, "wgs84");
+  await page.getByLabel(/^纬度（/).fill("31.23");
+  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+  const map = page.locator(".venue-map");
+  await expect(map).not.toHaveClass(/venue-map-disabled/);
+  await map.click({ position: { x: 120, y: 100 } });
+  await expectUiValue(system, "gcj02");
+  await expect(page.getByLabel("纬度（GCJ-02）", { exact: true })).toHaveValue("31.234567");
+  await expect(page.getByLabel("经度（GCJ-02）", { exact: true })).toHaveValue("121.456789");
+  await page.getByRole("button", { name: "保存球场", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "球场资料已保存" })).toBeVisible();
+  const saved = (await (await request.get("/api/venues")).json())[0];
+  expect([saved.coordinateSystem, saved.latitude, saved.longitude]).toEqual(["gcj02", 31.234567, 121.456789]);
+  await expect(page.getByText("GCJ-02：31.234567, 121.456789", { exact: true })).toBeVisible();
+});
+
+test("missing map tiles time out, retry stays safe, and a late old event cannot overwrite coordinates", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await mockTencentMap(page, "no-tiles");
+  await page.goto("/club/venues");
+  await page.getByRole("button", { name: "新增球场", exact: true }).click();
+  await page.getByLabel("球场名称", { exact: true }).fill("瓦片超时虚构球场");
+  await page.getByLabel(/^纬度（/).fill("31.23");
+  await page.getByLabel(/^经度（/).fill("121.47");
+  await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+  await expect(page.locator(".venue-map")).toHaveAttribute("data-sdk-fixture", "tencent-offline");
+  await expect(page.locator(".venue-map")).toHaveClass(/venue-map-disabled/);
+  await page.clock.runFor(26000);
+  await expect(page.getByRole("status").filter({ hasText: "地图加载超时" })).toBeVisible();
+  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
+  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+  await page.getByRole("button", { name: "重试加载地图", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(2);
+  await page.evaluate(() => {
+    const maps = (window as any).__mapFixture.maps;
+    maps[0].emit("tilesloaded", {});
+    maps[0].emit("click", { latLng: { getLat: () => 1, getLng: () => 2 } });
+  });
+  await expect(page.locator(".venue-map")).toHaveClass(/venue-map-disabled/);
+  await expect(page.getByLabel(/^纬度（/)).toHaveValue("31.23");
+  await page.evaluate(() => (window as any).__mapFixture.maps[1].emit("tilesloaded", {}));
+  await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
+  await page.getByRole("button", { name: "关闭地图", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.destroyed)).toBe(2);
+  await expect(page.getByLabel(/^经度（/)).toHaveValue("121.47");
+});
+
+test("late SDK completion after switching venue editors never attaches the old map to the new venue", async ({
+  page,
+  request,
+}) => {
+  await mockTencentMap(page);
+  for (const name of ["先编辑的虚构球场", "后编辑的虚构球场"]) {
+    expect((await request.post("/api/venues", { data: { name } })).ok()).toBe(true);
+  }
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let pending = false;
+  await page.route("https://map.qq.com/api/gljs?**", async (route) => {
+    pending = true;
+    await gate;
+    await route.fallback();
+  });
+  await page.goto("/club/venues");
+  const first = page.getByRole("article").filter({ hasText: "先编辑的虚构球场" });
+  const second = page.getByRole("article").filter({ hasText: "后编辑的虚构球场" });
+  try {
+    await first.getByRole("button", { name: "编辑球场", exact: true }).click();
+    await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+    await expect.poll(() => pending).toBe(true);
+    await second.getByRole("button", { name: "编辑球场", exact: true }).click();
+    await expect(page.getByLabel("球场名称", { exact: true })).toHaveValue("后编辑的虚构球场");
+  } finally {
+    release();
+  }
+  await expect.poll(() => page.evaluate(() => !!(window as any).__mapFixture)).toBe(true);
+  expect(await page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(0);
+  await expect(page.locator(".venue-map")).toHaveCount(0);
+  await expect(page.getByLabel(/^纬度（/)).toHaveValue("");
+  await page.getByRole("button", { name: "打开地图选点", exact: true }).click();
+  await expect(page.locator(".venue-map")).not.toHaveClass(/venue-map-disabled/);
+  expect(await page.evaluate(() => (window as any).__mapFixture.maps.length)).toBe(1);
+  await page.getByRole("button", { name: "取消", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as any).__mapFixture.destroyed)).toBe(1);
 });
