@@ -111,7 +111,14 @@
             <UiSelect v-model="form.venueId">
               <option :value="null">未选择 / 临时地点</option>
               <option v-for="venue in selectableVenues" :key="venue.id" :value="venue.id">
-                {{ venue.name }}{{ venue.status === "archived" ? "（已归档，保留历史）" : "" }}
+                {{ venue.id === match.venueId ? match.venueSnapshot?.name || venue.name : venue.name
+                }}{{
+                  venue.status === "archived"
+                    ? "（已归档，保留历史）"
+                    : venue.id === match.venueId
+                      ? "（本场保存资料）"
+                      : ""
+                }}
               </option>
               <option
                 v-if="form.venueId !== null && !selectableVenues.some((v) => v.id === form?.venueId)"

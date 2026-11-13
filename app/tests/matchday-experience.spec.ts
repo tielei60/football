@@ -29,7 +29,7 @@ test("composed schedule keeps unknowns and drafts, selects weekdays and crosses 
   expect(Math.abs(format!.y - side!.y)).toBeLessThanOrEqual(1);
   await setMatchSchedule(page, "2091-12-31", "23:30");
   await expectUiValue(page.getByRole("combobox", { name: "比赛时长", exact: true }), "90");
-  await expect(page.getByText(/预计结束：2092-01-01 周. 01:00/)).toBeVisible();
+  await expect(page.getByText(/预计结束：2092-01-01 周. 01:00 · 按球场当地时间/)).toBeVisible();
   const trigger = page.getByRole("button", { name: /^开始日期时间/ });
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "设置开始日期时间", exact: true });
@@ -57,7 +57,7 @@ test("composed schedule keeps unknowns and drafts, selects weekdays and crosses 
   await selectUiOption(page.getByRole("combobox", { name: "比赛时长", exact: true }), "custom");
   await page.getByLabel("时长（分钟）", { exact: true }).fill("75");
   await page.getByRole("button", { name: "保存比赛信息", exact: true }).click();
-  await expect(page.getByText(/预计结束：2092-01-01 周. 00:45/).first()).toBeVisible();
+  await expect(page.getByText(/预计结束：2092-01-01 周. 00:45 · 按球场当地时间/)).toBeVisible();
   await mkdir(evidence, { recursive: true });
   await trigger.click();
   await page.screenshot({ path: `${evidence}/matchday-schedule.png`, fullPage: false });
@@ -245,7 +245,24 @@ test("avatar shortcut and true multi-position choices retain explicit save, filt
   const player = await (
     await request.post("/api/players", { data: { name: "头像虚构成年球员", positions: ["待定"] } })
   ).json();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/club/players");
+  const searchInput = page.getByRole("textbox", { name: "查找球员", exact: true });
+  const avatarFilter = page.getByRole("combobox", { name: "头像筛选", exact: true });
+  await expect(searchInput).toBeVisible();
+  await expect(avatarFilter).toBeVisible();
+  const searchBox = await searchInput.boundingBox();
+  const avatarBox = await avatarFilter.boundingBox();
+  expect(searchBox).not.toBeNull();
+  expect(avatarBox).not.toBeNull();
+  expect(Math.abs(searchBox!.y - avatarBox!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(searchBox!.height - avatarBox!.height)).toBeLessThanOrEqual(1);
+  expect(
+    await page.locator(".player-filters").evaluate((element) => element.scrollWidth - element.clientWidth)
+  ).toBeLessThanOrEqual(1);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  ).toBeLessThanOrEqual(1);
   let row = page.getByRole("row").filter({ hasText: player.name });
   await row.getByRole("button", { name: "管理头像", exact: true }).click();
   await page.getByRole("checkbox", { name: "中场", exact: true }).check();

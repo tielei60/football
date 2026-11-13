@@ -121,7 +121,7 @@
     </fieldset>
   </form>
   <div class="club-card">
-    <div class="player-filters">
+    <div class="club-filterbar player-filters">
       <label>
         查找球员
         <input v-model="search" placeholder="姓名、号码或位置" />
@@ -527,7 +527,7 @@ onUnmounted(() => {
   align-items: end;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 18px;
+  margin: 0 0 18px;
 }
 .player-filters label {
   min-width: min(240px, 100%);

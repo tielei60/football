@@ -701,26 +701,6 @@
   .club-topbar {
     padding-inline: 24px;
   }
-  /* Stack only form/filter fields. Checkbox chips and action-row labels keep their compact layout. */
-  .club-fields > label:not(:has(input[type="checkbox"])),
-  .club-filterbar > label:not(:has(input[type="checkbox"])) {
-    display: flex;
-    flex-direction: column;
-    align-self: start;
-    min-width: 0;
-  }
-  .club-fields > label > .ui-select,
-  .club-filterbar > label > .ui-select {
-    display: block;
-    width: 100%;
-  }
-  .club-fields > label > .ui-select .ui-select-trigger,
-  .club-filterbar > label > .ui-select .ui-select-trigger {
-    min-height: 43px;
-  }
-  .club-fields > .match-schedule-picker {
-    grid-column: 1 / -1;
-  }
   .club-fields {
     grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   }
@@ -812,26 +792,6 @@
   .club-heading {
     align-items: flex-start;
     flex-wrap: wrap;
-  }
-  /* Stack only form/filter fields. Checkbox chips and action-row labels keep their compact layout. */
-  .club-fields > label:not(:has(input[type="checkbox"])),
-  .club-filterbar > label:not(:has(input[type="checkbox"])) {
-    display: flex;
-    flex-direction: column;
-    align-self: start;
-    min-width: 0;
-  }
-  .club-fields > label > .ui-select,
-  .club-filterbar > label > .ui-select {
-    display: block;
-    width: 100%;
-  }
-  .club-fields > label > .ui-select .ui-select-trigger,
-  .club-filterbar > label > .ui-select .ui-select-trigger {
-    min-height: 43px;
-  }
-  .club-fields > .match-schedule-picker {
-    grid-column: 1 / -1;
   }
   .club-fields {
     grid-template-columns: 1fr;

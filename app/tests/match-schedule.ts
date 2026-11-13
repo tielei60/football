@@ -16,6 +16,6 @@ export async function setMatchSchedule(page: Page, date: string, kickoff?: strin
     if (kickoff) await selectUiOption(panel.getByRole("combobox", { name: "开球分钟", exact: true }), kickoff.slice(3));
   }
   await panel.getByRole("button", { name: "确定时间", exact: true }).click();
-  await expect(panel).not.toBeVisible();
+  await expect(panel).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^开始日期时间/ })).toContainText(date);
 }
