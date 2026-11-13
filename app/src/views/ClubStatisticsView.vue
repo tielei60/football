@@ -1,6 +1,7 @@
 <template>
   <div class="club-heading">
     <div>
+      <span class="club-eyebrow">SEASON JOURNAL / 赛季记录</span>
       <h1>统计与赛季</h1>
       <p class="club-muted">赛季按比赛归属统计，年度独立按日期统计；未指定赛季的比赛不计入赛季。</p>
     </div>
@@ -37,10 +38,10 @@
     <div class="club-fields">
       <label>
         统计周期
-        <select v-model="mode" @change="loadStats">
+        <UiSelect v-model="mode" @change="loadStats">
           <option value="year">自然年度</option>
           <option value="season">自定义赛季</option>
-        </select>
+        </UiSelect>
       </label>
       <label v-if="mode === 'year'">
         年份
@@ -48,15 +49,15 @@
       </label>
       <label v-else>
         赛季
-        <select v-model="seasonId" aria-label="赛季" @change="loadStats">
+        <UiSelect v-model="seasonId" aria-label="赛季" @change="loadStats">
           <option value="" disabled>请选择赛季</option>
           <option v-for="s in seasons" :key="s.id" :value="s.id">
             {{ s.name }}（{{ s.startDate }} 至 {{ s.endDate }}）
           </option>
-        </select>
+        </UiSelect>
       </label>
     </div>
-    <p v-if="loading" role="status">正在计算统计…</p>
+    <p v-if="loading" role="status" class="club-loading">正在计算统计…</p>
     <template v-else-if="stats">
       <p v-if="stats.unassignedMatches" class="club-muted">
         球队有 {{ stats.unassignedMatches }} 场未归属赛季的已发布或已完赛比赛，年度仍按日期统计。
@@ -71,24 +72,36 @@
       </p>
       <section aria-label="球队汇总" class="club-card" style="margin-top: 18px">
         <h3>球队汇总</h3>
-        <p>
-          已确认出场 {{ stats.team.attendance.confirmedAppearances }} 人次 · 出场待确认
-          {{ stats.team.attendance.unknownAppearances }} 人次
-        </p>
-        <p class="club-muted">
-          出勤覆盖：{{ stats.team.attendance.matchesWithoutRoster }} 场已完赛比赛尚未录入名单，未记录不等于未出场。
-        </p>
-        <p>{{ stats.team.wins }} 胜 · {{ stats.team.draws }} 平 · {{ stats.team.losses }} 负</p>
-        <p class="club-muted">
-          胜平负覆盖：{{ stats.team.scoredMatches }} / {{ stats.team.matches }} 场（双方比分均已知）
-        </p>
-        <p>已知进球 {{ unknown(stats.team.goalsFor) }} · 已知失球 {{ unknown(stats.team.goalsAgainst) }}</p>
-        <p class="club-muted">
-          进球记录覆盖：{{ stats.team.goalsForKnownMatches }} / {{ stats.team.matches }} 场；失球记录覆盖：{{
-            stats.team.goalsAgainstKnownMatches
-          }}
-          / {{ stats.team.matches }} 场
-        </p>
+        <div class="club-stat-columns">
+          <div class="club-stat-group">
+            <p>
+              已确认出场 {{ stats.team.attendance.confirmedAppearances }} 人次 · 出场待确认
+              {{ stats.team.attendance.unknownAppearances }} 人次
+            </p>
+            <p class="club-muted">
+              出勤覆盖：{{ stats.team.attendance.matchesWithoutRoster }} 场已完赛比赛尚未录入名单，未记录不等于未出场。
+            </p>
+          </div>
+          <div class="club-stat-group">
+            <p class="club-stat-score">
+              {{ stats.team.wins }} 胜 · {{ stats.team.draws }} 平 · {{ stats.team.losses }} 负
+            </p>
+            <p class="club-muted">
+              胜平负覆盖：{{ stats.team.scoredMatches }} / {{ stats.team.matches }} 场（双方比分均已知）
+            </p>
+          </div>
+          <div class="club-stat-group">
+            <p class="club-stat-score">
+              已知进球 {{ unknown(stats.team.goalsFor) }} · 已知失球 {{ unknown(stats.team.goalsAgainst) }}
+            </p>
+            <p class="club-muted">
+              进球记录覆盖：{{ stats.team.goalsForKnownMatches }} / {{ stats.team.matches }} 场；失球记录覆盖：{{
+                stats.team.goalsAgainstKnownMatches
+              }}
+              / {{ stats.team.matches }} 场
+            </p>
+          </div>
+        </div>
         <p v-if="stats.team.scoredMatches < stats.team.matches" class="club-muted">
           有比赛比分未完整记录，胜平负和进失球为已知数据的汇总，不代表全部赛果。
         </p>
@@ -179,7 +192,7 @@
       <div v-if="auth.isAdmin" class="club-actions">
         <label>
           添加赛季球员
-          <select v-model="seasonPlayerId">
+          <UiSelect v-model="seasonPlayerId">
             <option value="">选择球员</option>
             <option
               v-for="p in seasonPlayers.filter((p) => !seasonRoster?.roster.some((r) => r.playerId === p.id))"
@@ -188,7 +201,7 @@
             >
               {{ p.name }}
             </option>
-          </select>
+          </UiSelect>
         </label>
         <button type="button" :disabled="!seasonPlayerId" @click="addSeasonPlayer">加入赛季名单</button>
       </div>

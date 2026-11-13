@@ -1,3 +1,4 @@
+import { selectUiOption } from "./ui-select";
 import { test, expect } from "./tactical-fixtures";
 
 test("opens the workspace directly and keeps drawing controls usable after zoom", async ({ page }) => {
@@ -78,7 +79,7 @@ test("new players can enter the pitch and injured players are excluded from form
   await expect(added.getByRole("button", { name: "下场", exact: true })).toBeVisible();
   const first = page.locator(".roster-item").first();
   await first.getByRole("button", { name: /队员详情/ }).click();
-  await first.getByRole("combobox", { name: "状态", exact: true }).selectOption("injured");
+  await selectUiOption(first.getByRole("combobox", { name: "状态", exact: true }), "injured");
   await page.getByRole("button", { name: "3-3-1", exact: true }).click();
   await expect(first.getByRole("button", { name: "上场", exact: true })).toBeDisabled();
   await expect(page.locator(".roster-item.on")).toHaveCount(8);

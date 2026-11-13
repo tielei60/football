@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { confirmAction } from "@/components/ui/confirmAction";
 import { computed, onMounted, ref } from "vue";
 import { Check, CircleAlert, Download, RefreshCw, Upload } from "lucide-vue-next";
 import { ElMessage } from "element-plus";
@@ -34,7 +35,7 @@ async function retry() {
   }
 }
 async function reload() {
-  if (!confirm("载入已保存的工作台将替换当前草稿。是否继续？")) return;
+  if (!(await confirmAction("载入已保存的工作台将替换当前草稿。是否继续？"))) return;
   await desk.initialize();
 }
 async function migrate() {
@@ -82,11 +83,11 @@ async function migrate() {
   flex-wrap: wrap;
   gap: 6px;
   padding: 0 24px 6px;
-  color: #47705b;
+  color: var(--color-success);
   font-size: 12px;
 }
 .coaching-save-status.failed {
-  color: #b42318;
+  color: var(--color-danger);
 }
 .coaching-save-status span,
 .coaching-save-status button {
@@ -97,14 +98,14 @@ async function migrate() {
 .coaching-save-status button {
   min-height: 28px;
   background: transparent;
-  border: 1px solid #d8dfe4;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 3px 6px;
-  color: #34424e;
+  color: var(--color-text);
   cursor: pointer;
 }
 .coaching-save-status button:hover {
-  background: #edf3f6;
+  background: var(--color-info-soft);
 }
 .coaching-save-status button:disabled {
   opacity: 0.6;

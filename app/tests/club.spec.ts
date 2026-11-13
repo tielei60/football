@@ -1,3 +1,4 @@
+import { selectUiOption, expectUiValue } from "./ui-select";
 import { test, expect } from "./fixtures";
 
 test("club admin records unknown statistics separately from zero and creates cross-year seasons", async ({
@@ -16,17 +17,17 @@ test("club admin records unknown statistics separately from zero and creates cro
   await page.getByRole("button", { name: "创建草稿" }).click();
   await expect(page.getByRole("heading", { name: /比赛信息与分析/ })).toBeVisible();
   const matchId = Number(page.url().split("/").pop());
-  await page.getByLabel("发布状态").selectOption("completed");
+  await selectUiOption(page.getByLabel("发布状态"), "completed");
   await page.getByLabel("本队比分").fill("0");
   await page.getByLabel("对手比分").fill("1");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
-  await page.getByLabel("添加至名单").selectOption(player.id);
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
+  await selectUiOption(page.getByLabel("添加至名单"), player.id);
   await page.getByRole("button", { name: "添加球员", exact: true }).click();
-  await page.getByLabel(`${player.name}实际出场`).selectOption({ label: "已出场" });
+  await selectUiOption(page.getByLabel(`${player.name}实际出场`), { label: "已出场" });
   await page.getByLabel(`${player.name}进球`).fill("0");
   await page.getByRole("button", { name: "保存名单与出场数据" }).click();
-  await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+  await expect(page.getByRole("status").filter({ hasText: "名单与实际出场已保存" })).toHaveText("名单与实际出场已保存");
   await page.reload();
   await expect(page.getByLabel(`${player.name}进球`)).toHaveValue("0");
   await expect(page.getByLabel(`${player.name}助攻`)).toHaveValue("");
@@ -48,10 +49,10 @@ test("club admin records unknown statistics separately from zero and creates cro
       })
     ).ok()
   ).toBe(true);
-  await page.getByLabel("统计周期").selectOption("season");
-  await page
-    .getByLabel("赛季", { exact: true })
-    .selectOption({ label: `跨年赛季${suffix}（2026-08-01 至 2027-07-31）` });
+  await selectUiOption(page.getByLabel("统计周期"), "season");
+  await selectUiOption(page.getByLabel("赛季", { exact: true }), {
+    label: `跨年赛季${suffix}（2026-08-01 至 2027-07-31）`,
+  });
   const row = page.getByRole("row").filter({ hasText: player.name });
   await expect(row).toContainText("未知");
   await expect(row).toContainText("1 / 1 场");
@@ -78,7 +79,7 @@ test("player logs in, registers independently of appearance, and cannot access b
   await expect(page.getByRole("heading", { name: "球队比赛" })).toBeVisible();
   await page.goto(`/club/matches/${match.id}`);
   await page.getByRole("button", { name: "参加", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("报名意愿已更新");
+  await expect(page.getByRole("status").filter({ hasText: "报名意愿已更新" })).toHaveText("报名意愿已更新");
   await expect(page.getByText("尚未录入比赛名单")).toBeVisible();
   await expect(page.getByRole("button", { name: "保存比赛信息" })).toHaveCount(0);
   await page.goto("/board");
@@ -197,11 +198,11 @@ test("autosave preserves board undo and redo history", async ({ page, request })
     (response) =>
       response.url().endsWith("/api/coaching-desk") && response.request().method() === "PUT" && response.ok()
   );
-  await status.selectOption("injured");
+  await selectUiOption(status, "injured");
   await saved;
   await expect(page.getByLabel("保存状态")).toContainText("已保存");
   await page.getByRole("button", { name: "撤销", exact: true }).click();
-  await expect(status).toHaveValue("ok");
+  await expectUiValue(status, "ok");
   await page.getByRole("button", { name: "重做", exact: true }).click();
-  await expect(status).toHaveValue("injured");
+  await expectUiValue(status, "injured");
 });

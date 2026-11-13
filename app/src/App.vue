@@ -6,7 +6,7 @@
       <RouterLink class="club-board-back" to="/club">← 俱乐部</RouterLink>
       <br />
       <img :src="teamBadge" :alt="teamName" width="64" height="64" />
-      <h1>教练工作台</h1>
+      <h1>战术工作台</h1>
       <p>{{ desk.status === "loading" ? "正在载入战术与球队名单" : desk.message }}</p>
       <button v-if="desk.status !== 'loading'" @click="desk.initialize">重新连接</button>
     </main>
@@ -61,8 +61,8 @@ const { teamName, teamBadge } = useTeamIdentity();
   display: inline-block;
   margin-bottom: 12px;
   padding: 5px 10px;
-  background: #e9f2e9;
-  color: #1b4934;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
   font-size: 12px;
   border-radius: 6px;
   text-decoration: none;
@@ -72,7 +72,7 @@ const { teamName, teamBadge } = useTeamIdentity();
   max-width: 440px;
   padding: 24px;
   text-align: center;
-  color: #263b36;
+  color: var(--color-text);
   h1 {
     font-size: 24px;
   }
@@ -81,7 +81,7 @@ const { teamName, teamBadge } = useTeamIdentity();
     line-height: 1.6;
   }
   button {
-    background: #247354;
+    background: var(--color-brand);
     color: white;
     border: 0;
     border-radius: 4px;
@@ -100,9 +100,9 @@ const { teamName, teamBadge } = useTeamIdentity();
     position: relative;
     height: 50px;
     line-height: 50px;
-    color: #ffffff;
+    color: var(--color-text);
     padding: 0 25px;
-    background-color: #738554;
+    background-color: var(--color-surface);
   }
 
   .board {

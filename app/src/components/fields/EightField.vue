@@ -6,17 +6,17 @@
     <g>
       <defs>
         <linearGradient id="eight-grass" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#93b49a" />
-          <stop offset="0.5" stop-color="#88ad92" />
-          <stop offset="1" stop-color="#81a78c" />
+          <stop offset="0" stop-color="var(--pitch-bg)" />
+          <stop offset="0.5" stop-color="var(--pitch-bg)" />
+          <stop offset="1" stop-color="var(--pitch-bg)" />
         </linearGradient>
         <radialGradient id="eight-vignette" cx="0.5" cy="0.5" r="0.75">
-          <stop offset="0.7" stop-color="#000000" stop-opacity="0" />
-          <stop offset="1" stop-color="#000000" stop-opacity="0.2" />
+          <stop offset="0.7" stop-color="var(--pitch-line)" stop-opacity="0" />
+          <stop offset="1" stop-color="var(--pitch-line)" stop-opacity="0.025" />
         </radialGradient>
       </defs>
       <!-- 外围 -->
-      <path d="M1250 0H0V826H1250V0Z" :fill="C.apron" />
+      <path d="M1250 0H0V826H1250V0Z" fill="var(--pitch-apron)" />
       <!-- 草皮底 -->
       <rect :x="P.x" :y="P.y" :width="P.w" :height="P.h" fill="url(#eight-grass)" />
       <!-- 草皮条纹（横条，沿攻防方向） -->
@@ -27,25 +27,33 @@
         :width="P.w"
         :y="s.y"
         :height="s.h"
-        fill="#ffffff"
-        :opacity="i % 2 === 0 ? 0.06 : 0"
+        fill="var(--pitch-stripe)"
+        :opacity="i % 2 === 0 ? 1 : 0"
       />
       <!-- 边线 -->
-      <rect :x="P.x" :y="P.y" :width="P.w" :height="P.h" fill="none" stroke="white" :stroke-width="LW" />
+      <rect :x="P.x" :y="P.y" :width="P.w" :height="P.h" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
       <!-- 中线 -->
-      <line :x1="midX" :y1="P.y" :x2="midX" :y2="P.y + P.h" stroke="white" :stroke-width="LW" />
+      <line :x1="midX" :y1="P.y" :x2="midX" :y2="P.y + P.h" stroke="var(--pitch-line)" :stroke-width="LW" />
       <!-- 中圈 + 中点 -->
-      <circle :cx="midX" :cy="midY" :r="R.center" fill="none" stroke="white" :stroke-width="LW" />
-      <circle :cx="midX" :cy="midY" :r="5" fill="white" />
+      <circle :cx="midX" :cy="midY" :r="R.center" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
+      <circle :cx="midX" :cy="midY" :r="5" fill="var(--pitch-line)" />
       <!-- 左禁区 / 小禁区（自家） -->
-      <rect :x="P.x" :y="midY - R.boxW / 2" :width="R.boxD" :height="R.boxW" fill="none" stroke="white" :stroke-width="LW" />
+      <rect
+        :x="P.x"
+        :y="midY - R.boxW / 2"
+        :width="R.boxD"
+        :height="R.boxW"
+        fill="none"
+        stroke="var(--pitch-line)"
+        :stroke-width="LW"
+      />
       <rect
         :x="P.x"
         :y="midY - R.goalBoxW / 2"
         :width="R.goalBoxD"
         :height="R.goalBoxW"
         fill="none"
-        stroke="white"
+        stroke="var(--pitch-line)"
         :stroke-width="LW"
       />
       <!-- 右禁区 / 小禁区（对方） -->
@@ -55,7 +63,7 @@
         :width="R.boxD"
         :height="R.boxW"
         fill="none"
-        stroke="white"
+        stroke="var(--pitch-line)"
         :stroke-width="LW"
       />
       <rect
@@ -64,20 +72,20 @@
         :width="R.goalBoxD"
         :height="R.goalBoxW"
         fill="none"
-        stroke="white"
+        stroke="var(--pitch-line)"
         :stroke-width="LW"
       />
       <!-- 点球点 -->
-      <circle :cx="P.x + R.spot" :cy="midY" r="5" fill="white" />
-      <circle :cx="P.x + P.w - R.spot" :cy="midY" r="5" fill="white" />
+      <circle :cx="P.x + R.spot" :cy="midY" r="5" fill="var(--pitch-line)" />
+      <circle :cx="P.x + P.w - R.spot" :cy="midY" r="5" fill="var(--pitch-line)" />
       <!-- 点球弧（弧顶朝外，背向球门） -->
-      <path :d="arcLeft" fill="none" stroke="white" :stroke-width="LW" />
-      <path :d="arcRight" fill="none" stroke="white" :stroke-width="LW" />
+      <path :d="arcLeft" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
+      <path :d="arcRight" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
       <!-- 角球弧 -->
-      <path :d="cornerTL" fill="none" stroke="white" :stroke-width="LW" />
-      <path :d="cornerTR" fill="none" stroke="white" :stroke-width="LW" />
-      <path :d="cornerBL" fill="none" stroke="white" :stroke-width="LW" />
-      <path :d="cornerBR" fill="none" stroke="white" :stroke-width="LW" />
+      <path :d="cornerTL" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
+      <path :d="cornerTR" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
+      <path :d="cornerBL" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
+      <path :d="cornerBR" fill="none" stroke="var(--pitch-line)" :stroke-width="LW" />
       <!-- 球门（框外） -->
       <rect
         :x="P.x - R.goalD"
@@ -85,7 +93,7 @@
         :width="R.goalD"
         :height="R.goalW"
         fill="none"
-        stroke="white"
+        stroke="var(--pitch-line)"
         :stroke-width="LW"
       />
       <rect
@@ -94,7 +102,7 @@
         :width="R.goalD"
         :height="R.goalW"
         fill="none"
-        stroke="white"
+        stroke="var(--pitch-line)"
         :stroke-width="LW"
       />
       <!-- 暗角 -->
@@ -124,7 +132,6 @@ const R = {
   goalW: 120,
   goalD: 16,
 };
-const C = { apron: "#e5ebe7" };
 
 const midX = P.x + P.w / 2;
 const midY = P.y + P.h / 2;

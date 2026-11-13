@@ -1,3 +1,4 @@
+import { selectUiOption, expectUiValue } from "./ui-select";
 /* eslint-disable no-restricted-syntax, no-await-in-loop -- Browser steps share a page and must run sequentially, not concurrently. */
 import { mkdir } from "node:fs/promises";
 import type { APIRequestContext, Page } from "@playwright/test";
@@ -51,7 +52,7 @@ test("history jump between match details reloads the route and cannot write the 
   await expect(page.getByLabel("对手", { exact: true })).toHaveValue("比赛甲");
   await page.getByLabel("地点", { exact: true }).fill("甲队的新场地");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
   expect((await (await request.get(`/api/matches/${a.id}`)).json()).location).toBe("甲队的新场地");
   const untouched = await (await request.get(`/api/matches/${b.id}`)).json();
   expect(untouched.opponent).toBe("比赛乙");
@@ -65,7 +66,7 @@ test("match and roster saves lock fields while pending and preserve unsaved sibl
   const player = await seedPlayer(request);
   const match = await seedMatch(request);
   await page.goto(`/club/matches/${match.id}`);
-  await page.getByLabel("添加至名单").selectOption(player.id);
+  await selectUiOption(page.getByLabel("添加至名单"), player.id);
   await page.getByRole("button", { name: "添加球员", exact: true }).click();
   await page.getByLabel(`${player.name}比赛位置`).fill("中锋");
   const held = await holdWrite(page, `**/api/matches/${match.id}`);
@@ -76,14 +77,16 @@ test("match and roster saves lock fields while pending and preserve unsaved sibl
   await expect(page.getByLabel(`${player.name}比赛位置`)).toBeDisabled();
   await expect(page.getByRole("button", { name: "移出" })).toBeDisabled();
   held.release();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
   await expect(page.getByLabel(`${player.name}比赛位置`)).toHaveValue("中锋");
+  await expect(page.getByText("名单有未保存修改，请独立保存名单与出场数据。", { exact: true })).toBeVisible();
+  expect((await (await request.get(`/api/matches/${match.id}`)).json()).roster).toEqual([]);
   await page.getByLabel("赛前计划 / 赛后分析").fill("名单保存不能覆盖这份未保存分析");
   await page.getByRole("button", { name: "保存名单与出场数据" }).click();
-  await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+  await expect(page.getByRole("status").filter({ hasText: "名单与实际出场已保存" })).toHaveText("名单与实际出场已保存");
   await expect(page.getByLabel("赛前计划 / 赛后分析")).toHaveValue("名单保存不能覆盖这份未保存分析");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
   expect((await (await request.get(`/api/matches/${match.id}`)).json()).roster[0].position).toBe("中锋");
 });
 for (const panel of ["match", "roster"] as const) {
@@ -93,7 +96,7 @@ for (const panel of ["match", "roster"] as const) {
     await page.goto(`/club/matches/${match.id}`);
     await expect(page.getByLabel("对手", { exact: true })).toHaveValue(match.opponent);
     await page.getByLabel("赛前计划 / 赛后分析").fill("保留本地分析");
-    await page.getByLabel("添加至名单").selectOption(player.id);
+    await selectUiOption(page.getByLabel("添加至名单"), player.id);
     await page.getByRole("button", { name: "添加球员", exact: true }).click();
     await page.getByLabel(`${player.name}比赛位置`).fill("保留本地位置");
     expect(
@@ -136,7 +139,7 @@ test("player save locks cancellation and switching, then stale profile retains t
     page.getByRole("row").filter({ hasText: "另一个球员" }).getByRole("button", { name: "编辑", exact: true })
   ).toBeDisabled();
   held.release();
-  await expect(page.getByRole("status")).toHaveText("球员资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球员资料已保存" })).toHaveText("球员资料已保存");
   await page.unroute(`**/api/players/${player.id}`);
   await page
     .getByRole("row")
@@ -391,7 +394,7 @@ test("failed match save retains the draft and retry sends only one new request",
   expect(writes).toBe(1);
   await page.unroute(`**/api/matches/${match.id}`);
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
   expect((await (await request.get(`/api/matches/${match.id}`)).json()).analysis).toBe("失败后保留的分析");
 });
 test("deleting a template preserves the match tactic snapshot", async ({ page, request }) => {
@@ -404,8 +407,11 @@ test("deleting a template preserves the match tactic snapshot", async ({ page, r
   await expect(card).toBeVisible();
   const [tactic] = await (await request.get("/api/tactics")).json();
   const match = await seedMatch(request, "保留战术关联", { tacticIds: [tactic.tacticId] });
-  page.once("dialog", (dialog) => dialog.accept());
   await card.getByRole("button", { name: "删除战术", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "请确认操作" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "确认", exact: true }).click();
+  await expect(confirmation).not.toBeVisible();
   await expect(card).toHaveCount(0);
   expect((await (await request.get(`/api/matches/${match.id}`)).json()).tacticIds).toEqual([tactic.tacticId]);
   expect((await request.get(`/api/tactics/${tactic.tacticId}`)).status()).toBe(404);
@@ -446,7 +452,7 @@ test("team name and crest save immediately updates the header without clearing p
   await expect(page.getByLabel("上传球队队徽")).toBeDisabled();
   await expect(page.getByRole("button", { name: "移除自定义队徽" })).toBeDisabled();
   held.release();
-  await expect(page.getByRole("status")).toHaveText("球队资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球队资料已保存" })).toHaveText("球队资料已保存");
   await expect(page.locator(".club-brand")).toContainText("新的球队名称");
   await expect(page.locator(".club-brand img")).toHaveAttribute("src", image);
   await expect(page.getByLabel("当前密码")).toHaveValue("unsaved-password-draft");
@@ -457,7 +463,7 @@ test("team name and crest save immediately updates the header without clearing p
   await expect(page.getByAltText("球队队徽预览")).toHaveAttribute("src", image);
   await page.getByRole("button", { name: "移除自定义队徽" }).click();
   await page.getByRole("button", { name: "保存球队资料", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("球队资料已保存");
+  await expect(page.getByRole("status").filter({ hasText: "球队资料已保存" })).toHaveText("球队资料已保存");
   expect((await (await request.get("/api/team")).json()).crest).toBeNull();
   await assertNeutralBadge(page.locator(".club-brand img"));
 });
@@ -596,8 +602,8 @@ test("opponent results follow cross-year season and calendar-year filters with u
       (await request.put(`/api/matches/${m.id}`, { data: { revision: m.revision, seasonId: season.id } })).ok()
     ).toBe(true);
   await page.goto("/club/statistics");
-  await page.getByLabel("统计周期").selectOption("season");
-  await page.getByLabel("赛季", { exact: true }).selectOption(String(season.id));
+  await selectUiOption(page.getByLabel("统计周期"), "season");
+  await selectUiOption(page.getByLabel("赛季", { exact: true }), String(season.id));
   const region = page.getByRole("region", { name: "对手交锋", exact: true });
   const row = region.getByRole("row").filter({ hasText: "跨年交锋对手" });
   await expect(row.getByRole("cell").nth(1)).toHaveText("2");
@@ -607,7 +613,7 @@ test("opponent results follow cross-year season and calendar-year filters with u
   await expect(unknownRow.getByRole("cell").nth(4)).toHaveText("未知");
   await expect(unknownRow.getByRole("cell").nth(6)).toHaveText("未知");
   await expect(unknownRow.getByRole("cell").nth(3)).toHaveText("0 / 1 场");
-  await page.getByLabel("统计周期").selectOption("year");
+  await selectUiOption(page.getByLabel("统计周期"), "year");
   await page.getByLabel("年份").fill("2092");
   await page.getByLabel("年份").blur();
   await expect(row.getByRole("cell").nth(1)).toHaveText("1");
@@ -679,7 +685,7 @@ test("season roster and match fields preserve historical identity, number and ta
   ).json();
   await page.goto("/club/statistics");
   await page.getByRole("button", { name: "赛季名单", exact: true }).click();
-  await page.getByLabel("添加赛季球员").selectOption(player.id);
+  await selectUiOption(page.getByLabel("添加赛季球员"), player.id);
   await page.getByRole("button", { name: "加入赛季名单" }).click();
   await page.getByLabel("赛时姓名赛季号码").fill("22");
   const seasonSaved = page.waitForResponse(
@@ -692,22 +698,22 @@ test("season roster and match fields preserve historical identity, number and ta
   await page.getByLabel("对手", { exact: true }).fill("归属对手");
   await page.getByLabel("比赛日期").fill("2092-01-01");
   await page.getByLabel("赛事名称").fill("业余杯");
-  await page.getByLabel("比赛人数制").selectOption("8");
-  await page.getByRole("combobox", { name: "主客场", exact: true }).selectOption("away");
-  await page.getByLabel("归属赛季").selectOption(String(season.id));
+  await selectUiOption(page.getByLabel("比赛人数制"), "8");
+  await selectUiOption(page.getByRole("combobox", { name: "主客场", exact: true }), "away");
+  await selectUiOption(page.getByLabel("归属赛季"), String(season.id));
   await page.getByRole("button", { name: "创建草稿" }).click();
   await expect(page.getByLabel("赛事名称")).toHaveValue("业余杯");
-  await expect(page.getByRole("combobox", { name: "主客场", exact: true })).toHaveValue("away");
+  await expectUiValue(page.getByRole("combobox", { name: "主客场", exact: true }), "away");
   await page.getByLabel("快照阵型", { exact: true }).check();
-  await page.getByLabel("发布状态").selectOption("completed");
+  await selectUiOption(page.getByLabel("发布状态"), "completed");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
-  await page.getByLabel("添加至名单").selectOption(player.id);
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
+  await selectUiOption(page.getByLabel("添加至名单"), player.id);
   await page.getByRole("button", { name: "添加球员", exact: true }).click();
-  await page.getByLabel("赛时姓名首发替补").selectOption("bench");
-  await page.getByLabel("赛时姓名实际出场").selectOption({ label: "已出场" });
+  await selectUiOption(page.getByLabel("赛时姓名首发替补"), "bench");
+  await selectUiOption(page.getByLabel("赛时姓名实际出场"), { label: "已出场" });
   await page.getByRole("button", { name: "保存名单与出场数据" }).click();
-  await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+  await expect(page.getByRole("status").filter({ hasText: "名单与实际出场已保存" })).toHaveText("名单与实际出场已保存");
   const id = Number(page.url().split("/").pop());
   const roster = page.getByRole("region", { name: "比赛名单表", exact: true });
   await expect(roster.getByRole("row").filter({ hasText: "赛时姓名" }).getByRole("cell").nth(1)).toHaveText("22");
@@ -742,11 +748,11 @@ test("season roster and match fields preserve historical identity, number and ta
   await page.getByText("查看已保存战术：快照阵型").click();
   const canvas = page.getByRole("img", { name: "快照阵型已保存战术画布" });
   await expect(canvas).toContainText("保存时球员");
-  await page.getByLabel("战术演示步骤").selectOption("1");
+  await selectUiOption(page.getByLabel("战术演示步骤"), "1");
   await expect(canvas.locator('[data-piece-id="saved-player"]')).toHaveAttribute("transform", "translate(500 400)");
   await page.getByLabel("地点", { exact: true }).fill("只改地点");
   await page.getByRole("button", { name: "保存比赛信息" }).click();
-  await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+  await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
   expect((await (await request.get(`/api/matches/${id}`)).json()).tacticSnapshots[0].tactic.title).toBe("快照阵型");
 });
 
@@ -793,8 +799,8 @@ test("registration yes no maybe unanswered and actual attendance remain separate
     ).ok()
   ).toBe(true);
   await page.goto("/club/statistics");
-  await page.getByLabel("统计周期").selectOption("season");
-  await page.getByLabel("赛季", { exact: true }).selectOption(String(season.id));
+  await selectUiOption(page.getByLabel("统计周期"), "season");
+  await selectUiOption(page.getByLabel("赛季", { exact: true }), String(season.id));
   const row = page
     .getByRole("region", { name: "球员统计表", exact: true })
     .getByRole("row")

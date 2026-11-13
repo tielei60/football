@@ -3,6 +3,12 @@ import vue from "@vitejs/plugin-vue";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import viteCompression from "vite-plugin-compression";
+import { readFileSync } from "node:fs";
+import { readThemeColor } from "./scripts/theme-colors.mjs";
+
+const themeCss = readFileSync(path.resolve(__dirname, "src/assets/styles/design-tokens.css"), "utf8");
+const brandColor = readThemeColor(themeCss, "--color-brand");
+const backgroundColor = readThemeColor(themeCss, "--color-bg");
 
 export default defineConfig({
   resolve: {
@@ -11,6 +17,10 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: "club-theme-metadata",
+      transformIndexHtml: (html) => html.replace("__APP_THEME_COLOR__", brandColor),
+    },
     vue(),
     viteCompression({
       verbose: true,
@@ -27,8 +37,8 @@ export default defineConfig({
         short_name: "足球俱乐部",
         start_url: "/club",
         display: "standalone",
-        background_color: "#0b2a1d",
-        theme_color: "#0b2a1d",
+        background_color: backgroundColor,
+        theme_color: brandColor,
         icons: [
           { src: "/logo.png", sizes: "192x192", type: "image/png" },
           { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },

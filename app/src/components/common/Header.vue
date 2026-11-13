@@ -5,7 +5,13 @@
         <img :src="teamBadge" class="logo-badge" alt="" @error="hideBadge" />
         <span class="logo-text">{{ teamName }} · 战术板</span>
       </div>
-      <nav class="nav-menu" :class="{ active: mobileMenuOpen }">
+      <nav
+        id="public-navigation"
+        class="nav-menu"
+        aria-label="网站导航"
+        :class="{ active: mobileMenuOpen }"
+        @keydown.esc="mobileMenuOpen = false"
+      >
         <template v-if="showFullMenu">
           <a href="#home" class="nav-link" @click="scrollToSection('home')">首页</a>
           <!-- <a href="#features" class="nav-link" @click="scrollToSection('features')">功能</a>
@@ -18,11 +24,19 @@
         </template>
         <router-link :to="{ name: 'board' }" target="_blank" class="nav-cta">进入战术板</router-link>
       </nav>
-      <div class="hamburger" :class="{ active: mobileMenuOpen }" @click="toggleMobileMenu">
+      <button
+        type="button"
+        class="hamburger"
+        :class="{ active: mobileMenuOpen }"
+        :aria-label="mobileMenuOpen ? '关闭导航' : '打开导航'"
+        :aria-expanded="mobileMenuOpen"
+        aria-controls="public-navigation"
+        @click="toggleMobileMenu"
+      >
         <span></span>
         <span></span>
         <span></span>
-      </div>
+      </button>
     </div>
   </header>
 </template>
@@ -73,9 +87,9 @@ const scrollToSection = (sectionId: string) => {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(11, 42, 29, 0.92);
+  background: var(--color-surface);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(180, 255, 57, 0.15);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.8rem 0;
   transition: all 0.3s ease;
 }
@@ -95,7 +109,7 @@ const scrollToSection = (sectionId: string) => {
   gap: 0.5rem;
   font-weight: 700;
   font-size: 1.25rem;
-  color: white;
+  color: var(--color-text);
 }
 
 .logo-icon {
@@ -115,7 +129,7 @@ const scrollToSection = (sectionId: string) => {
 }
 
 .nav-link {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-muted);
   text-decoration: none;
   font-weight: 500;
   transition: all 0.3s ease;
@@ -124,7 +138,7 @@ const scrollToSection = (sectionId: string) => {
 }
 
 .nav-link:hover {
-  color: white;
+  color: var(--color-text);
   transform: translateY(-2px);
 }
 
@@ -135,7 +149,7 @@ const scrollToSection = (sectionId: string) => {
   left: 0;
   width: 0;
   height: 2px;
-  background: white;
+  background: var(--color-brand);
   transition: width 0.3s ease;
 }
 
@@ -149,16 +163,19 @@ const scrollToSection = (sectionId: string) => {
   text-decoration: none;
   font-weight: 700;
   transition: all 0.3s ease;
-  background: var(--accent, #b4ff39);
-  color: var(--pitch-900, #0b2a1d);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 .nav-cta:hover {
   transform: translateY(-2px);
-  background: #c9ff6b;
+  background: var(--color-brand);
 }
 
 .hamburger {
+  border: 0;
+  padding: 10px;
+  background: transparent;
   display: none;
   flex-direction: column;
   cursor: pointer;
@@ -168,7 +185,7 @@ const scrollToSection = (sectionId: string) => {
 .hamburger span {
   width: 25px;
   height: 3px;
-  background: white;
+  background: var(--color-brand);
   border-radius: 3px;
   transition: all 0.3s ease;
 }
@@ -192,6 +209,9 @@ const scrollToSection = (sectionId: string) => {
   }
 
   .hamburger {
+    border: 0;
+    padding: 10px;
+    background: transparent;
     display: flex;
     z-index: 1001;
   }
@@ -202,25 +222,30 @@ const scrollToSection = (sectionId: string) => {
     left: -100%;
     bottom: 0;
     width: 280px;
-    background: #0b2a1d;
+    background: var(--color-surface);
     backdrop-filter: blur(20px);
     flex-direction: column;
     padding: 6rem 2rem 2rem;
     gap: 2rem;
     transform: translateX(0);
     transition: left 0.3s ease;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.2);
+    border-right: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-menu:not(.active) {
+    visibility: hidden;
   }
 
   .nav-menu.active {
+    visibility: visible;
     left: 0;
   }
 
   .nav-link {
     font-size: 1.2rem;
     padding: 1rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--color-border);
   }
 }
 

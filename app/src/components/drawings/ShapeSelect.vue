@@ -1,7 +1,10 @@
 <template>
   <div class="shape-container">
     <div class="shape-group">
-      <div
+      <button
+        type="button"
+        :aria-label="shapeLabels[shape]"
+        :aria-pressed="drawingConfig.type === shape"
         v-for="shape in shapes"
         :key="shape"
         class="shape-item"
@@ -9,7 +12,7 @@
         @click="chooseShape(shape)"
       >
         <SvgIcon :name="shape" class="svg-icon"></SvgIcon>
-      </div>
+      </button>
     </div>
   </div>
 </template>
@@ -23,6 +26,13 @@ const drawStore = useDrawStore();
 
 const { drawingConfig } = storeToRefs(drawStore);
 
+const shapeLabels: Record<string, string> = {
+  pen: "自由画笔",
+  line: "直线",
+  arrow: "箭头",
+  rectangle: "矩形",
+  ellipse: "椭圆",
+};
 const shapes = ["pen", "line", "arrow", "rectangle", "ellipse"];
 
 const emit = defineEmits(["changedShape"]);
@@ -56,13 +66,12 @@ const chooseShape = (shape: string) => {
     align-items: center;
     cursor: pointer;
     color: var(--text-dark-color);
-    box-shadow:
-      5px 7px 8px rgba(0, 0, 0, 0.08),
-      1px 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1.5px solid var(--pitch-500, #15803d);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    border: 1.5px solid var(--pitch-500);
 
     &:hover {
-      background: rgba(180, 255, 57, 0.25);
+      background: var(--color-brand-soft);
     }
 
     .svg-icon {
@@ -71,7 +80,7 @@ const chooseShape = (shape: string) => {
     }
 
     &.active {
-      background: rgba(180, 255, 57, 0.25);
+      background: var(--color-brand-soft);
     }
   }
 }

@@ -1,3 +1,4 @@
+import { selectUiOption } from "./ui-select";
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- One sequential story shares a browser session and depends on previous steps. */
 import type { Page } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -58,12 +59,12 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
     await page.getByRole("button", { name: "保存赛季" }).click();
     await page.getByRole("button", { name: "赛季名单", exact: true }).click();
     for (let i = 0; i < members.length; i += 1) {
-      await page.getByLabel("添加赛季球员").selectOption(ids[i]);
+      await selectUiOption(page.getByLabel("添加赛季球员"), ids[i]);
       await page.getByRole("button", { name: "加入赛季名单" }).click();
       await page.getByLabel(`${members[i].name}赛季号码`).fill(members[i].number);
     }
     await page.getByRole("button", { name: "保存赛季名单" }).click();
-    await expect(page.getByRole("status")).toHaveText("赛季名单已保存");
+    await expect(page.getByRole("status").filter({ hasText: "赛季名单已保存" })).toHaveText("赛季名单已保存");
   });
   const season = (await (await request.get("/api/seasons")).json())[0];
   // API-assisted template preparation only; the club business workflow uses actual UI controls.
@@ -104,16 +105,16 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
       await page.getByLabel("对手", { exact: true }).fill("河岸联队（虚构）");
       await page.getByLabel("比赛日期").fill(date);
       await page.getByLabel("赛事名称").fill("周末友谊杯");
-      await page.getByLabel("比赛人数制").selectOption("8");
-      await page.getByRole("combobox", { name: "主客场", exact: true }).selectOption("neutral");
-      await page.getByLabel("归属赛季").selectOption(String(season.id));
+      await selectUiOption(page.getByLabel("比赛人数制"), "8");
+      await selectUiOption(page.getByRole("combobox", { name: "主客场", exact: true }), "neutral");
+      await selectUiOption(page.getByLabel("归属赛季"), String(season.id));
       await page.getByRole("button", { name: "创建草稿" }).click();
       await expect(page.getByLabel("发布状态")).toBeVisible();
       matches.push(page.url());
-      await page.getByLabel("发布状态").selectOption("published");
+      await selectUiOption(page.getByLabel("发布状态"), "published");
       await page.getByLabel("星河赛前阵型", { exact: true }).check();
       await page.getByRole("button", { name: "保存比赛信息" }).click();
-      await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+      await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
     }
   });
   await test.step("三个球员独立登录并参加、不参加、待定", async () => {
@@ -121,7 +122,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
       await switchAccount(page, members[i].username, password);
       await page.goto(matches[0]);
       await page.getByRole("button", { name: ["参加", "不参加", "待定"][i], exact: true }).click();
-      await expect(page.getByRole("status")).toHaveText("报名意愿已更新");
+      await expect(page.getByRole("status").filter({ hasText: "报名意愿已更新" })).toHaveText("报名意愿已更新");
       await expect(page.getByRole("button", { name: "保存比赛信息" })).toHaveCount(0);
       await expect(page.getByText("尚未录入比赛名单")).toBeVisible();
     }
@@ -130,19 +131,19 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
   await test.step("首发替补独立于实际出场，第二场保留未知", async () => {
     for (let game = 0; game < matches.length; game += 1) {
       await page.goto(matches[game]);
-      await page.getByLabel("发布状态").selectOption("completed");
+      await selectUiOption(page.getByLabel("发布状态"), "completed");
       if (game === 0) {
         await page.getByLabel("本队比分").fill("2");
         await page.getByLabel("对手比分").fill("1");
       }
       await page.getByRole("button", { name: "保存比赛信息" }).click();
-      await expect(page.getByRole("status")).toHaveText("比赛信息已保存");
+      await expect(page.getByRole("status").filter({ hasText: "比赛信息已保存" })).toHaveText("比赛信息已保存");
       for (let i = 0; i < members.length; i += 1) {
-        await page.getByLabel("添加至名单").selectOption(ids[i]);
+        await selectUiOption(page.getByLabel("添加至名单"), ids[i]);
         await page.getByRole("button", { name: "添加球员", exact: true }).click();
-        await page.getByLabel(`${members[i].name}首发替补`).selectOption(i === 0 ? "starter" : "bench");
+        await selectUiOption(page.getByLabel(`${members[i].name}首发替补`), i === 0 ? "starter" : "bench");
         if (game === 0) {
-          await page.getByLabel(`${members[i].name}实际出场`).selectOption({ label: i === 1 ? "未出场" : "已出场" });
+          await selectUiOption(page.getByLabel(`${members[i].name}实际出场`), { label: i === 1 ? "未出场" : "已出场" });
           if (i !== 1) {
             await page.getByLabel(`${members[i].name}进球`).fill(i === 0 ? "2" : "0");
             await page.getByLabel(`${members[i].name}助攻`).fill(i === 0 ? "0" : "1");
@@ -150,13 +151,15 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
         }
       }
       await page.getByRole("button", { name: "保存名单与出场数据" }).click();
-      await expect(page.getByRole("status")).toHaveText("名单与实际出场已保存");
+      await expect(page.getByRole("status").filter({ hasText: "名单与实际出场已保存" })).toHaveText(
+        "名单与实际出场已保存"
+      );
     }
   });
   await test.step("跨年赛季与自然年统计分开，未知不当零", async () => {
     await page.goto("/club/statistics");
-    await page.getByLabel("统计周期").selectOption("season");
-    await page.getByLabel("赛季", { exact: true }).selectOption(String(season.id));
+    await selectUiOption(page.getByLabel("统计周期"), "season");
+    await selectUiOption(page.getByLabel("赛季", { exact: true }), String(season.id));
     const team = page.getByRole("region", { name: "球队汇总", exact: true });
     await expect(team).toContainText("1 胜 · 0 平 · 0 负");
     await expect(team).toContainText("1 / 2 场");
@@ -168,7 +171,7 @@ test("realistic fictional club: accounts, seasonal squad, RSVP, results, immutab
     await expect(table.getByRole("row").filter({ hasText: members[1].name }).getByRole("cell").nth(9)).toHaveText("1");
     await expect(table.getByRole("row").filter({ hasText: members[2].name }).getByRole("cell").nth(10)).toHaveText("1");
     await page.screenshot({ path: `${evidenceDir}/realistic-season-statistics.png`, fullPage: true });
-    await page.getByLabel("统计周期").selectOption("year");
+    await selectUiOption(page.getByLabel("统计周期"), "year");
     await page.getByLabel("年份").fill("2092");
     await page.getByLabel("年份").blur();
     await expect(team).toContainText("0 / 1 场");

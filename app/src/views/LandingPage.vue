@@ -4,10 +4,13 @@
     <div id="showcase" class="showcase-section">
       <div class="showcase-container">
         <img :src="teamBadge" class="hero-badge" :alt="`${teamName}队徽`" @error="hideBadge" />
-        <h1 class="title">{{ teamName }} · 足球战术板</h1>
-        <p class="showcase-subtitle">一键阵型 · 点名布阵 · 战术库与历史版本 · 投屏演示，为每一场比赛做准备</p>
+        <h1 class="title">{{ teamName }} · 足球俱乐部</h1>
+        <p class="showcase-subtitle">球员、比赛、赛季与战术，一起为每一次上场做准备</p>
         <div class="hero-ctas">
-          <router-link :to="{ name: 'board' }" class="start-button">进入战术板</router-link>
+          <router-link to="/club" class="start-button">
+            进入俱乐部
+            <span aria-hidden="true">↗</span>
+          </router-link>
           <span class="hero-note">球队账号登录 · SQLite 持久化 · 球员报名与比赛统计</span>
         </div>
         <div class="showcase-image">
@@ -18,18 +21,18 @@
     <div id="features" class="features-section">
       <div class="feature-card">
         <Users class="feature-icon" :size="30" />
-        <h3>8人制阵型</h3>
-        <p>2-3-2 等 5 套常规 + 角球任意球定位球，一键落位，主客对抗同屏</p>
+        <h3>比赛与报名</h3>
+        <p>发布赛程，收集参赛意愿，独立确认实际出场与赛后数据</p>
       </div>
       <div class="feature-card">
         <ClipboardList class="feature-icon" :size="30" />
         <h3>人员与名单</h3>
-        <p>20 人照片名单，点名上下场，号码位置备注可改</p>
+        <p>维护球员资料、赛季名单与号码，保留比赛时的历史快照</p>
       </div>
       <div class="feature-card">
         <LibraryBig class="feature-icon" :size="30" />
         <h3>战术库</h3>
-        <p>保存即版本，搜索标签收藏，缩略图 3 秒找回历史战术</p>
+        <p>阵型、绘图与跑位动画，保存版本，按比赛保留战术快照</p>
       </div>
       <div class="feature-card">
         <Presentation class="feature-icon" :size="30" />
@@ -77,260 +80,152 @@ const hideBadge = (e: Event) => {
 
 <style scoped>
 .landing-page {
-  height: 100%;
-  background:
-    radial-gradient(1000px 600px at 50% -10%, #14532d 0%, transparent 60%),
-    linear-gradient(180deg, #0b2a1d 0%, #071c13 100%);
-  color: var(--paper, #f8faf5);
   width: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 0;
   min-height: 100vh;
-  max-width: 100vw;
-  display: flex;
-  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow-x: hidden;
 }
-
-.hero-section,
-.features-section,
-.faq-section {
-  padding-left: 2rem;
-  padding-right: 2rem;
+.showcase-section {
+  margin: 4rem 0 2rem;
 }
-
-.hero-section,
-.features-section,
-.faq-section {
-  flex: 1;
+.showcase-container {
+  max-width: 1080px;
+  padding: 0 28px;
+  margin: auto;
+  text-align: center;
 }
-
-.title {
-  font-size: 3rem;
-  margin: 1rem 0;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-}
-
 .hero-badge {
-  width: 120px;
-  height: 120px;
+  width: 86px;
+  height: 86px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
+  padding: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
 }
-
+.title {
+  font-size: clamp(28px, 4vw, 48px);
+  line-height: 1.25;
+  font-weight: 800;
+  margin: 24px 0 18px;
+  letter-spacing: -1px;
+  overflow-wrap: anywhere;
+}
+.showcase-subtitle {
+  color: var(--color-text-muted);
+  font-size: 16px;
+  line-height: 1.8;
+  margin: 0 auto 26px;
+  max-width: 650px;
+}
 .hero-ctas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 4rem;
+  gap: 15px;
 }
-
 .start-button {
-  display: inline-block;
-  padding: 1rem 3rem;
-  font-size: 1.2rem;
-  font-weight: 800;
-  background: var(--accent, #b4ff39);
-  color: var(--pitch-900, #0b2a1d);
-  border-radius: 3rem;
+  display: inline-flex;
+  gap: 26px;
+  align-items: center;
+  padding: 13px 26px;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: 4px;
+  font-size: 15px;
   text-decoration: none;
-  transition: all 0.25s;
-  box-shadow: 0 10px 30px rgba(180, 255, 57, 0.25);
-  border: none;
-  cursor: pointer;
+  font-weight: 650;
 }
-
 .start-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(180, 255, 57, 0.35);
-  background: #c9ff6b;
+  background: var(--color-brand-hover);
 }
-
+.start-button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
 .hero-note {
-  font-size: 0.85rem;
-  opacity: 0.65;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
-
+.showcase-image {
+  margin: 42px auto;
+  max-width: 600px;
+  padding: 36px;
+  border: 1px solid var(--color-border);
+  background: var(--color-brand-soft);
+  border-radius: 6px;
+}
+.showcase-image img {
+  display: block;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  margin: auto;
+}
 .features-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 1200px;
-  margin: 4rem auto;
-  padding: 0 2rem;
+  padding: 0 28px;
+  margin: 56px auto;
+  gap: 20px;
 }
-
 .feature-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px);
-  padding: 2rem 1.5rem;
-  border-radius: 1.25rem;
-  text-align: center;
-  transition: all 0.25s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  border-top: 2px solid var(--color-brand);
+  background: var(--color-surface);
+  padding: 24px;
 }
-
-.feature-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(180, 255, 57, 0.4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
-}
-
 .feature-icon {
-  color: var(--accent, #b4ff39);
-  margin-bottom: 1rem;
+  color: var(--color-brand);
+  margin-bottom: 18px;
 }
-
-.feature-card h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.6rem;
-  font-weight: 700;
+.feature-card h3,
+.faq-item h3 {
+  font-size: 17px;
+  margin: 0 0 12px;
 }
-
-.feature-card p {
-  opacity: 0.85;
-  line-height: 1.6;
-  font-size: 0.95rem;
+.feature-card p,
+.faq-item p {
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--color-text-muted);
 }
-
 .faq-section {
   max-width: 1200px;
-  margin: 3rem auto;
-  padding: 0 2rem;
+  padding: 0 28px;
+  margin: 60px auto;
 }
-
 .faq-title {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 2rem;
+  font-size: 25px;
+  margin-bottom: 28px;
 }
-
 .faq-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
 }
-
 .faq-item {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(24px);
-  padding: 1.75rem;
-  border-radius: 1.25rem;
-  transition: all 0.25s;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border-strong);
 }
-
-.faq-item:hover {
-  transform: translateY(-4px);
-  border-color: rgba(180, 255, 57, 0.35);
-}
-
-.faq-item h3 {
-  font-size: 1.1rem;
-  margin-bottom: 0.75rem;
-  font-weight: 700;
-  color: var(--accent, #b4ff39);
-}
-
-.faq-item p {
-  opacity: 0.85;
-  line-height: 1.6;
-  font-size: 0.95rem;
-}
-
-/* Showcase Section */
-.showcase-section {
-  margin: 7rem 0 2rem;
-}
-
-.showcase-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  text-align: center;
-}
-
-.showcase-subtitle {
-  font-size: 1.15rem;
-  margin-bottom: 2rem;
-  opacity: 0.85;
-  max-width: 640px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-}
-
-.showcase-image {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(20px);
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.showcase-image img {
-  width: 100%;
-  height: auto;
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* Mobile responsive styles */
-@media (max-width: 768px) {
-  .showcase-section {
-    margin: 6rem 0 1rem;
-  }
-
-  .title {
-    font-size: 2rem;
-  }
-
-  .showcase-subtitle {
-    font-size: 1rem;
-  }
-
-  .showcase-image {
-    padding: 0.8rem;
-  }
-
+@media (max-width: 900px) {
   .features-section {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
+}
+@media (max-width: 600px) {
+  .features-section,
   .faq-grid {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 480px) {
-  .features-section {
-    margin: 3rem auto;
-    grid-template-columns: 1fr;
-    padding: 0 1rem;
-  }
-
+  .showcase-container,
+  .features-section,
   .faq-section {
-    margin: 2rem auto;
-    padding: 0 1rem;
+    padding-inline: 20px;
   }
-
-  .title {
-    font-size: 1.75rem;
-  }
-
-  .start-button {
-    font-size: 1rem;
-    padding: 0.8rem 2rem;
-  }
-
-  .showcase-container {
-    padding: 0 1rem;
+  .showcase-section {
+    margin-top: 2rem;
   }
 }
 </style>

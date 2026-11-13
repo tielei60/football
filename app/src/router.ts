@@ -1,3 +1,4 @@
+import { cancelAllConfirmations } from "./components/ui/confirmAction";
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "./stores/authStore";
 import { useCoachingDeskStore } from "./stores/coachingDeskStore";
@@ -51,5 +52,9 @@ router.beforeEach(async (to, from) => {
   if (!auth.session && !["login", "about", "changelog"].includes(String(to.name))) return "/login";
   if (auth.session && to.name === "login") return "/club";
   if (to.meta.admin && !auth.isAdmin) return "/club";
+});
+router.afterEach((to, from, failure) => {
+  // Do not cancel guards asking permission to leave until navigation succeeds.
+  if (!failure && to.fullPath !== from.fullPath) cancelAllConfirmations();
 });
 export default router;

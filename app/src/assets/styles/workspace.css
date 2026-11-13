@@ -1,15 +1,14 @@
 body.coach {
-  --surface: #ffffff;
-  --canvas: #f2f4f6;
-  --line: #e2e6e9;
-  --muted: #65716e;
-  --ink: #202b29;
-  --green-soft: #eaf3ef;
-  --pitch-900: #183b31;
-  --pitch-700: #26715a;
-  --pitch-500: #35876b;
-  --paper: #ffffff;
-  --radius-lg: 8px;
+  --surface: var(--color-surface);
+  --canvas: var(--color-bg);
+  --line: var(--color-border);
+  --muted: var(--color-text-muted);
+  --ink: var(--color-text);
+  --green-soft: var(--color-brand-soft);
+  --pitch-900: var(--color-brand);
+  --pitch-700: var(--color-brand);
+  --pitch-500: var(--color-brand);
+  --paper: var(--color-surface);
   background: var(--canvas);
   color: var(--ink);
   font-size: 14px;
@@ -28,7 +27,7 @@ body.coach .wrapper .board {
   overflow: hidden;
 }
 .board button,
-.board select {
+.board .ui-select-trigger {
   cursor: pointer;
   font-family: inherit;
 }
@@ -36,12 +35,12 @@ body.coach .wrapper .board {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.board :is(button, input, select):focus-visible {
-  outline: 2px solid #287fbc;
+.board :is(button, input, .ui-select-trigger):focus-visible {
+  outline: 2px solid var(--color-focus);
   outline-offset: 3px;
 }
-.tactics-shell :is(button, input, select):focus-visible {
-  outline: 2px solid #287fbc;
+.tactics-shell :is(button, input, .ui-select-trigger):focus-visible {
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }
 .board button {
@@ -104,14 +103,14 @@ body.coach .wrapper .board {
 }
 .board-badge.draft,
 .board-badge.dirty {
-  color: #b45309;
-  border-color: #ecd3ac;
-  background: #fef6e8;
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
 }
 .board-badge.clean {
   color: var(--pitch-700);
-  border-color: #b9d6c6;
-  background: #eef6f0;
+  border-color: var(--color-success-border);
+  background: var(--color-success-soft);
 }
 .board-badge.template {
   color: var(--pitch-700);
@@ -145,6 +144,8 @@ body.coach .wrapper .board {
   min-height: 0;
   overflow: hidden;
   touch-action: none;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
 }
 .pitch-footer {
   padding: 10px 24px 18px;
@@ -173,15 +174,15 @@ body.coach .wrapper .board {
   border-radius: 50%;
 }
 .home-dot {
-  background: #35876b;
+  background: var(--color-brand);
 }
 .away-dot {
-  background: #434b57;
+  background: var(--color-text);
 }
 .view-controls {
   display: flex;
   align-items: center;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 2px;
@@ -217,21 +218,21 @@ body.coach .wrapper .board {
   padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
-  color: #64736e;
+  color: var(--color-text-muted);
   background: transparent;
 }
 .board-tools .tbtn.active {
   background: var(--green-soft);
   color: var(--pitch-700);
-  border-color: #c7dfd4;
+  border-color: var(--color-border-strong);
 }
 .board-tools .tbtn:hover:not(:disabled) {
   background: var(--green-soft);
   color: var(--pitch-700);
 }
 .board-tools .tbtn.danger:hover {
-  color: #b43d43;
-  background: #fdf0f0;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
 }
 .board-tools .tbtn:disabled {
   background: transparent;
@@ -245,7 +246,7 @@ body.coach .wrapper .board {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: white;
+  background: var(--color-surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   box-shadow: var(--shadow-sm);
@@ -268,8 +269,8 @@ body.coach .wrapper .board {
 .anim-dot {
   width: 12px;
   height: 12px;
-  border: 2px solid #b3c7bd;
-  background: white;
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-surface);
   border-radius: 50%;
   padding: 0;
   flex-shrink: 0;
@@ -279,10 +280,10 @@ body.coach .wrapper .board {
   border-color: var(--pitch-700);
 }
 .anim-dot.played {
-  background: #bbdacc;
+  background: var(--color-brand-soft);
 }
 body.coach .board.presenting {
-  background: #183b31;
+  background: var(--color-bg);
 }
 .presenting .pitch-stage {
   padding: 0 20px;
@@ -293,7 +294,7 @@ body.coach .board.presenting {
   padding: 10px 20px;
   width: 100%;
   text-align: center;
-  color: white;
+  color: var(--color-text);
 }
 .present-title {
   font-size: 22px;
@@ -316,10 +317,10 @@ body.coach .board.presenting {
   min-height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid #ffffff40;
+  border: 1px solid var(--color-border);
   border-radius: 5px;
-  background: #ffffff15;
-  color: white;
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
   padding: 0 12px;
 }
 @media (max-width: 1100px) {
@@ -556,8 +557,10 @@ body.coach .wrapper .board.compact-workspace {
 .compact-workspace .roster-btn {
   min-height: 44px;
 }
-.compact-workspace .detail-fields :is(input, select),
-.compact-workspace .animation-timeline :is(input:not([type="checkbox"]):not([type="range"]), textarea, select) {
+.compact-workspace .detail-fields :is(input, .ui-select-trigger),
+.compact-workspace
+  .animation-timeline
+  :is(input:not([type="checkbox"]):not([type="range"]), textarea, .ui-select-trigger) {
   font-size: 16px;
 }
 .compact-workspace .board-tools {

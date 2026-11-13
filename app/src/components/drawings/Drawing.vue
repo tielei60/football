@@ -11,6 +11,7 @@
       :x="drawing.startX"
       :y="drawing.startY"
       :fill="drawing.strokeColor"
+      :style="textContrastStyle(drawing.strokeColor)"
       :font-size="fontSize"
       font-weight="700"
     >
@@ -32,6 +33,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { textContrastStyle } from "@/utils/displayContrast";
 import rough from "roughjs";
 import type { Drawing } from "@/types/drawing";
 import { renderShape, textFontSize } from "@/utils/drawing";
@@ -109,11 +111,11 @@ watch(() => props.drawing, drawShape, { deep: true });
 }
 .text-input {
   width: 100%;
-  border: 2px solid #15803d;
+  border: 2px solid var(--color-brand);
   border-radius: 6px;
   padding: 2px 8px;
   outline: none;
-  background: #fff;
+  background: var(--color-surface);
   font-weight: 700;
 }
 </style>

@@ -1,6 +1,7 @@
 <template>
   <div class="club-heading">
     <div>
+      <span class="club-eyebrow">PROFILE / 个人与球队</span>
       <h1>我的账号</h1>
       <p class="club-muted">{{ auth.session?.user.username }} · {{ auth.isAdmin ? "管理员" : "球员" }}</p>
     </div>
@@ -9,7 +10,7 @@
   <ClubTeamCard />
   <form class="club-card" style="max-width: 580px" @submit.prevent="changePassword">
     <h2>修改密码</h2>
-    <p class="club-muted">修改后，所有设备需要重新登录。</p>
+    <p class="club-muted club-credential-hint">修改后，所有设备需要重新登录。请使用独立密码，并通过可信渠道保管。</p>
     <p v-if="error" class="club-error" role="alert">{{ error }}</p>
     <div class="club-fields">
       <label>
@@ -56,10 +57,15 @@ async function changePassword() {
   }
 }
 async function logout() {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = "";
   try {
     await auth.logout();
   } catch (e) {
     error.value = (e as Error).message;
+  } finally {
+    busy.value = false;
   }
 }
 </script>

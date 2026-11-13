@@ -1,6 +1,7 @@
 <template>
   <div class="club-heading">
     <div>
+      <span class="club-eyebrow">THE SQUAD / 球队阵容</span>
       <h1>球队球员</h1>
       <p class="club-muted">
         {{ players.filter((p) => p.status === "active").length }} 位在队球员 · 名单与战术板共享球员身份
@@ -13,13 +14,13 @@
     <button type="button" :disabled="busy" @click="reload">重新载入球员（放弃未保存修改）</button>
   </div>
   <p v-if="success" role="status" class="club-success">{{ success }}</p>
-  <form v-if="form" class="club-card" @submit.prevent="save">
+  <form v-if="form" ref="playerFormElement" class="club-card" @submit.prevent="save">
     <fieldset :disabled="busy">
       <h2>{{ form.id ? "编辑球员资料" : "添加球员" }}</h2>
       <div class="club-fields">
         <label>
           姓名
-          <input v-model="form.name" required maxlength="100" />
+          <input ref="playerNameInput" v-model="form.name" required maxlength="100" />
         </label>
         <label>
           球衣号码
@@ -27,27 +28,38 @@
         </label>
         <label>
           位置（逗号分隔，可多选）
-          <input v-model="positions" placeholder="例如：中后卫, 中场" list="club-position-options" />
+          <input v-model="positions" placeholder="例如：中后卫, 中场" />
         </label>
-        <datalist id="club-position-options">
-          <option v-for="position in positionOptions" :key="position" :value="position" />
-        </datalist>
+
         <label>
           惯用脚
-          <select v-model="form.preferredFoot">
+          <UiSelect v-model="form.preferredFoot">
             <option value="">未知</option>
             <option>右脚</option>
             <option>左脚</option>
             <option>双脚</option>
-          </select>
+          </UiSelect>
         </label>
         <label>
           状态
-          <select v-model="form.status">
+          <UiSelect v-model="form.status">
             <option value="active">在队</option>
             <option value="inactive">已归档</option>
-          </select>
+          </UiSelect>
         </label>
+      </div>
+      <div class="club-position-suggestions" aria-label="常用位置快捷选择">
+        <span class="club-muted">快捷添加位置</span>
+        <button
+          v-for="position in positionOptions"
+          :key="position"
+          type="button"
+          :aria-pressed="selectedPositions.includes(position)"
+          :class="{ selected: selectedPositions.includes(position) }"
+          @click="togglePosition(position)"
+        >
+          {{ position }}
+        </button>
       </div>
       <div class="club-avatar-editor">
         <label>
@@ -79,7 +91,9 @@
   <form v-if="account" class="club-card" @submit.prevent="saveAccount">
     <fieldset :disabled="busy">
       <h2>{{ account.hasAccount ? "重置密码" : "创建球员账号" }} · {{ account.name }}</h2>
-      <p class="club-muted">请通过可信渠道单独告知球员登录信息。重置密码会退出该球员的所有已登录设备。</p>
+      <p class="club-muted club-credential-hint">
+        请通过可信渠道单独告知球员登录信息。重置密码会退出该球员的所有已登录设备。
+      </p>
       <div class="club-fields">
         <label v-if="!account.hasAccount">
           用户名
@@ -109,7 +123,7 @@
       查找球员
       <input v-model="search" placeholder="姓名、号码或位置" />
     </label>
-    <p v-if="loading" role="status">正在载入球员…</p>
+    <p v-if="loading" role="status" class="club-loading">正在载入球员…</p>
     <ClubTableWrap v-else label="球员资料表">
       <table>
         <thead>
@@ -146,7 +160,7 @@
             <td>{{ p.positions.join(" / ") || "未知" }}</td>
             <td>{{ p.preferredFoot || "未知" }}</td>
             <td>
-              <span class="club-tag">{{ p.status === "active" ? "在队" : "已归档" }}</span>
+              <span class="club-tag" :data-status="p.status">{{ p.status === "active" ? "在队" : "已归档" }}</span>
             </td>
             <td v-if="auth.isAdmin">
               <div class="club-actions">
@@ -173,7 +187,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import ClubTableWrap from "@/components/ClubTableWrap.vue";
 import { useAuthStore } from "@/stores/authStore";
 import { clubApi, ClubApiError, unknown, type ClubPlayer } from "@/services/clubApi";
@@ -197,6 +211,21 @@ const positionOptions = [
   "待定",
 ];
 const positions = ref("待定");
+const playerFormElement = ref<HTMLFormElement | null>(null);
+const playerNameInput = ref<HTMLInputElement | null>(null);
+const selectedPositions = computed(() =>
+  positions.value
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
+function togglePosition(position: string) {
+  if (busy.value) return;
+  const selected = new Set(selectedPositions.value);
+  if (selected.has(position)) selected.delete(position);
+  else selected.add(position);
+  positions.value = [...selected].join(", ");
+}
 const account = ref<ClubPlayer | null>(null);
 const username = ref("");
 const password = ref("");
@@ -309,6 +338,10 @@ function edit(p?: ClubPlayer) {
       };
   positions.value = p?.positions.join(", ") || "待定";
   success.value = "";
+  void nextTick(() => {
+    playerFormElement.value?.scrollIntoView({ block: "start" });
+    playerNameInput.value?.focus({ preventScroll: true });
+  });
 }
 async function save() {
   if (busy.value || readingAvatar.value || !form.value) return;
@@ -395,7 +428,8 @@ onUnmounted(() => {
   width: 96px;
   height: 96px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
   display: block;
   margin: 12px 0;
 }
@@ -410,5 +444,29 @@ onUnmounted(() => {
   object-fit: cover;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.club-position-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 14px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+.club-position-suggestions > span {
+  font-size: 11px;
+  margin-right: 8px;
+}
+.club-position-suggestions button {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.club-position-suggestions button.selected {
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
 }
 </style>

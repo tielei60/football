@@ -1,3 +1,4 @@
+import { selectUiOption, expectUiValue } from "./ui-select";
 import { test, expect } from "./tactical-fixtures";
 import { MATCH_FORMATIONS, MATCH_PLAYER_COUNTS } from "../src/data/matchFormats";
 
@@ -21,18 +22,18 @@ test("each match size offers working home and opponent formation choices on mobi
   await page.goto("/board");
   await page.getByRole("button", { name: "更多设置", exact: true }).click();
   for (const size of MATCH_PLAYER_COUNTS) {
-    await page.getByRole("combobox", { name: "比赛人数", exact: true }).selectOption(String(size));
+    await selectUiOption(page.getByRole("combobox", { name: "比赛人数", exact: true }), String(size));
     for (const formation of MATCH_FORMATIONS[size].filter((f) => f.category === "常规")) {
       const choice = page.getByRole("combobox", { name: "主队阵型", exact: true });
-      await choice.selectOption(formation.id);
-      await expect(choice).toHaveValue(formation.id);
-      await page.getByRole("combobox", { name: "对手阵型" }).selectOption(formation.id);
+      await selectUiOption(choice, formation.id);
+      await expectUiValue(choice, formation.id);
+      await selectUiOption(page.getByRole("combobox", { name: "对手阵型" }), formation.id);
       await expect(page.locator(".roster-item.on")).toHaveCount(size);
       await expect(page.locator("#players > g")).toHaveCount(size * 2);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   }
-  await page.getByRole("combobox", { name: "比赛人数", exact: true }).selectOption("11");
+  await selectUiOption(page.getByRole("combobox", { name: "比赛人数", exact: true }), "11");
   await page.screenshot({ path: "test-results/formation-options-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.screenshot({ path: "test-results/formation-options-desktop.png", fullPage: true });
@@ -41,31 +42,31 @@ test("each match size offers working home and opponent formation choices on mobi
 test("match formats resize both teams and survive undo, save and reload", async ({ page, request }) => {
   await page.goto("/board");
   const count = page.getByRole("combobox", { name: "比赛人数", exact: true });
-  await expect(count).toHaveValue("8");
+  await expectUiValue(count, "8");
   await expect(page.locator(".roster-item.on")).toHaveCount(8);
-  await page.getByRole("combobox", { name: "对手阵型" }).selectOption("2-3-2");
+  await selectUiOption(page.getByRole("combobox", { name: "对手阵型" }), "2-3-2");
   for (const size of [11, 9, 6, 5, 7, 8]) {
-    await count.selectOption(String(size));
+    await selectUiOption(count, String(size));
     await expect(page.locator(".roster-item.on")).toHaveCount(size);
     await expect(page.locator("#players > g")).toHaveCount(size * 2);
     await expect(page.locator(".pitch-size")).toHaveText(`${size} 人制`);
   }
-  await count.selectOption("11");
+  await selectUiOption(count, "11");
   await page.locator("h1").click();
   await page.keyboard.press("Control+z");
-  await expect(count).toHaveValue("8");
+  await expectUiValue(count, "8");
   await expect(page.locator("#players > g")).toHaveCount(16);
   await page.keyboard.press("Control+y");
-  await expect(count).toHaveValue("11");
+  await expectUiValue(count, "11");
   await expect(page.locator("#players > g")).toHaveCount(22);
   await expect(page.locator(".watermark")).toContainText("11人制");
-  await expect(page.getByRole("combobox", { name: "对手阵型" })).toHaveValue("4-4-2");
+  await expectUiValue(page.getByRole("combobox", { name: "对手阵型" }), "4-4-2");
   await page.getByRole("button", { name: "保存战术", exact: true }).click();
   await expect.poll(async () => (await (await request.get("/api/tactics")).json())[0]?.board.playerCount).toBe(11);
   await expect(page.getByLabel("保存状态")).toContainText("已保存");
   await page.reload();
-  await expect(count).toHaveValue("11");
-  await expect(page.getByRole("combobox", { name: "对手阵型" })).toHaveValue("4-4-2");
+  await expectUiValue(count, "11");
+  await expectUiValue(page.getByRole("combobox", { name: "对手阵型" }), "4-4-2");
   await expect(page.locator("#players > g")).toHaveCount(22);
   await page.screenshot({ path: "test-results/match-format-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });

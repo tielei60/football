@@ -1,7 +1,7 @@
 <template>
   <section class="club-card" aria-label="球队资料">
     <h2>球队资料</h2>
-    <p v-if="loading" role="status">正在载入球队资料…</p>
+    <p v-if="loading" role="status" class="club-loading">正在载入球队资料…</p>
     <div v-if="error" class="club-error" role="alert">
       <p>{{ error }}</p>
       <button type="button" :disabled="busy || loading" @click="load">重新载入球队（放弃未保存修改）</button>
@@ -25,11 +25,7 @@
           </label>
         </div>
         <p class="club-muted">支持 PNG、JPEG、WebP、GIF，最大 2 MiB。选择后预览，保存才会更新球队资料。</p>
-        <img
-          :src="draft.crest || defaultBadge"
-          alt="球队队徽预览"
-          style="width: 96px; height: 96px; object-fit: contain; margin-bottom: 12px"
-        />
+        <img :src="draft.crest || defaultBadge" alt="球队队徽预览" class="club-team-crest-preview" />
         <p v-if="reading" role="status">正在读取队徽…</p>
         <p v-if="!draft.crest" class="club-muted">未设置自定义队徽，当前使用默认队徽。</p>
         <div class="club-actions">
@@ -39,11 +35,7 @@
       </fieldset>
     </form>
     <div v-else-if="draft">
-      <img
-        :src="draft.crest || defaultBadge"
-        alt="球队队徽预览"
-        style="width: 96px; height: 96px; object-fit: contain"
-      />
+      <img :src="draft.crest || defaultBadge" alt="球队队徽预览" class="club-team-crest-preview" />
       <p>
         <strong>{{ draft.name }}</strong>
       </p>
@@ -172,3 +164,16 @@ onUnmounted(() => {
   cancelReading();
 });
 </script>
+
+<style scoped>
+.club-team-crest-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin-bottom: 12px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  border-radius: 5px;
+}
+</style>
