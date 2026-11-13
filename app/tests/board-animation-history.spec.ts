@@ -4,7 +4,10 @@ import { test, expect } from "./tactical-fixtures";
 async function snapshot(page: Page) {
   return page.evaluate(async () => {
     const { useAnimationStore } = await import("../../../../../../src/stores/animationStore.ts");
-    return useAnimationStore().getSnapshot() ?? null;
+    const { restoreAnimation } = await import("../../../../../../src/types/animation.ts");
+    // Restore applies the persisted contract defaults (empty note and default duration).
+    // Compare every normalized field, without treating omitted defaults as lost user data.
+    return restoreAnimation(useAnimationStore().getSnapshot())?.toJSON() ?? null;
   });
 }
 
@@ -81,10 +84,13 @@ test("new blank board undo and redo preserve complete custom animation instead o
                 title: "虚构旧版画板",
                 board: { pieces: [], markings: [], playerCount: 8 },
                 tags: [],
+                favorite: false,
+                formationName: null,
+                thumbnail: null,
               },
             }),
           });
-          if (!saved.ok) throw new Error(`fixture failed: ${saved.status}`);
+          if (!saved.ok) throw new Error(`fixture failed: ${saved.status} ${await saved.text()}`);
           const target = await saved.json();
           await store.loadTactic(target.tacticId);
         }

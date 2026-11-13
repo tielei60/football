@@ -115,3 +115,24 @@ test("focused toolbar buttons retain Ctrl/Cmd undo and redo without stealing the
   await page.keyboard.press("Meta+Shift+z");
   await expect(text).toHaveCount(1);
 });
+
+test("Escape closes an open select first and still exits fallback fullscreen from a focused button", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Element.prototype.requestFullscreen = () => Promise.reject(new Error("test fallback"));
+  });
+  await openAnimation(page);
+  await page.locator(".view-controls").getByRole("button", { name: "全屏", exact: true }).click();
+  await expect(page.locator(".board")).toHaveClass(/workspace-fullscreen/);
+  const speed = page.getByRole("combobox", { name: "播放速度", exact: true });
+  await speed.focus();
+  await page.keyboard.press("Space");
+  await expect(speed).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(speed).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".board")).toHaveClass(/workspace-fullscreen/);
+  await page.locator(".view-controls").getByRole("button", { name: "退出全屏", exact: true }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".board")).not.toHaveClass(/workspace-fullscreen/);
+});

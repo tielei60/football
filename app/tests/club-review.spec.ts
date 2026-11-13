@@ -1,8 +1,8 @@
+import { mkdir } from "node:fs/promises";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { setMatchSchedule } from "./match-schedule";
 import { selectUiOption, expectUiValue } from "./ui-select";
 /* eslint-disable no-restricted-syntax, no-await-in-loop -- Browser steps share a page and must run sequentially, not concurrently. */
-import { mkdir } from "node:fs/promises";
-import type { APIRequestContext, Page } from "@playwright/test";
 import { assertNeutralBadge } from "./assert-neutral-badge";
 import { test, expect } from "./fixtures";
 
@@ -702,12 +702,12 @@ test("season roster and match fields preserve historical identity, number and ta
   await page.getByRole("button", { name: "新建比赛" }).click();
   await page.getByLabel("对手", { exact: true }).fill("归属对手");
   await setMatchSchedule(page, "2092-01-01");
-  await page.getByLabel("赛事名称").fill("业余杯");
+  await page.getByRole("textbox", { name: "赛事名称", exact: true }).fill("业余杯");
   await selectUiOption(page.getByLabel("比赛人数制"), "8");
   await selectUiOption(page.getByRole("combobox", { name: "主客场", exact: true }), "away");
   await selectUiOption(page.getByLabel("归属赛季"), String(season.id));
   await page.getByRole("button", { name: "创建草稿" }).click();
-  await expect(page.getByLabel("赛事名称")).toHaveValue("业余杯");
+  await expect(page.getByRole("textbox", { name: "赛事名称", exact: true })).toHaveValue("业余杯");
   await expectUiValue(page.getByRole("combobox", { name: "主客场", exact: true }), "away");
   await page.getByLabel("快照阵型", { exact: true }).check();
   await selectUiOption(page.getByLabel("发布状态"), "completed");

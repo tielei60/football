@@ -300,11 +300,14 @@
 </template>
 
 <script setup lang="ts">
-import { confirmAction } from "@/components/ui/confirmAction";
 import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import type { Component } from "vue";
 import { storeToRefs } from "pinia";
-import { GAME_CONSTANTS } from "../constants";
+import { ZoomIn, ZoomOut, Maximize, Minimize, Scan, Columns2, ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { ElMessage } from "element-plus";
+import { useMediaQuery } from "@vueuse/core";
+import { confirmAction } from "@/components/ui/confirmAction";
+import { GAME_CONSTANTS, RUN_LINE_CONFIG, PASS_LINE_CONFIG } from "../constants";
 // 组件导入
 import ItemComponent from "@/components/Item.vue";
 import RosterPanel from "@/components/RosterPanel.vue";
@@ -312,8 +315,6 @@ import TacticsPanel from "@/components/TacticsPanel.vue";
 import CoachingPanel from "@/components/CoachingPanel.vue";
 import AnimationTimeline from "@/components/AnimationTimeline.vue";
 import PrintSheet from "@/components/PrintSheet.vue";
-import { ZoomIn, ZoomOut, Maximize, Minimize, Scan, Columns2, ChevronLeft, ChevronRight } from "lucide-vue-next";
-import { ElMessage } from "element-plus";
 import BoardTools from "@/components/BoardTools.vue";
 import WorkspaceHeader from "@/components/WorkspaceHeader.vue";
 import DragToolsPanel from "@/components/DragToolsPanel.vue";
@@ -337,14 +338,12 @@ import { useEraser } from "../composables/useEraser";
 import { useFormation } from "../composables/useFormation";
 import { useHistory } from "../composables/useHistory";
 import { useTacticsStore } from "../stores/tacticsStore";
-import { RUN_LINE_CONFIG, PASS_LINE_CONFIG } from "../constants";
 import { useCoachingDeskStore } from "../stores/coachingDeskStore";
 import { useRosterStore } from "../stores/rosterStore";
 import { TACTICAL_SCENARIOS } from "@/data/tacticalScenarios";
 import { useCoachingStore } from "@/stores/coachingStore";
 import { useMatchStore } from "@/stores/matchStore";
 import { useWorkspaceFullscreen } from "@/composables/useWorkspaceFullscreen";
-import { useMediaQuery } from "@vueuse/core";
 import MobileWorkspaceTabs, { type WorkspaceTab } from "@/components/MobileWorkspaceTabs.vue";
 import { findFormation, type MatchPlayerCount } from "@/data/matchFormats";
 import { useTeamIdentity } from "@/composables/useTeamIdentity";
@@ -478,7 +477,7 @@ const coachingOpen = ref(false);
 // 场上有走位线条时一键落位可能让线条错位（可撤销），先确认；纯换模板不打扰。
 const confirmRelayout = async (kind: string) => {
   if (drawStore.drawings.getDrawings().length === 0) return true;
-  return await confirmAction(`${kind}一键落位将重排场上球员站位，现有线条保留但可能错位（可撤销），继续？`);
+  return confirmAction(`${kind}一键落位将重排场上球员站位，现有线条保留但可能错位（可撤销），继续？`);
 };
 const onApplyFormation = async (id: string) => {
   // 模板状态干净时重复点击是纯 no-op；已微调后点击则按就近落位收敛到模板网格。
@@ -568,9 +567,9 @@ const onDemoAnimation = async (id = "cross") => {
 
 // 演示模式：F 进入/退出，空格/→下一套，←上一套，Esc 退出
 const presentIndex = ref(0);
-const presentTitle = computed(() => {
-  return isAnimationMode.value ? currentAnimation.value?.name || "战术动画" : currentTacticTitle.value;
-});
+const presentTitle = computed(() =>
+  isAnimationMode.value ? currentAnimation.value?.name || "战术动画" : currentTacticTitle.value
+);
 const presentSub = computed(() => {
   const list = tacticsStore.tactics;
   if (useCoachingStore().plan.objective) return useCoachingStore().plan.objective;
@@ -636,7 +635,7 @@ const handleShortcut = (e: KeyboardEvent) => {
   // Keep explicit Ctrl/Cmd+S in workspace fields/drawers, but never act behind a confirmation dialog.
   if (saveShortcut && !blockingDialog && (!modalOpen || inWorkspaceDrawer)) {
     e.preventDefault();
-    void quickSaveFlow();
+    quickSaveFlow();
     return;
   }
   if (modalOpen) return;
@@ -649,6 +648,7 @@ const handleShortcut = (e: KeyboardEvent) => {
   }
   if (
     !mod &&
+    e.key !== "Escape" &&
     target?.closest(
       'button, a[href], summary, [role="button"], [role="combobox"], [role="listbox"], [role="option"], [role="slider"], [role="menu"], [role="menuitem"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"]'
     )
@@ -680,13 +680,13 @@ const handleShortcut = (e: KeyboardEvent) => {
       handleRedo();
     } else if (e.key.toLowerCase() === "s") {
       e.preventDefault();
-      void quickSaveFlow();
+      quickSaveFlow();
     }
     return;
   }
   if (e.key === "Escape") {
     closeMobilePanel();
-    if (isFullscreen.value) void exitFullscreen();
+    if (isFullscreen.value) exitFullscreen();
     tacticsOpen.value = false;
     coachingOpen.value = false;
     globalStore.setCurrentTool("select");

@@ -108,8 +108,10 @@ test("a pen pointerup before RAF still stores and renders the exact final point"
     return useDrawStore().drawings.getDrawings()[0];
   });
   expect(drawing.pathPoints!.length).toBeGreaterThanOrEqual(2);
-  expect(drawing.pathPoints!.at(-1)![0]).toBeCloseTo(940, 4);
-  expect(drawing.pathPoints!.at(-1)![1]).toBeCloseTo(250, 4);
+  // SVGPoint uses float32 precision. A sub-0.001 SVG-unit tolerance is far below
+  // a rendered pixel while still proving that pointerup supplies the last sample.
+  expect(drawing.pathPoints!.at(-1)![0]).toBeCloseTo(940, 3);
+  expect(drawing.pathPoints!.at(-1)![1]).toBeCloseTo(250, 3);
   await expect(page.locator("#drawings path").first()).toBeVisible();
 });
 
