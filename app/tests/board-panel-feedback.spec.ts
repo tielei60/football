@@ -85,7 +85,7 @@ test("open provides pending feedback, blocks duplicate activation, and failed re
   } finally {
     release();
   }
-  await expect(page.getByRole("alert").filter({ hasText: "模拟读取暂不可用" })).toBeVisible();
+  await expect(page.locator(".tactics-drawer .panel-error")).toContainText("战术服务暂时不可用，请稍后重试");
   await expect(title).toHaveValue("保留草稿");
   await page.unroute(`**/api/tactics/${id}`);
   await page.getByRole("button", { name: "重试读取", exact: true }).click();
@@ -125,7 +125,7 @@ test("late history replies cannot reopen a collapsed or switched history, and fa
   await expect(b.locator(".version-item")).toHaveCount(1);
   await expect(a.getByRole("button", { name: "版本历史", exact: true })).toHaveAttribute("aria-expanded", "false");
   await a.getByRole("button", { name: "版本历史", exact: true }).click();
-  await expect(a.getByRole("alert")).toContainText("旧历史请求失败");
+  await expect(a.getByRole("alert")).toContainText("战术服务暂时不可用，请稍后重试");
   await page.unroute(`**/api/tactics/${first}/versions`);
   await a.getByRole("button", { name: "重试历史读取", exact: true }).click();
   await expect(a.locator(".version-item")).toHaveCount(1);
@@ -172,7 +172,7 @@ test("failed import offers verification instead of automatically replaying the w
         JSON.stringify({ title: "不可自动重复导入", tags: [], board: { pieces: [], markings: [], trainingPlan: {} } })
       ),
     });
-  const error = page.getByRole("alert").filter({ hasText: "写入可能已完成" });
+  const error = page.locator(".tactics-drawer .panel-error").filter({ hasText: "写入可能已完成" });
   await expect(error).toBeVisible();
   await expect(error.getByRole("button", { name: "重试读取", exact: true })).toHaveCount(0);
   await error.getByRole("button", { name: "刷新战术库核对", exact: true }).click();
@@ -357,7 +357,7 @@ test("failed tactic save releases the shared lock for a deliberate retry", async
     return route.fulfill({ status: 503, json: { error: "测试保存失败" } });
   });
   await page.getByRole("button", { name: "保存战术", exact: true }).click();
-  await expect(page.getByText("测试保存失败", { exact: true })).toBeVisible();
+  await expect(page.locator(".el-message").filter({ hasText: "战术服务暂时不可用，请稍后重试" })).toBeVisible();
   expect(
     await page.evaluate(async () => (await import("../src/stores/tacticsStore.ts")).useTacticsStore().savingTactic)
   ).toBe(false);

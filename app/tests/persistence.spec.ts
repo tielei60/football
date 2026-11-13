@@ -208,7 +208,7 @@ test("concurrent desks report conflicts without overwriting another browser's ch
       .toBe("先保存的训练目标");
     await other.getByRole("button", { name: "训练计划", exact: true }).click();
     await other.getByRole("textbox", { name: "训练目标" }).fill("过期页面的训练目标");
-    await expect(other.getByLabel("保存状态")).toContainText("工作台已在其他页面修改");
+    await expect(other.getByLabel("保存状态")).toContainText("服务器草稿已在其他页面修改");
     const { desk } = await (await request.get("/api/coaching-desk")).json();
     expect(desk.board.trainingPlan.objective).toBe("先保存的训练目标");
   } finally {

@@ -247,7 +247,7 @@ const exportImage = async () => {
   font-size: 11px;
   line-height: 1.45;
   font-weight: 650;
-  max-width: 44px;
+  max-width: 2.3em;
   grid-column: 1 / -1;
 }
 .tool-caption.destructive {

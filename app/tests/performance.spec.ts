@@ -25,7 +25,7 @@ test("animated players move as a group without relaying out avatar coordinates",
   expect((await circle.boundingBox())!.x).toBeGreaterThan(before.x + 10);
 });
 
-test("playing animation avoids per-player SVG shadow filters", async ({ page }) => {
+test("playing and paused animation keep marker groups and text free of shadow filters", async ({ page }) => {
   await page.goto("/board");
   await page.getByRole("button", { name: "制作动画", exact: true }).click();
   await page.getByRole("button", { name: "添加帧", exact: true }).click();
@@ -33,8 +33,26 @@ test("playing animation avoids per-player SVG shadow filters", async ({ page }) 
   await page.getByRole("button", { name: "播放动画", exact: true }).click();
   const marker = page.locator("#players > g > g > g").first();
   await expect(marker).toHaveCSS("filter", "none");
+  expect(
+    await marker.locator("text").evaluateAll((elements) =>
+      elements.every((el) => {
+        const style = getComputedStyle(el);
+        return style.filter === "none" && style.textShadow === "none";
+      })
+    )
+  ).toBe(true);
   await page.getByRole("button", { name: "暂停动画", exact: true }).click();
-  await expect(marker).not.toHaveCSS("filter", "none");
+  await expect(marker).toHaveCSS("filter", "none");
+  const labels = marker.locator("text");
+  expect(await labels.count()).toBeGreaterThan(0);
+  expect(
+    await labels.evaluateAll((elements) =>
+      elements.every((el) => {
+        const style = getComputedStyle(el);
+        return style.filter === "none" && style.textShadow === "none";
+      })
+    )
+  ).toBe(true);
 });
 
 test("editing a tactic name during a slow save keeps the newer input", async ({ page }) => {

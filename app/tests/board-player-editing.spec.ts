@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { selectUiOption } from "./ui-select";
 import { test, expect } from "./tactical-fixtures";
 
 async function openRoster(page: Page) {
@@ -259,4 +260,36 @@ test("football marker opens and deletes by keyboard and undo restores it", async
   await page.getByRole("button", { name: "撤销", exact: true }).click();
   await expect(ball).toBeVisible();
   await expect(ball.getByRole("button", { name: "足球，打开棋子详情", exact: true })).toHaveAttribute("tabindex", "0");
+});
+
+test("linked player keeps profile positions when its tactical role changes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/board");
+  await expect(page.locator(".roster-item").first()).toBeVisible();
+  const profile = await page.evaluate(async () => {
+    const { useRosterStore } = await import("../src/stores/rosterStore.ts");
+    const player = useRosterStore().players.find((p) => p.name === "虚构战术队员01")!;
+    return { id: player.id, fieldId: player.fieldId, positions: [...player.positions] };
+  });
+  const piece = page.locator(`[id="item-${profile.fieldId}"]`);
+  await expect(piece.locator(".player-position")).toHaveText("中后卫、后腰");
+  await piece.getByRole("button").focus();
+  await page.keyboard.press("Enter");
+  await selectUiOption(piece.getByRole("combobox", { name: "战术职责", exact: true }), { label: "前锋" });
+  await expect(piece.locator(".player-position")).toHaveText("中后卫、后腰");
+  await expect(piece.locator("title")).toContainText("档案位置：中后卫、后腰");
+  await expect(piece.locator("title")).toContainText("战术职责：前锋");
+  expect(
+    await page.evaluate(async (id) => {
+      const { useRosterStore } = await import("../src/stores/rosterStore.ts");
+      return useRosterStore().players.find((p) => p.id === id)!.positions;
+    }, profile.id)
+  ).toEqual(profile.positions);
+  await page.evaluate(async () => {
+    const { useCoachingDeskStore } = await import("../src/stores/coachingDeskStore.ts");
+    await useCoachingDeskStore().flush();
+  });
+  await page.reload();
+  await expect(piece.locator(".player-position")).toHaveText("中后卫、后腰");
+  await expect(piece.locator("title")).toContainText("战术职责：前锋");
 });

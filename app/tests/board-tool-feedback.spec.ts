@@ -60,10 +60,12 @@ test("palette keyboard input cannot add objects during a transition or playback"
     useAnimationStore().seek(0.5);
   });
   const ball = page.getByRole("button", { name: "添加足球", exact: true });
-  await expect(ball).toHaveAttribute("aria-disabled", "true");
-  await expect(ball).toHaveAttribute("tabindex", "-1");
+  // BoardView removes the whole palette outside editable keyframes.
+  // A keyboard user must not find a hidden placement action or create a piece.
+  await expect(ball).toHaveCount(0);
+  await expect(page.locator("#toolbar-drag")).toHaveCount(0);
   const before = await state(page);
-  await ball.dispatchEvent("keydown", { key: "Enter", bubbles: true });
+  await page.keyboard.press("Enter");
   expect(await state(page)).toEqual(before);
   await expect(page.locator(".tool-caption")).toHaveText("动画预览");
   await page.getByRole("button", { name: "播放动画", exact: true }).click();

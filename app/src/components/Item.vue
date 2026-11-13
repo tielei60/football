@@ -11,7 +11,12 @@
         @keydown.enter.stop.prevent="handleKeyboardOpen"
         @keydown.space.stop.prevent="handleKeyboardOpen"
       >
-        <title>{{ item.text || "自由球员" }} · {{ displayedPosition }} · {{ item.number ?? "号码未知" }}</title>
+        <title>
+          {{ item.text || "自由球员" }} · {{ item.number ?? "号码未知" }} · 档案位置：{{
+            rosterPlayer?.positions?.join("、") || "未关联档案"
+          }}
+          · 战术职责：{{ posLabel(item.playerPosition) }}
+        </title>
         <!-- 名称（教练栏开关控制） -->
         <text v-if="showNames" :x="namePosition.x" :y="namePosition.y" text-anchor="middle" class="player-name">
           {{ shortLabel(item.text, 8) }}
@@ -148,7 +153,8 @@
               <span v-if="nameError" role="alert" class="field-error">{{ nameError }}</span>
             </div>
             <div class="input-group">
-              <UiSelect :value="item.playerPosition" aria-label="球员位置" @change="onRoleChange" class="role-select">
+              <span class="role-label">战术职责</span>
+              <UiSelect :value="item.playerPosition" aria-label="战术职责" @change="onRoleChange" class="role-select">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
@@ -255,8 +261,8 @@ const rosterPlayer = computed(() =>
     team: playerTeam.value,
   })
 );
-const displayedPosition = computed(() =>
-  props.item.playerPosition ? posLabel(props.item.playerPosition) : rosterPlayer.value?.positions?.join("、") || "待定"
+const displayedPosition = computed(
+  () => rosterPlayer.value?.positions?.join("、") || posLabel(props.item.playerPosition)
 );
 
 const shortLabel = (value: string | undefined, limit: number) => {
