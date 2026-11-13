@@ -318,12 +318,14 @@ const onSave = async (asNew = false) => {
   }
 };
 
-// 打开战术时把它的比赛信息带入输入框，方便接着改
+// Initialize on route re-entry as well as first asynchronous refresh. Drawer
+// visibility and background list refreshes must not overwrite unsaved form edits.
 watch(
-  () => store.currentId,
+  () => [store.currentId, store.ready] as const,
   () => {
     if (!saving.value) syncForm();
-  }
+  },
+  { immediate: true }
 );
 
 const matchText = (t: { match?: { opponent?: string; date?: string; score?: string } }) => {
