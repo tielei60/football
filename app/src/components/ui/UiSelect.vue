@@ -106,7 +106,9 @@ const props = withDefaults(
     placeholder?: string;
     modelModifiers?: { number?: boolean };
   }>(),
-  { disabled: false, required: false, placeholder: "请选择" }
+  // Value includes boolean, so Vue otherwise casts an absent prop to false.
+  // Preserve absence to allow the native-select-compatible :value fallback.
+  { modelValue: undefined, value: undefined, disabled: false, required: false, placeholder: "请选择" }
 );
 const emit = defineEmits<{ "update:modelValue": [value: Value]; change: [event: Event]; blur: [event: FocusEvent] }>();
 const attrs = useAttrs();

@@ -117,7 +117,7 @@
               <input type="text" placeholder="名称" v-model="item.text" />
             </div>
             <div class="input-group">
-              <UiSelect v-model="item.playerPosition" @change="onRoleChange" class="role-select">
+              <UiSelect v-model="item.playerPosition" aria-label="球员位置" @change="onRoleChange" class="role-select">
                 <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>

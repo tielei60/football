@@ -1,3 +1,4 @@
+import { selectUiOption, expectUiValue } from "./ui-select";
 import { test, expect } from "./tactical-fixtures";
 
 test("mouse selection in a teleported role menu keeps its player popup alive and still dismisses outside", async ({
@@ -7,7 +8,7 @@ test("mouse selection in a teleported role menu keeps its player popup alive and
   const player = page.locator("#players > g").filter({
     has: page.locator(".player-name", { hasText: "虚构战术队员01" }),
   });
-  await player.locator("circle").first().click();
+  await player.locator(":scope > g > g > circle").first().click();
   const popup = player.locator(".popup");
   await expect(popup).toBeVisible();
   const role = popup.getByRole("combobox");
@@ -49,4 +50,29 @@ test("successful browser Back cancels a pending tactic deletion without deleting
   await page.getByRole("button", { name: "战术库", exact: true }).click();
   await expect(page.locator(".tactic-title", { hasText: "导航取消删除虚构战术" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "请确认操作", exact: true })).toHaveCount(0);
+});
+
+test(":value controls retain numeric and empty-string values across live format changes", async ({ page }) => {
+  await page.goto("/board");
+  const count = page.getByRole("combobox", { name: "比赛人数", exact: true });
+  const away = page.getByRole("combobox", { name: "对手阵型", exact: true });
+  await expectUiValue(count, 8);
+  await expect(count).toContainText("8 人制");
+  await expectUiValue(away, "");
+  await expect(away).toContainText("不显示");
+  await selectUiOption(away, "2-3-2");
+  await expectUiValue(away, "2-3-2");
+  await selectUiOption(count, 11);
+  await expectUiValue(count, 11);
+  await expect(count).toContainText("11 人制");
+  await selectUiOption(away, "4-4-2");
+  await expectUiValue(away, "4-4-2");
+  await expect(page.locator("#players > g")).toHaveCount(22);
+  await selectUiOption(away, "");
+  await expectUiValue(away, "");
+  await expect(away).toContainText("不显示");
+  await expect(page.locator("#players > g")).toHaveCount(11);
+  await selectUiOption(count, 8);
+  await expectUiValue(count, 8);
+  await expect(page.locator("#players > g")).toHaveCount(8);
 });
