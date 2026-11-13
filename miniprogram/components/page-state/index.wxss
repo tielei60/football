@@ -1,0 +1,30 @@
+.state {
+  padding: 60rpx 28rpx;
+  text-align: center;
+  color: #81788b;
+  font-size: 26rpx;
+}
+.state button {
+  margin-top: 22rpx;
+  color: #8845a0;
+  background: #f0e7f5;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+}
+.state button::after {
+  border: 0;
+}
+.pulse {
+  width: 24rpx;
+  height: 24rpx;
+  margin: 0 auto 20rpx;
+  border: 4rpx solid #e9dced;
+  border-top-color: #8845a0;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

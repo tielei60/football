@@ -1,0 +1,31 @@
+.hero {
+  padding: 30rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #f0e3f5, #eaf3fa);
+  border: 1rpx solid #e8dcef;
+}
+.hero .title {
+  font-size: 38rpx;
+  margin-top: 6rpx;
+}
+.hero-metrics {
+  display: flex;
+  margin-top: 34rpx;
+  gap: 48rpx;
+  color: #81788b;
+  font-size: 22rpx;
+}
+.hero-number {
+  display: block;
+  font-size: 42rpx;
+  color: #633277;
+  font-weight: 750;
+}
+.next {
+  border-color: #d8c3e2;
+}
+.match-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin: 24rpx 0 14rpx;
+}

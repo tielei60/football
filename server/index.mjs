@@ -202,7 +202,26 @@ export function createFootballServer({
       const method = request.method;
       if (pathname === "/api/health" && method === "GET")
         return send(response, 200, { ok: true });
-      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+      // Native credentials are never ambient cookies. A distinct token format
+      // prevents browser sessions from being replayed to bypass Origin checks.
+      const nativeLogin =
+        pathname === "/api/auth/native-login" && method === "POST";
+      const authorization = request.headers.authorization;
+      const nativeRequest = nativeLogin || authorization !== undefined;
+      if (nativeRequest) {
+        if (
+          request.headers.origin !== undefined ||
+          request.headers.cookie !== undefined ||
+          Object.keys(request.headers).some((name) =>
+            name.startsWith("sec-fetch-"),
+          ) ||
+          (nativeLogin && request.headers["x-football-client"] !== "native-v1")
+        )
+          throw new FootballError(403, "请使用小程序客户端重新操作。");
+        if (!nativeLogin && !/^Bearer native_[a-f0-9]{64}$/.test(authorization))
+          throw new FootballError(401, "请先登录。");
+      }
+      if (!nativeRequest && !["GET", "HEAD", "OPTIONS"].includes(method)) {
         const expectedOrigin = publicOrigin || `http://${request.headers.host}`;
         if (
           request.headers.origin !== expectedOrigin ||
@@ -210,12 +229,29 @@ export function createFootballServer({
         )
           throw new FootballError(403, "请求来源不可信，请从本站重新操作。");
       }
-      const token = (request.headers.cookie ?? "")
-        .split(";")
-        .map((value) => value.trim())
-        .find((value) => value.startsWith("football_session="))
-        ?.slice("football_session=".length);
+      const token = nativeRequest
+        ? authorization?.slice("Bearer ".length)
+        : (request.headers.cookie ?? "")
+            .split(";")
+            .map((value) => value.trim())
+            .find((value) => value.startsWith("football_session="))
+            ?.slice("football_session=".length);
+      if (nativeLogin) {
+        if (authorization !== undefined)
+          throw new FootballError(400, "登录时请勿携带旧会话。");
+        return send(
+          response,
+          200,
+          club.login(
+            await readRequest(request, Math.min(maximumRequestBytes, 16384)),
+            clientAddress(request),
+            "native",
+          ),
+        );
+      }
       if (pathname === "/api/auth/login" && method === "POST") {
+        if (nativeRequest)
+          throw new FootballError(400, "请使用小程序登录接口。");
         const { token: sessionToken, ...session } = club.login(
           await readRequest(request, Math.min(maximumRequestBytes, 16384)),
           clientAddress(request),
@@ -225,7 +261,7 @@ export function createFootballServer({
       }
       if (pathname === "/api/auth/logout" && method === "POST") {
         club.logout(token);
-        response.setHeader("Set-Cookie", cookie("", true));
+        if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
       }
       // Read untrusted input before authenticating. A password reset, logout, or
@@ -245,7 +281,10 @@ export function createFootballServer({
               : Math.min(maximumRequestBytes, 1024 * 1024),
         );
       }
-      const user = club.authenticate(token);
+      const user = club.authenticate(
+        token,
+        nativeRequest ? "native" : "cookie",
+      );
       const admin = () => {
         if (user.role !== "admin")
           throw new FootballError(403, "此操作需要管理员权限。");
@@ -261,7 +300,7 @@ export function createFootballServer({
         return send(response, 200, club.sessionView(user));
       if (pathname === "/api/auth/password" && method === "PUT") {
         club.changePassword(user, body());
-        response.setHeader("Set-Cookie", cookie("", true));
+        if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
       }
       if (pathname === "/api/team") {

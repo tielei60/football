@@ -553,7 +553,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   });
   const dummyHash = hashPassword(randomBytes(20).toString("hex"));
   const loginAttempts = new Map();
-  function login(input, remoteAddress) {
+  function login(input, remoteAddress, transport = "cookie") {
     object(input);
     const username = text(input.username, 100, true);
     const normalizedUsername = username.toLowerCase();
@@ -588,17 +588,25 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (u.player_id && getPlayer(u.team_id, u.player_id).status !== "active")
       fail(403, "此球员账户已停用。");
     loginAttempts.delete(key);
-    const token = randomBytes(32).toString("hex");
+    const token = `${transport === "native" ? "native_" : ""}${randomBytes(32).toString("hex")}`;
+    const expiresAt = now + 7 * 86400000;
     q("DELETE FROM club_sessions WHERE expires_at<=?").run(now);
     q("INSERT INTO club_sessions VALUES (?,?,?)").run(
       tokenHash(token),
       u.id,
-      now + 7 * 86400000,
+      expiresAt,
     );
-    return { token, ...sessionView(u) };
+    return {
+      token,
+      ...(transport === "native" ? { expiresAt } : {}),
+      ...sessionView(u),
+    };
   }
-  function authenticate(token) {
-    if (!token || !/^[a-f0-9]{64}$/.test(token)) fail(401, "请先登录。");
+  function authenticate(token, transport = "cookie") {
+    const tokenPattern =
+      transport === "native" ? /^native_[a-f0-9]{64}$/ : /^[a-f0-9]{64}$/;
+    if (typeof token !== "string" || !tokenPattern.test(token))
+      fail(401, "请先登录。");
     const u = q(
       "SELECT u.* FROM club_sessions s JOIN club_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?",
     ).get(tokenHash(token), Date.now());

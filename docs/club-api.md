@@ -71,3 +71,11 @@ Statistics adds `registrationMatches:number`, counting published/completed match
 ### Snapshot response limits
 
 Only GET `/api/matches/:id` includes complete tacticSnapshots. GET `/api/matches` omits them to avoid loading every historical board for a list; it retains tacticIds and normal match/roster fields. New associations are limited to 32 MiB total UTF-8 serialized tactic snapshots per match. Exceeding that returns 413 and rolls back the entire edit. This accommodates one previously valid 25 MiB tactic. Existing migration captures larger than the limit remain intact, and edits that add no new snapshot do not reject or truncate them.
+
+### Native mini-program transport
+
+`POST /api/auth/native-login`, with `X-Football-Client: native-v1` and JSON `{username,password}`, returns `{token,expiresAt,user,team}` without setting a cookie. `expiresAt` is epoch milliseconds. This is club-account authentication, not WeChat identity authentication.
+
+For subsequent routes use `Authorization: Bearer native_<64 hex chars>`. Do not send Cookie, Origin or Sec-Fetch headers; the WeChat platform Referer is supported. Native and browser tokens cannot be interchanged. Existing role/team authorization, password reset, archive, expiry and logout revocation are shared. Browser cookie writes still require the original Origin check. Responses remain no-store and no wildcard CORS is added. Native login shares the existing per-address/account attempt limiter.
+
+See [native client deployment and verification](wechat-miniprogram.md). No AppSecret is used or sent to the client.

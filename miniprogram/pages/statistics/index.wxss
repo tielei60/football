@@ -1,0 +1,17 @@
+.rank-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eee8f1;
+}
+.rank-row:last-child {
+  border: 0;
+}
+.rank {
+  width: 34rpx;
+  color: #a18aad;
+  font-weight: 650;
+}
+.rank-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #633277;
+}

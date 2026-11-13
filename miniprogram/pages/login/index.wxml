@@ -1,0 +1,36 @@
+<view class="page login"
+  ><view class="brand-mark">FC</view><view class="title">欢迎归队</view
+  ><view class="subtitle">使用管理员分配的俱乐部账号登录</view
+  ><view class="card login-card"
+    ><view class="field"
+      ><text class="field-label">账号</text
+      ><input
+        class="input"
+        value="{{username}}"
+        bindinput="username"
+        placeholder="俱乐部账号"
+        maxlength="100"
+        disabled="{{busy}}" /></view
+    ><view class="field"
+      ><text class="field-label">密码</text
+      ><input
+        class="input"
+        password
+        value="{{password}}"
+        bindinput="password"
+        placeholder="输入密码"
+        maxlength="256"
+        disabled="{{busy}}"
+        confirm-type="done"
+        bindconfirm="submit" /></view
+    ><view wx:if="{{error}}" class="error">{{error}}</view
+    ><button
+      class="primary"
+      loading="{{busy}}"
+      disabled="{{busy}}"
+      bindtap="submit"
+    >
+      登录
+    </button></view
+  ><view class="hint">仅球队成员可访问。忘记密码请联系球队管理员。</view></view
+>

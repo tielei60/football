@@ -1,0 +1,20 @@
+.login {
+  padding-top: 100rpx;
+}
+.brand-mark {
+  width: 100rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #8845a0;
+  color: #fff;
+  font-size: 38rpx;
+  font-weight: 750;
+  border-radius: 30rpx;
+  margin-bottom: 32rpx;
+  box-shadow: 0 14rpx 30rpx #8845a025;
+}
+.login-card {
+  margin-top: 44rpx;
+}
