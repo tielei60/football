@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { setMatchSchedule } from "./match-schedule";
+import { openManualMatchDate, setMatchSchedule } from "./match-schedule";
 import { selectUiOption, expectUiValue } from "./ui-select";
 import { fixturePng } from "./fixture-png";
 
@@ -33,8 +33,8 @@ test("composed schedule keeps unknowns and drafts, selects weekdays and crosses 
   const trigger = page.getByRole("button", { name: /^开始日期时间/ });
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "设置开始日期时间", exact: true });
-  await dialog.getByText("手动输入日期", { exact: true }).click();
-  await dialog.getByLabel("日期（YYYY-MM-DD）").fill("2092-02-30");
+  await openManualMatchDate(dialog);
+  await dialog.getByLabel("日期（YYYY-MM-DD）", { exact: true }).fill("2092-02-30");
   await dialog.getByRole("button", { name: "确定时间", exact: true }).click();
   await expect(dialog).toBeVisible();
   await dialog.press("Escape");
