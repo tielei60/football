@@ -20,7 +20,7 @@
           <router-link :to="{ name: 'changelog' }" class="nav-link">更新记录</router-link>
         </template>
         <template v-else>
-          <router-link :to="{ name: 'home' }" class="nav-link">返回首页</router-link>
+          <router-link :to="{ name: 'about' }" class="nav-link">返回首页</router-link>
         </template>
         <router-link :to="{ name: 'board' }" target="_blank" class="nav-cta">进入战术板</router-link>
       </nav>

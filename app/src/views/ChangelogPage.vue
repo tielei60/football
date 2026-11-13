@@ -66,6 +66,7 @@ const getCategoryText = (category: string) => {
 .changelog-page {
   width: 100%;
   min-height: 100vh;
+  padding-top: 80px;
   background: var(--color-bg);
   color: var(--color-text);
 }

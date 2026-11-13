@@ -62,7 +62,7 @@ test("custom select Tab and outside click dismiss without committing highlighted
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expectUiValue(filter, "");
   await filter.click();
-  await expect(page.getByRole("option", { selected: true })).toHaveText("全部比赛");
+  await expect(page.getByRole("option", { selected: true })).toHaveAccessibleName("全部比赛");
   await filter.press("Escape");
   await expect(filter).toBeFocused();
 });

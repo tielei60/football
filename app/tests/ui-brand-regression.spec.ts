@@ -5,6 +5,8 @@ import { test, expect } from "./tactical-fixtures";
 for (const width of [1440, 390]) {
   test(`light club theme stays usable across real routes at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 });
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
     await mkdir("test-results/visual-review", { recursive: true });
     for (const [path, name] of [
       ["/club", "matches"],
@@ -15,7 +17,8 @@ for (const width of [1440, 390]) {
       ["/changelog", "changelog"],
     ]) {
       await page.goto(path);
-      await expect(page.locator("h1").first()).toBeVisible();
+      await expect(page.locator("h1").first(), `${name} route must render its heading`).toBeVisible();
+      expect(pageErrors, `${name} route must not throw during rendering`).toEqual([]);
       const styles = await page.evaluate(() => {
         const root = getComputedStyle(document.documentElement);
         return {
@@ -35,6 +38,11 @@ for (const width of [1440, 390]) {
       }
       await page.screenshot({ path: `test-results/visual-review/theme-${name}-${width}.png`, fullPage: true });
     }
+    if (width < 600) await page.getByRole("button", { name: "打开导航", exact: true }).click();
+    await page.getByRole("link", { name: "返回首页", exact: true }).click();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page.locator("h1")).toBeVisible();
+    expect(pageErrors).toEqual([]);
   });
 }
 
