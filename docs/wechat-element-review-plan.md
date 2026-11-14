@@ -254,7 +254,7 @@
 | manage-venue | 管理员，球场 1 | 顶/中/底，仅查看已有虚构坐标 |
 | match-edit | 管理员，比赛 6 | 顶/中/底，不输入、不保存 |
 | match-roster | 管理员，比赛 6 | 顶/中/底，当前 1 名球员，不保存 |
-| tactic-compose | 管理员，战术 1 | 顶/中/底，画布错层/空白待修，不能计通过 |
+| tactic-compose | 管理员，战术 1 | 顶/中/底，旧会话出现错层/空白；后续清洁会话有限复测见下 |
 | tactic-transfer | 管理员 | 顶/中/底，不导入/导出文件 |
 | tactic-setup | 管理员，战术 1 | 顶/中/底，不编辑、不保存 |
 | tactic-export | 管理员，战术 1 | 顶/中/底，不生成或另存文件 |
@@ -263,8 +263,10 @@
 
 **长页覆盖核查**：官方实际底部 scrollTop 分别为 manage-players 185.5、manage-player 343.5、manage-venue 124、match-edit 486.5、match-roster 0、tactic-compose 0、tactic-setup 893.5。结合当前可见高度与 450 中段，现有截图区间重叠，没有发现这些页面中间未采到的区间；短页三图相同不伪称滚动。未为截图创造或修改业务数据。
 
-**画布阻断（未解决）**：真实点击战术板专注后 focusCanvas=true，点击播放后 playing=true，但 `/tmp/football-elements-375-player-board-focus-playing.png` 中画布覆盖控制栏。编排页原三图也出现类似错层。重连后重新进入，官方截图 `/tmp/football-canvas-layer-compose-cli.png` 与 CUA 实际屏幕均出现整块空白；不是仅官方截图导出错误。
+**画布异常原始记录（后续清洁会话恢复见下）**：真实点击战术板专注后 focusCanvas=true，点击播放后 playing=true，但 `/tmp/football-elements-375-player-board-focus-playing.png` 中画布覆盖控制栏。编排页原三图也出现类似错层。重连后重新进入，官方截图 `/tmp/football-canvas-layer-compose-cli.png` 与 CUA 实际屏幕均出现整块空白；不是仅官方截图导出错误。
 
 只读诊断结果：编排页 scrollTop=0，canvas top=150、left≈37.17、宽≈300.66、高=455；容器 top=149，data 尺寸≈300.664×455；节点像素902×1365，变换矩阵 a=d=3、e=f=0。模型及演示存在，非隐藏/卸载/加载状态，无 renderError。战术板专注页 scrollTop=0，canvas top=93、left≈19.34、宽≈338.33、高512，节点1015×1536。两页现有 ctx.getImageData 非零 alpha 比例均为100%，中心像素为不透明球场颜色，说明位图已绘而显示异常，支持原生合成/显示层问题，尚未证明精确机制。没有调用 paint、重设 node 尺寸或修改模型来伪造恢复。控制台仅检索 canvas 无匹配，不能据此声称无任何日志异常。
 
 本轮没有业务保存、密码再修改或发布；最新停在管理员编排页，已交还源码定位窗口。共享弹层、320 补测、真实读屏/软键盘及其他未覆盖状态仍须另验，不能因 25 路由均打开而宣布全站完成。
+
+**清洁项目会话后续复核**：不改代码、设置或业务数据，仅用官方 `close_project_window` / `open_project_window` 关闭并重开本项目窗口，未退出整个应用。关闭前编辑器为空，编排保存(0)、撤销禁用，没有未保存/丢弃提示。重开后 CUA 实际画布恢复，位图尺寸与不透明比例和异常时相同。随后 375 宽、管理员、同一战术 1 连续完成 3 轮：离开/重入编排 → 普通战术板 → 真实点击专注/播放 → 暂停；暂停均只读核对 playing=false。9 张截图逐张查看，未复现空白或覆盖工具栏，第三轮暂停后 CUA 实际屏幕亦完整。此结论仅为旧会话异常、重开恢复及三轮有限验证，不是应用代码修复，不保证长期或真机不复现。详见 [画布会话诊断](wechat-canvas-session-review.md)。
