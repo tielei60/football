@@ -160,3 +160,37 @@ test('picker accessibility combines semantic title and current value',()=>{
  const c={properties:{mode:'selector',title:'Position',value:1,range:['A','B']},setData(p){this.data=p;}};
  d.methods.updateLabel.call(c);assert.ok(c.data.defaultLabel.includes('Position'));assert.ok(c.data.defaultLabel.includes('B'));
 });
+
+test('superseded unblock waits for masked loading close before settling and pumping',async()=>{
+ const h=setup({defer:true});let resolved=false;const calls=[];
+ const first=h.ui.showModal(h.page,{success:()=>{assert.equal(h.page.data.businessUiBlocking,false);calls.push('first');}}).then(r=>{resolved=true;return r;});
+ h.commits.shift()();h.confirm();
+ const loading=h.ui.showLoading(h.page,{mask:true});
+ const second=h.ui.showModal(h.page,{});
+ while(h.commits.length)h.commits.shift()();
+ await Promise.resolve();assert.equal(resolved,false);assert.deepEqual(calls,[]);
+ assert.equal(h.states.at(-1).modal,null);
+ h.ui.hideLoading(h.page);await loading;
+ await Promise.resolve();assert.equal(resolved,false);
+ h.commits.shift()();assert.equal((await first).confirm,true);assert.deepEqual(calls,['first']);
+ assert.ok(h.states.at(-1).modal);
+ h.commits.shift()();h.cancel();h.commits.shift()();assert.equal((await second).cancel,true);
+});
+for(const reason of ['hide','unload','account'])test('superseded settlement aborts safely on '+reason,async()=>{
+ const h=setup({defer:true});let calls=0;
+ const first=h.ui.showModal(h.page,{success:()=>calls++,complete:()=>calls++});
+ h.commits.shift()();h.confirm();h.ui.showLoading(h.page,{mask:true});
+ if(reason==='account')h.setToken('B');
+ else {if(reason==='hide')h.page._hidden=true;else h.page._disposed=true;h.ui.abort(h.page);}
+ while(h.commits.length)h.commits.shift()();
+ if(reason==='account'){h.ui.hideLoading(h.page);while(h.commits.length)h.commits.shift()();}
+ assert.equal((await first).aborted,true);assert.equal(calls,0);
+});
+test('unblock hook may reblock without prematurely executing settlement',async()=>{
+ const h=setup({defer:true});let once=true,called=0;
+ h.page.onBusinessUiClosed=()=>{if(once){once=false;h.ui.showLoading(h.page,{mask:true});}};
+ const task=h.ui.showModal(h.page,{success:()=>called++});h.commits.shift()();h.confirm();
+ while(h.commits.length)h.commits.shift()();assert.equal(called,0);
+ h.ui.hideLoading(h.page);while(h.commits.length)h.commits.shift()();
+ assert.equal((await task).confirm,true);assert.equal(called,1);
+});

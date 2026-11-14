@@ -13,19 +13,28 @@ function attach(page){
  if(states.has(page))return states.get(page);
  const host=page.selectComponent?.('#business-dialog');
  if(!host||typeof host.present!=='function')return null;
- const state={host,queue:[],settling:new Set(),modal:null,transient:null,timer:null,blocking:false,version:0};states.set(page,state);
+ const state={host,queue:[],settling:new Set(),modal:null,transient:null,timer:null,blocking:false,version:0,pendingCommit:null,unblockWaiters:[]};states.set(page,state);
  host.connect({confirm:(id,value)=>settle(page,id,true,value),cancel:id=>settle(page,id,false,''),detach:()=>abort(page)});
  return state;
 }
+// A superseded render must not discard a modal settlement. Only drain after
+// the current unblock has actually committed; abort resolves tasks separately.
+function drainUnblocked(page,state){
+ while(states.get(page)===state&&!state.blocking&&state.pendingCommit===null&&state.unblockWaiters.length){
+  state.unblockWaiters.shift()();
+ }
+}
 function render(page,state,onCommitted){
+ if(onCommitted)state.unblockWaiters.push(onCommitted);
  const visible=!!(state.modal||state.transient?.view.mask);
  state.host.present({modal:state.modal?.view||null,transient:state.transient?.view||null});
- if(state.blocking===visible){onCommitted?.();return;}
- state.blocking=visible;const version=++state.version;
+ if(state.blocking===visible){drainUnblocked(page,state);return;}
+ state.blocking=visible;const version=++state.version;state.pendingCommit=version;
  page.setData({businessUiBlocking:visible},()=>{
   if(states.get(page)!==state||state.version!==version)return;
+  state.pendingCommit=null;
   if(!visible&&!page._disposed&&!page._hidden)page.onBusinessUiClosed?.();
-  onCommitted?.();
+  drainUnblocked(page,state);
  });
  if(visible&&!page._disposed&&!page._hidden)page.onBusinessUiOpen?.();
 }
@@ -102,7 +111,7 @@ function abort(page){
  for(const task of [state.modal,...state.queue,...state.settling,state.transient])task?.resolve(result);
  state.modal=null;state.queue=[];state.settling.clear();state.transient=null;state.host.clearInput?.();
  // Do not redraw detached canvas or execute old business callbacks.
- state.blocking=false;state.version++;state.host.present({modal:null,transient:null});
+ state.blocking=false;state.version++;state.pendingCommit=null;state.unblockWaiters=[];state.host.present({modal:null,transient:null});
  if(!page._disposed)page.setData({businessUiBlocking:false});
 }
 function showPicker(page,options={}){
