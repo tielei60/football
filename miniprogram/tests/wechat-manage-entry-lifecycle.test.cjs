@@ -46,3 +46,27 @@ test('A 首载迟到能力不可写入 B，B 返回后重新鉴权读取',async(
 test('非管理员首载拒绝权限且不读取管理入口能力',async()=>{
   const h=setup();h.setRole('player');await h.p.onLoad({id:'p1'});await h.p.onShow();assert.equal(h.p.data.authorized,false);assert.equal(h.count(),0);assert.match(h.p.data.error,/管理员/);
 });
+for (const enabled of [false,true,undefined]) test('目标球员密码能力 '+enabled+' 投影与操作门禁',async()=>{
+  const h=setup();h.records.resolve([{...h.player,hasAccount:true,...(enabled===undefined?{}:{passwordEnabled:enabled})}]);h.capability.resolve({wechat:true});await h.p.onLoad({id:'p1'});
+  assert.equal(h.p.data.passwordEnabled,enabled!==false);h.p.toggleAccount();assert.equal(h.p.data.accountOpen,enabled!==false);
+  if(enabled===false){h.p.data.password='anonymous-test-password';h.p.account();assert.equal(h.p.data.actionError,'');assert.equal(h.p.data.busy,false);}
+});
+test('无账号仍可打开创建表单，能力未知不隐式关闭旧密码账号',async()=>{
+  const h=setup();h.records.resolve([{...h.player,hasAccount:false,passwordEnabled:false}]);h.capability.resolve({wechat:true});await h.p.onLoad({id:'p1'});h.p.toggleAccount();assert.equal(h.p.data.accountOpen,true);
+});
+test('管理模板仅对目标账号已知密码能力关闭隐藏重置与表单',()=>{
+  const source=fs.readFileSync(path.join(root,'pages/manage-player/index.wxml'),'utf8');
+  assert.match(source,/wx:if="{{status==='active'&&\(!hasAccount\|\|passwordEnabled\)}}"[^>]*bindtap="toggleAccount"/);
+  assert.match(source,/wx:if="{{accountOpen&&\(!hasAccount\|\|passwordEnabled\)}}"/);
+});
+for(const enabled of [false,true,undefined]) test('注销失败按原会话密码能力 '+enabled+' 给出可用恢复步骤',async()=>{
+  let definition;const modals=[],routes=[];
+  const session={user:{...(enabled===undefined?{}:{passwordEnabled:enabled})}};
+  const s={api:{getSession:()=>null,logout:async()=>{throw Error('离线');}}};
+  vm.runInNewContext(fs.readFileSync(path.join(root,'pages/me/index.js'),'utf8'),{Page:d=>definition=d,require:id=>id.includes('/ui')?{showModal:(_,o)=>modals.push(o)}:s,wx:{reLaunch:o=>routes.push(o.url)}});
+  const p={...definition,data:{...structuredClone(definition.data),session},setData(v){Object.assign(this.data,v);}};
+  p.logout();await modals[0].success({confirm:true});
+  assert.equal(modals.length,2);assert.equal(routes.length,0);
+  if(enabled===false){assert.match(modals[1].content,/联系管理员解除微信绑定/);assert.doesNotMatch(modals[1].content,/修改密码/);}else assert.match(modals[1].content,/修改密码/);
+  modals[1].complete();assert.deepEqual(routes,['/pages/login/index']);assert.equal(p.data.busy,false);
+});

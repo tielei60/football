@@ -83,6 +83,7 @@ Page({
     revision: null,
     status: "active",
     hasAccount: false,
+    passwordEnabled: true,
     avatar: "",
     form: {
       name: "",
@@ -160,6 +161,8 @@ Page({
         revision: p?.revision || null,
         status: p?.status || "active",
         hasAccount: !!p?.hasAccount,
+        passwordEnabled: p?.passwordEnabled !== false,
+        accountOpen: false,
         avatar: a.s.assetUrl(p?.avatar),
         form: {
           name: p?.name || "",
@@ -261,6 +264,7 @@ Page({
           id: p.id,
           revision: p.revision,
           hasAccount: p.hasAccount,
+          passwordEnabled: p.passwordEnabled !== false,
         });
         ui.showToast(this, { title: "球员已保存" });
       },
@@ -295,7 +299,7 @@ Page({
     });
   },
   toggleAccount() {
-    if (this.data.busy) return;
+    if (this.data.busy || (this.data.hasAccount && !this.data.passwordEnabled)) return;
     this.setData({
       accountOpen: !this.data.accountOpen,
       password: "",
@@ -309,7 +313,8 @@ Page({
       this.setData({ [key]: e.detail.value });
   },
   account() {
-    if (!this.id || this.data.status !== "active") return;
+    if (!this.id || this.data.status !== "active" ||
+        (this.data.hasAccount && !this.data.passwordEnabled)) return;
     if (
       this.data.password.length < 10 ||
       (!this.data.hasAccount && !this.data.username.trim())
@@ -323,7 +328,8 @@ Page({
         ? "重置后该球员所有现有会话失效。是否继续？"
         : "为当前球员创建独立登录账号。是否继续？",
       success: (r) => {
-        if (!r.confirm || this._disposed) return;
+        if (!r.confirm || this._disposed ||
+            (this.data.hasAccount && !this.data.passwordEnabled)) return;
         const existing = this.data.hasAccount;
         const body = existing
           ? { newPassword: this.data.password }

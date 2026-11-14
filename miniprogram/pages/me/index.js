@@ -132,6 +132,7 @@ Page({
       success: async (result) => {
         if (!result.confirm) return;
         const viewEpoch = this._viewEpoch || 0;
+        const passwordEnabled = this.data.session?.user.passwordEnabled !== false;
         const attempt = (this._authAttempt = {});
         const active = () =>
           !this._disposed &&
@@ -146,7 +147,9 @@ Page({
           ui.showModal(this, {
             title: "本机已退出",
             content:
-              "服务器注销未确认。网络恢复后请重新登录并修改密码，以撤销所有旧会话。",
+              passwordEnabled
+                ? "服务器注销未确认。网络恢复后请重新登录并修改密码，以撤销所有旧会话。"
+                : "服务器注销未确认。请联系管理员解除微信绑定，以撤销旧会话；之后需重新邀请绑定。",
             showCancel: false,
             complete: () => {
               if (active()) wx.reLaunch({ url: "/pages/login/index" });

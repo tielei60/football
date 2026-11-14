@@ -6,7 +6,7 @@
 <block wx:else>
 <view class="card">
 <view class="field-label">邀请码</view>
-<input wx:if="{{showInput}}" class="input" password bindinput="credential" maxlength="64" disabled="{{busy}}" placeholder="输入管理员提供的邀请码"/>
+<input wx:if="{{showInput}}" class="input" password bindinput="credential" maxlength="64" disabled="{{busy}}" placeholder="粘贴管理员提供的邀请码"/>
 <view class="hint">{{hasCredential?'已收到邀请码。请确认此邀请由球队管理员交付。':'邀请码仅用于本次认领，不保存到本机。'}}</view>
 <button class="primary ui-button ui-block" bindtap="submit" disabled="{{busy||!hasCredential}}" loading="{{busy}}" size="mini">提交或恢复认领</button>
 </view>

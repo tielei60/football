@@ -110,12 +110,12 @@ Page({
     const action = e.currentTarget.dataset.action, invite = this.data.activeInvite;
     if (!invite || !['approve', 'reject', 'revoke'].includes(action) || (action !== 'revoke' && invite.status !== 'claimed')) return;
     const stamp = this.stamp();
-    return ui.showModal(this, { title: { approve: '核对本人后批准', reject: '拒绝认领申请', revoke: '撤销邀请' }[action], content: action === 'approve' ? '请通过可信联系渠道确认是该球员本人，并输入对方提供的 8 位确认编号。' : '此操作不会删除球员或比赛资料。', editable: action === 'approve', maxlength: 8, placeholderText: '本人提供的 8 位编号', confirmText: { approve: '核对并批准', reject: '拒绝申请', revoke: '撤销邀请' }[action], success: r => {
+    return ui.showModal(this, { title: { approve: '核对本人后批准', reject: '拒绝认领申请', revoke: '撤销邀请' }[action], content: action === 'approve' ? '请通过可信联系渠道确认是该球员本人，并输入对方提供的 8 位核验编号。' : '此操作不会删除球员或比赛资料。', editable: action === 'approve', maxlength: 8, placeholderText: '本人提供的 8 位编号', confirmText: { approve: '核对并批准', reject: '拒绝申请', revoke: '撤销邀请' }[action], success: r => {
       if (!r.confirm || !this.current(stamp) || !this.ready() || this.data.activeInvite?.id !== invite.id || this.data.activeInvite?.revision !== invite.revision) return;
       const body = { revision: invite.revision };
       if (action === 'approve') {
         body.confirmationCode = String(r.content || '').trim().toUpperCase();
-        if (!/^[A-F0-9]{8}$/.test(body.confirmationCode)) { this.setData({ actionError: '请输入本人提供的 8 位确认编号' }); return; }
+        if (!/^[A-F0-9]{8}$/.test(body.confirmationCode)) { this.setData({ actionError: '请输入本人提供的 8 位核验编号' }); return; }
       }
       return this.mutate(this.route('invites') + '/' + invite.id + '/' + action, body, () => { this._credential = null; this._createId = null; });
     } });

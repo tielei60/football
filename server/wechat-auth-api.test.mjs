@@ -685,3 +685,72 @@ test("HTTP approved invitation recovery after unbind returns history only, no se
     409,
   );
 });
+
+test("player password capability follows target same-team account across get/list/save without enabling WeChat passwords", async (t) => {
+  const f = await fixture(t);
+  const plain = await f.player("无账号模拟队员");
+  const password = await f.player("密码模拟队员");
+  const wechat = await f.player("微信模拟队员");
+  assert.equal(plain.hasAccount, false);
+  assert.equal(plain.passwordEnabled, false);
+  assert.equal(
+    (
+      await f.manage(`/players/${password.id}/account`, "POST", {
+        username: "fictional-password-player",
+        password: "fictional-safe-password",
+      })
+    ).status,
+    201,
+  );
+  await f.bind(wechat);
+  for (const [player, hasAccount, enabled] of [
+    [plain, false, false],
+    [password, true, true],
+    [wechat, true, false],
+  ]) {
+    const got = await f.manage(`/players/${player.id}`);
+    const listed = (await f.manage("/players")).body.find(
+      (p) => p.id === player.id,
+    );
+    const saved = await f.manage(`/players/${player.id}`, "PUT", {
+      ...got.body,
+      note: "虚构能力回归",
+    });
+    assert.equal(saved.status, 200);
+    for (const view of [got.body, listed, saved.body]) {
+      assert.equal(view.hasAccount, hasAccount);
+      assert.equal(view.passwordEnabled, enabled);
+      assert.equal(view.password_hash, undefined);
+      assert.equal(view.username, undefined);
+    }
+  }
+  assert.equal(
+    (
+      await f.manage(`/players/${wechat.id}/password`, "PUT", {
+        newPassword: "fictional-no-implicit-enable",
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (await f.manage(`/players/${wechat.id}`)).body.passwordEnabled,
+    false,
+  );
+  // 仅隔离测试模拟旧资料中的越队引用；正常外键本已拒绝该形态。
+  f.db.exec("PRAGMA foreign_keys=OFF");
+  const adminRow = f.db
+    .prepare("SELECT * FROM club_users WHERE role='admin'")
+    .get();
+  f.db
+    .prepare("INSERT INTO club_teams(id,name) VALUES(?,?)")
+    .run(999, "隔离外队");
+  f.db
+    .prepare(
+      "INSERT INTO club_users(team_id,username,password_hash,role,player_id,password_enabled) VALUES(999,?,?, 'player',?,1)",
+    )
+    .run("foreign-fictional", adminRow.password_hash, plain.id);
+  f.db.exec("PRAGMA foreign_keys=ON");
+  const isolated = (await f.manage(`/players/${plain.id}`)).body;
+  assert.equal(isolated.hasAccount, false);
+  assert.equal(isolated.passwordEnabled, false);
+});

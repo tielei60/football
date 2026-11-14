@@ -393,7 +393,7 @@ export function createClubStore(
   }
   const getPlayer = (teamId, id) => {
     const r = q(
-      "SELECT p.*, EXISTS(SELECT 1 FROM club_users u WHERE u.player_id=p.id) AS has_account FROM club_players p WHERE p.team_id=? AND p.id=?",
+      "SELECT p.*, EXISTS(SELECT 1 FROM club_users u WHERE u.team_id=p.team_id AND u.player_id=p.id) AS has_account, EXISTS(SELECT 1 FROM club_users u WHERE u.team_id=p.team_id AND u.player_id=p.id AND u.password_enabled=1) AS password_enabled FROM club_players p WHERE p.team_id=? AND p.id=?",
     ).get(teamId, id);
     if (!r) fail(404, "未找到球员。");
     return {
@@ -407,6 +407,7 @@ export function createClubStore(
       note: r.note,
       avatar: r.avatar,
       hasAccount: Boolean(r.has_account),
+      passwordEnabled: Boolean(r.password_enabled),
     };
   };
   const listPlayers = (teamId) =>
