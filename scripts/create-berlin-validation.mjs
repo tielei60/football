@@ -27,10 +27,10 @@ export function createBerlinValidation() {
   if (preview.total !== 20)
     throw new Error("来源不再是已核对的20人，请重新审查。");
   const directory = mkdtempSync(join(tmpdir(), "football-berlin-validation-"));
-  chmodSync(directory, 0o700);
   const databasePath = join(directory, "validation.sqlite");
   let store;
   try {
+    chmodSync(directory, 0o700);
     writeFileSync(databasePath, "", { flag: "wx", mode: 0o600 });
     store = openFootballStore(databasePath);
     const credentials = {

@@ -91,3 +91,59 @@ test("匿名隔离库：未知资料、空历史、仅验证管理员、迁移�
     fs.rmSync(sentinelDir, { recursive: true, force: true });
   }
 });
+
+for (const cleanupFails of [false, true]) {
+  test(`目录权限失败：${cleanupFails ? "清理失败保留原错并提示" : "清理本次空目录"}`, () => {
+    const original = { read: fs.readFileSync, mkdir: fs.mkdtempSync, chmod: fs.chmodSync, rm: fs.rmSync, write: fs.writeFileSync };
+    const sources = anonymousSources();
+    const sentinelDir = original.mkdir(join(tmpdir(), "football-validation-sentinel-"));
+    const sentinel = join(sentinelDir, "untouched");
+    original.write(sentinel, "不得修改");
+    const failure = Object.assign(new Error("模拟目录权限失败"), { code: "EACCES" });
+    let directory, writes = 0;
+    fs.readFileSync = function (path, ...args) {
+      const p = String(path);
+      if (p.endsWith("/app/src/data/berlinGarden.ts")) return sources[0];
+      if (p.endsWith("/server/football-store.mjs")) return sources[1];
+      return original.read.call(this, path, ...args);
+    };
+    fs.mkdtempSync = function (prefix, ...args) {
+      const result = original.mkdir.call(this, prefix, ...args);
+      if (String(prefix).includes("football-berlin-validation-")) directory = result;
+      return result;
+    };
+    fs.chmodSync = function (path, ...args) {
+      if (path === directory) throw failure;
+      return original.chmod.call(this, path, ...args);
+    };
+    fs.writeFileSync = function (path, ...args) {
+      if (directory && String(path).startsWith(directory + "/")) writes++;
+      return original.write.call(this, path, ...args);
+    };
+    fs.rmSync = function (path, ...args) {
+      if (cleanupFails && path === directory) throw new Error("模拟清理失败");
+      return original.rm.call(this, path, ...args);
+    };
+    syncBuiltinESMExports();
+    try {
+      assert.throws(() => createBerlinValidation(), error => error === failure);
+      assert.ok(directory);
+      assert.equal(writes, 0);
+      assert.equal(original.read(sentinel, "utf8"), "不得修改");
+      assert.equal(fs.existsSync(directory), cleanupFails);
+      if (cleanupFails) {
+        assert.deepEqual(fs.readdirSync(directory), []);
+        assert.match(failure.message, /临时目录清理未完成/);
+      } else assert.equal(failure.message, "模拟目录权限失败");
+    } finally {
+      fs.readFileSync = original.read;
+      fs.mkdtempSync = original.mkdir;
+      fs.chmodSync = original.chmod;
+      fs.rmSync = original.rm;
+      fs.writeFileSync = original.write;
+      syncBuiltinESMExports();
+      if (directory) original.rm(directory, { recursive: true, force: true });
+      original.rm(sentinelDir, { recursive: true, force: true });
+    }
+  });
+}
