@@ -2,3 +2,14 @@
 
 /* Page-specific density, hierarchy and long-content safeguards. */
 .title{font-size:34rpx;line-height:1.4;overflow-wrap:anywhere}.card .between{gap:18rpx;align-items:flex-start}.card .bold{font-size:29rpx;min-width:0;line-height:1.5;overflow-wrap:anywhere}.card .link{flex-shrink:0;font-size:24rpx}.card .muted{margin:8rpx 0 14rpx;font-size:24rpx}.card .tag{font-size:22rpx}.input.section{margin-bottom:24rpx}
+
+/* 战术文字层级：普通信息局部增强，专注工具及画布几何保持。 */
+.title{font-weight:650;color:var(--ink)}
+.card .bold{font-size:30rpx;font-weight:600;color:var(--ink)}
+.card .muted{font-size:26rpx;font-weight:400;color:var(--muted)}
+.card .tag{font-size:24rpx;font-weight:500}
+.card .link{font-size:25rpx;font-weight:500;color:var(--brand-ink)}
+.tactic-help{font-size:24rpx;line-height:1.6;color:var(--muted)}
+@media(max-width:375px){.card .tag,.tactic-help{font-size:12px}}
+@media(max-width:360px){.card .link{font-size:12px}}
+@media(max-width:346px){.card .muted{font-size:12px}}

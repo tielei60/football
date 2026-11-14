@@ -1,3 +1,12 @@
 .section-title{margin:24rpx 0 16rpx;font-weight:650}.filename{word-break:break-all}.actions button{margin-top:18rpx}.warning{color:var(--danger);margin:14rpx 0}.summary{line-height:1.8}
 /* Page-specific density, hierarchy and long-content safeguards. */
 .section-title{font-size:29rpx;line-height:1.4}.filename{padding:14rpx 16rpx;background:var(--brand-soft);border-radius:12rpx;font-size:24rpx;line-height:1.6}.summary{font-size:26rpx;line-height:1.8;overflow-wrap:anywhere}.warning{font-size:24rpx;line-height:1.7}.actions{gap:12rpx}.actions button{font-size:25rpx;line-height:1.45;min-width:0}.card>.hint{font-size:24rpx;line-height:1.65}
+
+/* 战术文字层级：普通信息局部增强，专注工具及画布几何保持。 */
+.section-title{font-size:30rpx;font-weight:600;color:var(--ink)}
+.filename{font-size:26rpx;font-weight:400;color:var(--ink)}
+.transfer-count{font-size:28rpx;font-weight:500;color:var(--ink)}
+.warning{font-size:26rpx;font-weight:500;color:var(--danger)}
+.card>.hint{font-size:25rpx;color:var(--muted)}
+@media(max-width:360px){.card>.hint{font-size:12px}}
+@media(max-width:346px){.filename,.warning{font-size:12px}}

@@ -1,0 +1,32 @@
+{
+  "tactics": {
+    "wxml": "fa6ae54bb346e10d6dab48298eda3fcae0cb7d28abb45d333a0d91d52742b935",
+    "js": "64abad771242675043dccad3e757b7dd584d78f546132dcaf4258176791bf2fc",
+    "css": "ebc8a853f41b405695fe7b489a01bbf11fc09e51d5e4ab03a18870ee5999e235"
+  },
+  "tactic-board": {
+    "wxml": "9c22ebd45d66918eb75249db757b0ca6de545ea9203654db814aaa3d3dd3df88",
+    "js": "f79e0b192f12adc4be800789bf52fcbb640586b6cf2e2d0d0868b0dbcf3558e2",
+    "css": "8a1f7d0664d21b1b643897d959fd69b65ef18999918b83a3c66993df6dee17eb"
+  },
+  "tactic-compose": {
+    "wxml": "c90aaccaa0fc74c8a583a3af1a5f4b45882bf8f77fec89ebfb1d9bc95c293b87",
+    "js": "0458ac4d96ec9517080b4cfd903fc7efd0d1cfa6b3148c8fd44cdc670e9d0e6a",
+    "css": "d45b485fcc48c3668fa0cebcbd0d209e1b0e38f8ada4baaab56b8bca24f3bd41"
+  },
+  "tactic-transfer": {
+    "wxml": "b1e1b5d28bfb0a00e9371fabb4de699d5b139795b27daedde31bf5f591ca53e6",
+    "js": "97e567b3d21d0c3f270fd82987f7830a4f7babcf770e92d4c66208e9a0851bc7",
+    "css": "ea17080aba6e40ce9011779025e1dbe8aa09ef88e082dc7d826c5daa72956e47"
+  },
+  "tactic-setup": {
+    "wxml": "51f86db4863024244a565e2b4c1a7bdca3afaa57299f565fadd700bcb231a35b",
+    "js": "77beee058a1739fa6f14c04f3187b5a23fa7140f285ffd2a285a3b441f4927f1",
+    "css": "beb17773b6d3a8e8e396983b914ff07f1522d2a6aee2f75e1e76d526abe9888c"
+  },
+  "tactic-export": {
+    "wxml": "4c387a7289ec5831990117b947ad969a3e80e79d7a7359dc9734c8f6f1c1e999",
+    "js": "c7c0314e1da6087038bd990a8a257d673024a28cdb3f7df602d05ddc1a1fc823",
+    "css": "4b6a7007a00ec0c26faae1da68c454d92fa6e277b862e5b07bce518c2de57a97"
+  }
+}

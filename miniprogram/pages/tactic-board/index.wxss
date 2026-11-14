@@ -29,3 +29,12 @@
 .page .edit-actions>button.edit-action{flex:1 1 0;width:0;min-width:0;margin:0;box-sizing:border-box}
 .page button.focus-toggle{width:100%;min-width:0;box-sizing:border-box}
 .properties input{height:80rpx;min-height:80rpx;padding:0 12rpx;font-size:26rpx;line-height:42rpx;box-sizing:border-box}
+
+/* 战术文字层级：普通信息局部增强，专注工具及画布几何保持。 */
+.type-expanded .title{font-weight:650;color:var(--ink)}
+.type-expanded .tactic-meta{font-size:26rpx;font-weight:400;color:var(--muted)}
+.type-expanded .tag{font-size:24rpx;font-weight:500}
+.type-expanded .hint{font-size:24rpx;color:var(--muted)}
+.type-expanded .tactic-objective{font-size:28rpx;font-weight:600;color:var(--ink)}
+@media(max-width:375px){.type-expanded .tag,.type-expanded .hint{font-size:12px}}
+@media(max-width:346px){.type-expanded .tactic-meta{font-size:12px}}

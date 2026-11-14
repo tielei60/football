@@ -1,4 +1,4 @@
-<view class="page {{focusCanvas&&tab===0?'canvas-focus':''}}">
+<view class="page {{focusCanvas&&tab===0?'canvas-focus':'type-expanded'}}">
 <page-state skeleton-type="detail" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
 <block wx:if="{{!loading && !error}}">
 <view wx:if="{{!focusCanvas||tab!==0}}" class="title">{{title}}</view>
@@ -16,7 +16,7 @@
 </block>
 </block>
 <block wx:else>
-<view class="card"><business-picker title="属性作用范围" disabled="{{loading}}" bind:pickeropen="openBusinessPicker" id="piece-target" range="{{targets}}" value="{{targetIndex}}" data-key="targetIndex" bindchange="select"><view class="picker"><text class="picker-value">{{targets[targetIndex]}}</text></view></business-picker><view class="hint">只修改所选范围，不自动同步另一范围，不修改球队球员档案或历史比赛。</view>
+<view class="card"><business-picker title="属性作用范围" disabled="{{loading}}" bind:pickeropen="openBusinessPicker" id="piece-target" range="{{targets}}" value="{{targetIndex}}" data-key="targetIndex" bindchange="select"><view class="picker"><text class="picker-value">{{targets[targetIndex]}}</text></view></business-picker><view class="hint scope-warning">只修改所选范围，不自动同步另一范围，不修改球队球员档案或历史比赛。</view>
 <business-picker title="选择球员" disabled="{{loading}}" bind:pickeropen="openBusinessPicker" id="piece-picker" range="{{players}}" range-key="label" value="{{playerIndex}}" data-key="playerIndex" bindchange="select"><view class="picker"><text class="picker-value">{{players[playerIndex].label||'该范围暂无球员'}}</text></view></business-picker>
 <block wx:if="{{players.length}}"><label>名称<input disabled="{{loading}}" id="piece-label" value="{{label}}" maxlength="100" data-key="label" bindinput="input"/></label><label>号码<input disabled="{{loading}}" id="piece-number" value="{{shirtNumber}}" maxlength="3" type="number" data-key="shirtNumber" bindinput="input" placeholder="未编号"/></label><label>位置<business-picker title="球员位置" disabled="{{loading}}" bind:pickeropen="openBusinessPicker" id="piece-position" range="{{positions}}" value="{{positionIndex}}" data-key="positionIndex" bindchange="select"><view class="picker"><text class="picker-value">{{positions[positionIndex]}}</text></view></business-picker></label><button id="piece-apply" class="primary" bindtap="applyPlayer" disabled="{{loading || (busy||conflict)}}">应用属性</button></block></view>
 </block>

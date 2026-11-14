@@ -5,3 +5,11 @@
 
 /* Page-specific density, hierarchy and long-content safeguards. */
 .title{font-size:32rpx;line-height:1.4;overflow-wrap:anywhere}.export-options{gap:16rpx}.export-buttons{gap:12rpx}.export-buttons button{font-size:25rpx;line-height:1.45;padding:18rpx 10rpx}.preview{border:1rpx solid var(--line);border-radius:18rpx;background:var(--canvas)}.hint{font-size:24rpx;line-height:1.65}.export-options .row{gap:12rpx}
+
+/* 战术文字层级：普通信息局部增强，专注工具及画布几何保持。 */
+.title{font-weight:650;color:var(--ink)}
+.hint{font-size:25rpx;color:var(--muted)}
+.export-source{font-weight:400}
+.export-ready{font-size:26rpx;font-weight:500;color:var(--ink)}
+@media(max-width:360px){.hint{font-size:12px}.export-ready{font-size:26rpx}}
+@media(max-width:346px){.export-ready{font-size:12px}}

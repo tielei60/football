@@ -15,3 +15,12 @@
 .page button.small{min-width:0;width:auto;margin:0;line-height:1.5;box-sizing:border-box}
 .page button.primary:not(.small){width:100%;min-width:0;margin:16rpx 0;line-height:1.5;padding:18rpx 20rpx}
 input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing:border-box}
+
+/* 战术文字层级：普通信息局部增强，专注工具及画布几何保持。 */
+.type-expanded .title{color:var(--ink)}
+.type-expanded .card label{font-size:26rpx;color:var(--ink)}
+.type-expanded .hint{font-size:24rpx;color:var(--muted)}
+.type-expanded .scope-warning{font-size:25rpx;font-weight:500;color:var(--ink)}
+@media(max-width:375px){.type-expanded .hint{font-size:12px}.type-expanded .scope-warning{font-size:25rpx}}
+@media(max-width:360px){.type-expanded .scope-warning{font-size:12px}}
+@media(max-width:346px){.type-expanded .card label{font-size:12px}}
