@@ -1,4 +1,4 @@
-// 独立基础模块；未接 HTTP。未启用时不会访问微信或接受测试身份。
+// 服务端微信交换适配器，由默认关闭的认证服务装配；未启用时不外呼或接受测试身份。
 export class WechatFoundationError extends Error {
   constructor(status, message) {
     super(message);

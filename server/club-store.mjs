@@ -1,3 +1,8 @@
+import {
+  migrateWechatIdentity,
+  revokeWechatPlayer,
+  createWechatIdentityStore,
+} from "./wechat-identity-store.mjs";
 import { createMatchMediaStore } from "./match-media-store.mjs";
 import { createVenueStore } from "./venue-store.mjs";
 import {
@@ -55,6 +60,8 @@ const hashPassword = (v) => {
 };
 const verify = (value, hash) => {
   if (typeof value !== "string" || value.length > 200) return false;
+  if (typeof hash !== "string" || !/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(hash))
+    return false;
   const [salt, expected] = hash.split(":");
   return timingSafeEqual(
     scryptSync(value, salt, 64),
@@ -164,9 +171,14 @@ const userView = (r) => ({
   role: r.role,
   playerId: r.player_id,
   teamId: r.team_id,
+  passwordEnabled: r.password_enabled !== 0,
 });
 
-export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
+export function createClubStore(
+  database,
+  legacy,
+  { bootstrapAdmin, wechatProvider, wechatAppId } = {},
+) {
   const q = (sql) => database.prepare(sql);
   const tx = (work) => {
     database.exec("BEGIN IMMEDIATE");
@@ -228,6 +240,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     INSERT OR IGNORE INTO app_migrations(migration_name,applied_at) VALUES ('club-management-v1',unixepoch()*1000);
   `),
   );
+  migrateWechatIdentity(database);
   tx(() => {
     for (const table of ["club_players", "club_matches", "club_seasons"]) {
       if (
@@ -445,10 +458,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
         p.note,
         p.avatar,
       );
-      if (p.status === "inactive")
-        q(
-          "DELETE FROM club_sessions WHERE user_id IN (SELECT id FROM club_users WHERE player_id=? AND team_id=?)",
-        ).run(id, teamId);
+      if (p.status === "inactive") revokeWechatPlayer(database, teamId, id);
       // Preserve board placement and injury status; match history always refers to stable club IDs.
       if (teamId === 1)
         q(
@@ -583,8 +593,11 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     const u = q("SELECT * FROM club_users WHERE username=? COLLATE NOCASE").get(
       username,
     );
-    const valid = verify(input.password, u?.password_hash ?? dummyHash);
-    if (!u || !valid) {
+    const valid = verify(
+      input.password,
+      u?.password_enabled === 1 ? u.password_hash : dummyHash,
+    );
+    if (!u || u.password_enabled !== 1 || !valid) {
       accountAttempt.count++;
       loginAttempts.set(accountKey, accountAttempt);
       fail(401, "用户名或密码不正确。");
@@ -592,13 +605,22 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (u.player_id && getPlayer(u.team_id, u.player_id).status !== "active")
       fail(403, "此球员账户已停用。");
     loginAttempts.delete(key);
+    return issueSession(u, transport);
+  }
+  function issueSession(u, transport = "cookie", binding = null) {
+    const now = Date.now();
     const token = `${transport === "native" ? "native_" : ""}${randomBytes(32).toString("hex")}`;
     const expiresAt = now + 7 * 86400000;
     q("DELETE FROM club_sessions WHERE expires_at<=?").run(now);
-    q("INSERT INTO club_sessions VALUES (?,?,?)").run(
+    q(
+      "INSERT INTO club_sessions(token_hash,user_id,expires_at,auth_method,wechat_identity_id,wechat_revision) VALUES (?,?,?,?,?,?)",
+    ).run(
       tokenHash(token),
       u.id,
       expiresAt,
+      binding ? "wechat" : "password",
+      binding?.id ?? null,
+      binding?.revision ?? null,
     );
     return {
       token,
@@ -612,8 +634,13 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (typeof token !== "string" || !tokenPattern.test(token))
       fail(401, "请先登录。");
     const u = q(
-      "SELECT u.* FROM club_sessions s JOIN club_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?",
-    ).get(tokenHash(token), Date.now());
+      "SELECT u.* FROM club_sessions s JOIN club_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND (s.auth_method='password' OR EXISTS (SELECT 1 FROM club_wechat_identities w WHERE w.id=s.wechat_identity_id AND w.user_id=u.id AND w.revoked_at IS NULL AND w.revision=s.wechat_revision AND w.app_id=? AND ?=1))",
+    ).get(
+      tokenHash(token),
+      Date.now(),
+      wechatAppId ?? "",
+      wechatProvider?.enabled === true ? 1 : 0,
+    );
     if (!u) fail(401, "登录已过期，请重新登录。");
     if (u.player_id && getPlayer(u.team_id, u.player_id).status !== "active")
       fail(403, "此球员账户已停用。");
@@ -645,6 +672,8 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       playerId,
     );
     if (!u) fail(404, "该球员尚未创建账户。");
+    if (u.password_enabled !== 1)
+      fail(409, "此账户仅使用微信登录，不能通过密码重置隐式启用密码。");
     const hash = hashPassword(input.newPassword);
     tx(() => {
       q("UPDATE club_users SET password_hash=? WHERE id=?").run(hash, u.id);
@@ -653,7 +682,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
   }
   function changePassword(u, input) {
     object(input);
-    if (!verify(input.currentPassword, u.password_hash))
+    if (
+      u.password_enabled !== 1 ||
+      !verify(input.currentPassword, u.password_hash)
+    )
       fail(403, "当前密码不正确。");
     const hash = hashPassword(input.newPassword);
     tx(() => {
@@ -877,7 +909,10 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
     if (m.kickoff && !/^([01]\d|2[0-3]):[0-5]\d$/.test(m.kickoff))
       fail(400, "开球时间须为 HH:mm。");
     m.location = text(m.location, 500);
-    if (m.venueId !== null && (!Number.isSafeInteger(m.venueId) || m.venueId < 1))
+    if (
+      m.venueId !== null &&
+      (!Number.isSafeInteger(m.venueId) || m.venueId < 1)
+    )
       fail(400, "球场编号不正确。");
     oneOf(m.status, ["draft", "published", "completed", "cancelled"]);
     integer(m.homeScore);
@@ -904,9 +939,20 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
       if (m.venueId === null) venueSnapshot = null;
       else if (changedVenue || !venueSnapshot) {
         const venue = venues.getVenue(u.team_id, m.venueId);
-        if (venue.status !== "active") fail(400, "已停用球场不能用于新的比赛关联。");
-        venueSnapshot = {name:venue.name,address:venue.address,latitude:venue.latitude,longitude:venue.longitude,coordinateSystem:"gcj02"};
-        if (input.location === undefined) m.location = [venue.name, venue.address].filter(Boolean).join(" · ").slice(0,500);
+        if (venue.status !== "active")
+          fail(400, "已停用球场不能用于新的比赛关联。");
+        venueSnapshot = {
+          name: venue.name,
+          address: venue.address,
+          latitude: venue.latitude,
+          longitude: venue.longitude,
+          coordinateSystem: "gcj02",
+        };
+        if (input.location === undefined)
+          m.location = [venue.name, venue.address]
+            .filter(Boolean)
+            .join(" · ")
+            .slice(0, 500);
       }
       if (m.seasonId !== null) {
         const season = getSeason(u.team_id, m.seasonId);
@@ -952,9 +998,19 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
             m.seasonId,
           ).lastInsertRowid,
         );
-      q("UPDATE club_matches SET venue_id=?,venue_snapshot=? WHERE id=? AND team_id=?")
-        .run(m.venueId, venueSnapshot ? JSON.stringify(venueSnapshot) : null, id, u.team_id);
-      q("UPDATE club_matches SET notice=? WHERE id=? AND team_id=?").run(m.notice, id, u.team_id);
+      q(
+        "UPDATE club_matches SET venue_id=?,venue_snapshot=? WHERE id=? AND team_id=?",
+      ).run(
+        m.venueId,
+        venueSnapshot ? JSON.stringify(venueSnapshot) : null,
+        id,
+        u.team_id,
+      );
+      q("UPDATE club_matches SET notice=? WHERE id=? AND team_id=?").run(
+        m.notice,
+        id,
+        u.team_id,
+      );
       const wanted = new Set(m.tacticIds);
       const previous = q(
         "SELECT source_tactic_id FROM club_match_tactic_snapshots WHERE match_id=?",
@@ -1239,9 +1295,7 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           q(
             "UPDATE club_players SET status='inactive',revision=revision+1 WHERE id=? AND team_id=1 AND status!='inactive'",
           ).run(id);
-          q(
-            "DELETE FROM club_sessions WHERE user_id IN (SELECT id FROM club_users WHERE player_id=? AND team_id=1)",
-          ).run(id);
+          revokeWechatPlayer(database, 1, id);
         }
       }
     });
@@ -1294,7 +1348,15 @@ export function createClubStore(database, legacy, { bootstrapAdmin } = {}) {
           .join("、")}），请先解除比赛关联后再删除。`,
       );
   }
+  const wechat = createWechatIdentityStore(database, {
+    provider: wechatProvider,
+    appId: wechatAppId,
+    authenticate,
+    issueSession,
+    getPlayer,
+  });
   return {
+    wechat,
     assertTacticDeletable,
     ...venues,
     ...matchMedia,

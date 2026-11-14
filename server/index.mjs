@@ -1,6 +1,17 @@
-import { createPlayerMediaStore } from './player-media-store.mjs';
-import { readTacticCommands, applyTacticCommands } from "./native-tactic-commands.mjs";
-import { readTacticPositions, moveTacticPositions } from "./native-tactic-positions.mjs";
+import {
+  createWechatProvider,
+  WechatFoundationError,
+} from "./wechat-provider.mjs";
+import { createWechatAuthService } from "./wechat-auth-service.mjs";
+import { createPlayerMediaStore } from "./player-media-store.mjs";
+import {
+  readTacticCommands,
+  applyTacticCommands,
+} from "./native-tactic-commands.mjs";
+import {
+  readTacticPositions,
+  moveTacticPositions,
+} from "./native-tactic-positions.mjs";
 import { createServer } from "node:http";
 import { isIP } from "node:net";
 import { stat } from "node:fs/promises";
@@ -160,6 +171,11 @@ export function createFootballServer({
         password: process.env.FOOTBALL_ADMIN_PASSWORD,
       }
     : undefined,
+  wechat = {
+    enabled: process.env.FOOTBALL_WECHAT_ENABLED === "true",
+    appId: process.env.FOOTBALL_WECHAT_APP_ID,
+    appSecret: process.env.FOOTBALL_WECHAT_APP_SECRET,
+  },
   publicOrigin = process.env.FOOTBALL_PUBLIC_ORIGIN,
   trustedProxyAddresses = (process.env.FOOTBALL_TRUSTED_PROXY_ADDRESSES || "")
     .split(",")
@@ -184,9 +200,21 @@ export function createFootballServer({
       ? forwarded.trim()
       : peer;
   };
+  const wechatProvider = createWechatProvider(wechat);
   const store = openFootballStore(databasePath);
-  const club = createClubStore(store.database, store, { bootstrapAdmin });
-  const playerMedia = createPlayerMediaStore(store.database);
+  let club, wechatAuth, playerMedia;
+  try {
+    club = createClubStore(store.database, store, {
+      bootstrapAdmin,
+      wechatProvider,
+      wechatAppId: wechat.appId,
+    });
+    wechatAuth = createWechatAuthService({ provider: wechatProvider, club });
+    playerMedia = createPlayerMediaStore(store.database);
+  } catch (error) {
+    store.close();
+    throw error;
+  }
   const cookie = (token, clear = false) =>
     `football_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 604800}${secureCookies ? "; Secure" : ""}`;
   const server = createServer(async (request, response) => {
@@ -206,12 +234,18 @@ export function createFootballServer({
       const method = request.method;
       if (pathname === "/api/health" && method === "GET")
         return send(response, 200, { ok: true });
+      if (pathname === "/api/auth/capabilities" && method === "GET")
+        return send(response, 200, { wechat: wechatAuth.enabled });
+      const wechatPreauth =
+        method === "POST" &&
+        /^\/api\/auth\/wechat\/(claim|claim-status|login)$/.exec(pathname);
       // Native credentials are never ambient cookies. A distinct token format
       // prevents browser sessions from being replayed to bypass Origin checks.
       const nativeLogin =
         pathname === "/api/auth/native-login" && method === "POST";
       const authorization = request.headers.authorization;
-      const nativeRequest = nativeLogin || authorization !== undefined;
+      const nativeRequest =
+        nativeLogin || !!wechatPreauth || authorization !== undefined;
       if (nativeRequest) {
         // WeChat Electron simulator adds this exact Fetch Metadata tuple to
         // wx.request without an Origin. It is not an authentication signal.
@@ -228,10 +262,15 @@ export function createFootballServer({
           request.headers.origin !== undefined ||
           request.headers.cookie !== undefined ||
           (fetchHeaders.length > 0 && !simulatorMetadata) ||
-          (nativeLogin && request.headers["x-football-client"] !== "native-v1")
+          ((nativeLogin || wechatPreauth) &&
+            request.headers["x-football-client"] !== "native-v1")
         )
           throw new FootballError(403, "请使用小程序客户端重新操作。");
-        if (!nativeLogin && !/^Bearer native_[a-f0-9]{64}$/.test(authorization))
+        if (
+          !nativeLogin &&
+          !wechatPreauth &&
+          !/^Bearer native_[a-f0-9]{64}$/.test(authorization)
+        )
           throw new FootballError(401, "请先登录。");
       }
       if (!nativeRequest && !["GET", "HEAD", "OPTIONS"].includes(method)) {
@@ -249,6 +288,16 @@ export function createFootballServer({
             .map((value) => value.trim())
             .find((value) => value.startsWith("football_session="))
             ?.slice("football_session=".length);
+      if (wechatPreauth) {
+        if (authorization !== undefined)
+          throw new FootballError(400, "登录时请勿携带旧会话。");
+        const result = await wechatAuth.preauth(
+          wechatPreauth[1],
+          await readRequest(request, Math.min(maximumRequestBytes, 16384)),
+          clientAddress(request),
+        );
+        return send(response, wechatPreauth[1] === "claim" ? 202 : 200, result);
+      }
       if (nativeLogin) {
         if (authorization !== undefined)
           throw new FootballError(400, "登录时请勿携带旧会话。");
@@ -280,20 +329,35 @@ export function createFootballServer({
       // Read untrusted input before authenticating. A password reset, logout, or
       // archival during a slow upload must invalidate that pending write too.
       let parsedBody;
-      const playerPhotoDelete = method === "DELETE" && /^\/api\/players\/[^/]+\/photos\/[1-9]\d*$/.test(pathname);
-      const photoDelete = playerPhotoDelete || method === "DELETE" && /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname);
-      if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method) || photoDelete) {
+      const playerPhotoDelete =
+        method === "DELETE" &&
+        /^\/api\/players\/[^/]+\/photos\/[1-9]\d*$/.test(pathname);
+      const photoDelete =
+        playerPhotoDelete ||
+        (method === "DELETE" &&
+          /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname));
+      if (
+        !["GET", "HEAD", "OPTIONS", "DELETE"].includes(method) ||
+        photoDelete
+      ) {
         const largeBody =
           /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
             pathname,
           );
         parsedBody = await readRequest(
           request,
-          (pathname === "/api/team" || (method === "POST" && /^\/api\/players\/[^/]+\/photos$/.test(pathname)) || (method === "POST" && /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname)))
+          pathname === "/api/team" ||
+            (method === "POST" &&
+              /^\/api\/players\/[^/]+\/photos$/.test(pathname)) ||
+            (method === "POST" &&
+              /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname))
             ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
             : largeBody
               ? maximumRequestBytes
-              : Math.min(maximumRequestBytes, 1024 * 1024),
+              : Math.min(
+                  maximumRequestBytes,
+                  pathname.includes("/wechat-") ? 16384 : 1024 * 1024,
+                ),
         );
       }
       const user = club.authenticate(
@@ -327,16 +391,22 @@ export function createFootballServer({
         }
       }
       if (pathname === "/api/venues") {
-        if (method === "GET") return send(response, 200, club.listVenues(user.team_id));
+        if (method === "GET")
+          return send(response, 200, club.listVenues(user.team_id));
         if (method === "POST") {
           admin();
-          return send(response, 201, club.saveVenue(user.team_id, null, body()));
+          return send(
+            response,
+            201,
+            club.saveVenue(user.team_id, null, body()),
+          );
         }
       }
       const venueRoute = /^\/api\/venues\/([1-9]\d*)$/.exec(pathname);
       if (venueRoute) {
         const id = routeId(venueRoute[1]);
-        if (method === "GET") return send(response, 200, club.getVenue(user.team_id, id));
+        if (method === "GET")
+          return send(response, 200, club.getVenue(user.team_id, id));
         if (method === "PUT") {
           admin();
           return send(response, 200, club.saveVenue(user.team_id, id, body()));
@@ -354,18 +424,101 @@ export function createFootballServer({
           );
         }
       }
-      const playerPhotos = /^\/api\/players\/([^/]+)\/photos(?:\/(cover|order|[1-9]\d*))?$/.exec(pathname);
-      if (playerPhotos) {
-        const [,id,part]=playerPhotos;
-        if (!part && method==='GET') return send(response,200,playerMedia.list(user,id));
-        if (part && !['cover','order'].includes(part) && method==='GET') return send(response,200,playerMedia.get(user,id,routeId(part)));
+      const invitationRoute =
+        /^\/api\/players\/([^/]+)\/wechat-invites(?:\/([a-f0-9]{32})\/(approve|reject|revoke))?$/.exec(
+          pathname,
+        );
+      const bindingRoute =
+        /^\/api\/players\/([^/]+)\/wechat-binding(?:\/(revoke))?$/.exec(
+          pathname,
+        );
+      if (invitationRoute || bindingRoute) {
         admin();
-        if (!part && method==='POST') return send(response,201,await playerMedia.add(user,id,body(),()=>club.authenticate(token,nativeRequest?'native':'cookie')));
-        if (part==='cover' && method==='PUT') return send(response,200,playerMedia.cover(user,id,body()));
-        if (part==='order' && method==='PUT') return send(response,200,playerMedia.order(user,id,body()));
-        if (part && !['cover','order'].includes(part) && method==='PUT') return send(response,200,playerMedia.caption(user,id,routeId(part),body()));
-        if (part && !['cover','order'].includes(part) && method==='DELETE') return send(response,200,playerMedia.remove(user,id,routeId(part),body()));
-        throw new FootballError(405,'球员照片操作方式不支持。');
+        const actor = { token, transport: nativeRequest ? "native" : "cookie" };
+        if (invitationRoute) {
+          const [, playerId, id, action] = invitationRoute;
+          if (!id && method === "POST") {
+            const result = wechatAuth.manage(actor, playerId, "create", body());
+            return send(
+              response,
+              result.credentialUnavailable ? 200 : 201,
+              result,
+            );
+          }
+          if (!id && method === "GET") {
+            const query = new URL(request.url, "http://localhost").searchParams;
+            if ([...query.keys()].some((k) => !["limit", "cursor"].includes(k)))
+              throw new FootballError(400, "邀请分页参数不正确。");
+            return send(
+              response,
+              200,
+              wechatAuth.manage(actor, playerId, "list", {
+                ...(query.has("limit")
+                  ? { limit: Number(query.get("limit")) }
+                  : {}),
+                ...(query.has("cursor") ? { cursor: query.get("cursor") } : {}),
+              }),
+            );
+          }
+          if (id && method === "POST")
+            return send(
+              response,
+              200,
+              wechatAuth.manage(actor, playerId, action, { ...body(), id }),
+            );
+        } else {
+          const [, playerId, action] = bindingRoute;
+          if (!action && method === "GET")
+            return send(
+              response,
+              200,
+              wechatAuth.manage(actor, playerId, "binding"),
+            );
+          if (action && method === "POST")
+            return send(
+              response,
+              200,
+              wechatAuth.manage(actor, playerId, "unbind", body()),
+            );
+        }
+        throw new FootballError(405, "此微信操作不支持该方法。");
+      }
+      const playerPhotos =
+        /^\/api\/players\/([^/]+)\/photos(?:\/(cover|order|[1-9]\d*))?$/.exec(
+          pathname,
+        );
+      if (playerPhotos) {
+        const [, id, part] = playerPhotos;
+        if (!part && method === "GET")
+          return send(response, 200, playerMedia.list(user, id));
+        if (part && !["cover", "order"].includes(part) && method === "GET")
+          return send(response, 200, playerMedia.get(user, id, routeId(part)));
+        admin();
+        if (!part && method === "POST")
+          return send(
+            response,
+            201,
+            await playerMedia.add(user, id, body(), () =>
+              club.authenticate(token, nativeRequest ? "native" : "cookie"),
+            ),
+          );
+        if (part === "cover" && method === "PUT")
+          return send(response, 200, playerMedia.cover(user, id, body()));
+        if (part === "order" && method === "PUT")
+          return send(response, 200, playerMedia.order(user, id, body()));
+        if (part && !["cover", "order"].includes(part) && method === "PUT")
+          return send(
+            response,
+            200,
+            playerMedia.caption(user, id, routeId(part), body()),
+          );
+        if (part && !["cover", "order"].includes(part) && method === "DELETE")
+          return send(
+            response,
+            200,
+            playerMedia.remove(user, id, routeId(part), body()),
+          );
+        throw new FootballError(405, "球员照片操作方式不支持。");
       }
       const playerRoute =
         /^\/api\/players\/([^/]+)(?:\/(account|password))?$/.exec(pathname);
@@ -441,15 +594,32 @@ export function createFootballServer({
           return send(response, 201, club.saveMatch(user, null, body()));
         }
       }
-      const matchPhotoRoute = /^\/api\/matches\/([1-9]\d*)\/photos(?:\/(cover|[1-9]\d*))?$/.exec(pathname);
+      const matchPhotoRoute =
+        /^\/api\/matches\/([1-9]\d*)\/photos(?:\/(cover|[1-9]\d*))?$/.exec(
+          pathname,
+        );
       if (matchPhotoRoute) {
-        const id = routeId(matchPhotoRoute[1]), part = matchPhotoRoute[2];
-        if (!part && method === "GET") return send(response, 200, club.listMatchPhotos(user, id));
-        if (part && part !== "cover" && method === "GET") return send(response, 200, club.getMatchPhoto(user, id, routeId(part)));
+        const id = routeId(matchPhotoRoute[1]),
+          part = matchPhotoRoute[2];
+        if (!part && method === "GET")
+          return send(response, 200, club.listMatchPhotos(user, id));
+        if (part && part !== "cover" && method === "GET")
+          return send(
+            response,
+            200,
+            club.getMatchPhoto(user, id, routeId(part)),
+          );
         admin();
-        if (!part && method === "POST") return send(response, 201, club.addMatchPhoto(user, id, body()));
-        if (part === "cover" && method === "PUT") return send(response, 200, club.setMatchCover(user, id, body()));
-        if (part && part !== "cover" && method === "DELETE") return send(response, 200, club.removeMatchPhoto(user, id, routeId(part), body()));
+        if (!part && method === "POST")
+          return send(response, 201, club.addMatchPhoto(user, id, body()));
+        if (part === "cover" && method === "PUT")
+          return send(response, 200, club.setMatchCover(user, id, body()));
+        if (part && part !== "cover" && method === "DELETE")
+          return send(
+            response,
+            200,
+            club.removeMatchPhoto(user, id, routeId(part), body()),
+          );
         throw new FootballError(405, "照片操作方式不支持。");
       }
       const matchRoute =
@@ -471,19 +641,34 @@ export function createFootballServer({
       if (user.team_id !== 1)
         throw new FootballError(403, "无权访问其他球队的战术。");
       if (method !== "GET") admin();
-      const nativeCommands = /^\/api\/tactics\/([1-9]\d*)\/commands$/.exec(pathname);
+      const nativeCommands = /^\/api\/tactics\/([1-9]\d*)\/commands$/.exec(
+        pathname,
+      );
       if (nativeCommands) {
         const id = routeId(nativeCommands[1]);
-        if (method === "GET") return send(response, 200, readTacticCommands(store, id));
-        if (method === "PUT") return send(response, 200, applyTacticCommands(store, id, body(), playerId => club.getPlayer(user.team_id, playerId)));
+        if (method === "GET")
+          return send(response, 200, readTacticCommands(store, id));
+        if (method === "PUT")
+          return send(
+            response,
+            200,
+            applyTacticCommands(store, id, body(), (playerId) =>
+              club.getPlayer(user.team_id, playerId),
+            ),
+          );
         throw new FootballError(405, "此战术命令接口不支持该操作。");
       }
-      const nativePositions = /^\/api\/tactics\/([1-9]\d*)\/positions$/.exec(pathname);
+      const nativePositions = /^\/api\/tactics\/([1-9]\d*)\/positions$/.exec(
+        pathname,
+      );
       if (nativePositions) {
         const id = Number(nativePositions[1]);
-        if (!Number.isSafeInteger(id)) throw new FootballError(400, "请选择有效战术编号。");
-        if (method === "GET") return send(response, 200, readTacticPositions(store, id));
-        if (method === "PUT") return send(response, 200, moveTacticPositions(store, id, body()));
+        if (!Number.isSafeInteger(id))
+          throw new FootballError(400, "请选择有效战术编号。");
+        if (method === "GET")
+          return send(response, 200, readTacticPositions(store, id));
+        if (method === "PUT")
+          return send(response, 200, moveTacticPositions(store, id, body()));
         throw new FootballError(405, "此站位接口不支持该操作。");
       }
       if (pathname === "/api/tactics") {
@@ -532,11 +717,16 @@ export function createFootballServer({
       }
       throw new FootballError(405, "此足球页面不支持该操作。");
     } catch (error) {
+      if (error instanceof WechatFoundationError)
+        error = new FootballError(error.status, error.message);
       if (!(error instanceof FootballError))
         console.error("Football storage failed:", error);
       if (!response.headersSent)
         send(response, error instanceof FootballError ? error.status : 500, {
-          ...(error instanceof FootballError && error.code === "ANIMATION_IDENTITY_CONFIRMATION_REQUIRED" ? {code:error.code} : {}),
+          ...(error instanceof FootballError &&
+          error.code === "ANIMATION_IDENTITY_CONFIRMATION_REQUIRED"
+            ? { code: error.code }
+            : {}),
           message:
             error instanceof FootballError
               ? error.message

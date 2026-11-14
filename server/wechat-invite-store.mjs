@@ -14,6 +14,16 @@ const text = (value, max = 128) => {
     fail(400, "邀请参数不正确。");
   return value;
 };
+const fields = (value, allowed) => {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).some((k) => !allowed.includes(k))
+  )
+    fail(400, "邀请参数不正确。");
+  return value;
+};
 const sync = (fn, value) => {
   const result = fn(value);
   if (result?.then) fail(500, "邀请事务依赖必须同步执行。");
@@ -81,6 +91,7 @@ export function createWechatInviteStore(
     status: r.status,
     revision: r.revision,
     expiresAt: r.expires_at,
+    confirmationCode: r.claim_confirmation_code ?? null,
   });
   const get = (id) => {
     const r = q("SELECT * FROM wechat_invites_foundation WHERE id=?").get(
@@ -101,18 +112,39 @@ export function createWechatInviteStore(
   return {
     initialize() {
       guard();
-      // 不改 club_users/club_sessions，也不由模块加载自动执行迁移。
-      db.exec(`CREATE TABLE IF NOT EXISTS wechat_invites_foundation (
+      return tx(() => {
+        // 不改 club_users/club_sessions，也不由模块加载自动执行迁移。
+        db.exec(`CREATE TABLE IF NOT EXISTS wechat_invites_foundation (
         id TEXT PRIMARY KEY, team_id INTEGER NOT NULL, player_id TEXT NOT NULL, app_id TEXT NOT NULL,
         actor_id INTEGER NOT NULL, request_id TEXT NOT NULL, request_hash TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
         expires_at INTEGER NOT NULL, status TEXT NOT NULL CHECK(status IN ('pending','claimed','approved','rejected','revoked','expired')),
-        revision INTEGER NOT NULL DEFAULT 1, claim_openid TEXT, claim_request_id TEXT,
+        revision INTEGER NOT NULL DEFAULT 1, claim_openid TEXT, claim_request_id TEXT, claim_confirmation_code TEXT,
         FOREIGN KEY(team_id,player_id) REFERENCES club_players(team_id,id), FOREIGN KEY(actor_id) REFERENCES club_users(id),
         UNIQUE(actor_id,request_id)
       ) STRICT;
       CREATE UNIQUE INDEX IF NOT EXISTS wechat_invites_foundation_active ON wechat_invites_foundation(app_id,team_id,player_id) WHERE status IN ('pending','claimed');`);
+        if (
+          !q("PRAGMA table_info(wechat_invites_foundation)")
+            .all()
+            .some((c) => c.name === "claim_confirmation_code")
+        )
+          db.exec(
+            "ALTER TABLE wechat_invites_foundation ADD COLUMN claim_confirmation_code TEXT",
+          );
+        // 旧待审批申请无核对码，撤销后重新邀请，不能绕过二次核验。
+        q(
+          "UPDATE wechat_invites_foundation SET status='revoked',revision=revision+1 WHERE status='claimed' AND claim_confirmation_code IS NULL",
+        ).run();
+      });
     },
-    create(actor, { teamId, playerId, appId, requestId, ttlMs = 86400000 }) {
+    create(actor, input) {
+      const {
+        teamId,
+        playerId,
+        appId,
+        requestId,
+        ttlMs = 86400000,
+      } = fields(input, ["teamId", "playerId", "appId", "requestId", "ttlMs"]);
       guard();
       text(playerId);
       text(requestId);
@@ -143,6 +175,12 @@ export function createWechatInviteStore(
           ).get(appId, teamId, playerId)
         )
           fail(409, "请先撤销原邀请再重新创建。");
+        if (
+          q(
+            "SELECT count(*) AS n FROM wechat_invites_foundation WHERE status IN ('pending','claimed')",
+          ).get().n >= 1000
+        )
+          fail(429, "待处理邀请过多，请先清理或稍后重试。");
         const id = randomBytes(16).toString("hex"),
           credential = randomBytes(32).toString("hex");
         q(
@@ -171,20 +209,40 @@ export function createWechatInviteStore(
         return view(get(id));
       });
     },
-    claim(identity, { credential, requestId }) {
+    claim(identity, input) {
       guard();
+      const { credential, requestId } = fields(input, [
+        "credential",
+        "requestId",
+      ]);
       validIdentity(identity);
       text(credential, 64);
       text(requestId);
       if (!/^[a-f0-9]{64}$/.test(credential)) fail(400, "邀请凭据无效。");
       const result = tx(() => {
-        expire();
         const r = q(
           "SELECT * FROM wechat_invites_foundation WHERE token_hash=?",
         ).get(hash(credential));
+        // 丢响应后的本人终态恢复仅派生元数据，不修改任何行、版本或绑定。
+        // 到期但尚未落库的 claimed 也只返回 expired，不运行全局 expire 写入。
+        if (
+          r &&
+          r.app_id === identity.appId &&
+          r.claim_openid === identity.openid &&
+          (["approved", "rejected", "revoked", "expired"].includes(r.status) ||
+            (r.status === "claimed" && r.expires_at <= now()))
+        ) {
+          return {
+            id: r.id,
+            status: r.status === "claimed" ? "expired" : r.status,
+            revision: r.revision,
+            confirmationCode: r.claim_confirmation_code ?? null,
+          };
+        }
         if (
           !r ||
           r.app_id !== identity.appId ||
+          r.expires_at <= now() ||
           !["pending", "claimed"].includes(r.status)
         )
           fail(409, "邀请不可用，请联系管理员。");
@@ -198,23 +256,98 @@ export function createWechatInviteStore(
           return null;
         }
         if (r.status === "claimed") {
-          if (
-            r.claim_openid !== identity.openid ||
-            r.claim_request_id !== requestId
-          )
+          // 同一服务端验证身份可在丢响应/重启后恢复，不改变初次申请及版本。
+          if (r.claim_openid !== identity.openid)
             fail(409, "邀请已有待审核申请。");
         } else
           q(
-            "UPDATE wechat_invites_foundation SET status='claimed',claim_openid=?,claim_request_id=?,revision=revision+1 WHERE id=?",
-          ).run(identity.openid, requestId, r.id);
+            "UPDATE wechat_invites_foundation SET status='claimed',claim_openid=?,claim_request_id=?,claim_confirmation_code=?,revision=revision+1 WHERE id=?",
+          ).run(
+            identity.openid,
+            requestId,
+            randomBytes(4).toString("hex").toUpperCase(),
+            r.id,
+          );
         // 认领者只得到自身申请状态；不发业务session，不返回球员/球队资料。
-        return { id: r.id, status: "claimed", revision: get(r.id).revision };
+        return {
+          id: r.id,
+          status: "claimed",
+          revision: get(r.id).revision,
+          confirmationCode: get(r.id).claim_confirmation_code,
+        };
       });
       if (!result) fail(409, "邀请不可用，请联系管理员。");
       return result;
     },
-    decide(actor, { id, revision, action }) {
+    list(actor, input) {
       guard();
+      const {
+        teamId,
+        playerId,
+        appId,
+        limit = 20,
+        cursor = null,
+      } = fields(input, ["teamId", "playerId", "appId", "limit", "cursor"]);
+      if (
+        typeof appId !== "string" ||
+        !/^wx[0-9a-f]{16}$/.test(appId) ||
+        !Number.isSafeInteger(teamId) ||
+        teamId < 1 ||
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 50 ||
+        (cursor !== null && !/^[a-f0-9]{32}$/.test(cursor))
+      )
+        fail(400, "邀请分页参数不正确。");
+      text(playerId);
+      return tx(() => {
+        auth(actor, { team_id: teamId, player_id: playerId });
+        expire();
+        if (
+          cursor !== null &&
+          !q(
+            "SELECT id FROM wechat_invites_foundation WHERE id=? AND app_id=? AND team_id=? AND player_id=?",
+          ).get(cursor, appId, teamId, playerId)
+        )
+          fail(400, "分页位置不属于当前邀请列表。");
+        const rows = q(
+          "SELECT * FROM wechat_invites_foundation WHERE app_id=? AND team_id=? AND player_id=? AND id>? ORDER BY id LIMIT ?",
+        ).all(appId, teamId, playerId, cursor ?? "", limit + 1);
+        const active = q(
+          "SELECT * FROM wechat_invites_foundation WHERE app_id=? AND team_id=? AND player_id=? AND status IN ('pending','claimed')",
+        ).get(appId, teamId, playerId);
+        return {
+          activeInvite: active ? view(active) : null,
+          items: rows.slice(0, limit).map(view),
+          nextCursor: rows.length > limit ? rows[limit - 1].id : null,
+        };
+      });
+    },
+    claimStatus(identity, id) {
+      guard();
+      validIdentity(identity);
+      return tx(() => {
+        const r = get(id);
+        if (r.app_id !== identity.appId || r.claim_openid !== identity.openid)
+          fail(404, "申请不存在。");
+        expire();
+        const current = get(id);
+        return {
+          id: current.id,
+          status: current.status,
+          revision: current.revision,
+          confirmationCode: current.claim_confirmation_code ?? null,
+        };
+      });
+    },
+    decide(actor, input) {
+      guard();
+      const { id, revision, action, confirmationCode } = fields(input, [
+        "id",
+        "revision",
+        "action",
+        "confirmationCode",
+      ]);
       if (
         !["approve", "reject", "revoke"].includes(action) ||
         !Number.isSafeInteger(revision) ||
@@ -233,6 +366,12 @@ export function createWechatInviteStore(
         )
           fail(409, "当前邀请状态不允许此操作。");
         if (action === "approve") {
+          if (
+            typeof confirmationCode !== "string" ||
+            !/^[A-F0-9]{8}$/.test(confirmationCode) ||
+            confirmationCode !== r.claim_confirmation_code
+          )
+            fail(409, "核对编号不匹配，请与申请人重新核实。");
           const binding = sync(bindIdentity, {
             db,
             authorization: a,

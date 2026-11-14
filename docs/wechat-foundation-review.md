@@ -1,5 +1,7 @@
 # 微信邀请内部基础模块（未接入业务入口）
 
+> 本文保留第一阶段基础模块当时的验收记录。后续 HTTP 接线、确认编号及双归档撤销的当前实现见[接线说明](wechat-integration-contract.md)，不能把本文原“未接线”描述当作最新状态。
+
 ## 已实现边界
 
 新增 `server/wechat-provider.mjs`、`server/wechat-invite-store.mjs` 和 `server/wechat-foundation.test.mjs`。默认关闭，不在现有服务启动时加载，不自动迁移数据库，不挂HTTP路由，不修改club_users/club_sessions、不签发应用会话，不提供微信登录按钮或小程序码。不能据此称球员已可扫码加入。
