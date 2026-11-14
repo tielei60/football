@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { tacticVersion } from "./tactic-version.mjs";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -14,6 +15,21 @@ export class FootballError extends Error {
 
 const reject = (message) => {
   throw new FootballError(400, message);
+};
+const canonicalJson = (value) => JSON.stringify(value, function (key, item) {
+  return item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map((name) => [name, item[name]]))
+    : item;
+});
+const createRequestId = (value) => {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{8,128}$/.test(value))
+    reject("请使用有效的新建请求编号。");
+  return value;
+};
+const createOwner = (owner) => {
+  if (!owner || owner.role !== "admin" || owner.team_id !== 1 || !Number.isSafeInteger(owner.id) || owner.id < 1)
+    throw new FootballError(403, "仅本队管理员可核对新建战术。");
+  return owner;
 };
 const isObject = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -683,6 +699,11 @@ export function openFootballStore(databasePath) {
       throw error;
     }
   };
+  database.exec(`CREATE TABLE IF NOT EXISTS tactic_create_receipts (
+    team_id INTEGER NOT NULL, user_id INTEGER NOT NULL, request_id TEXT NOT NULL,
+    payload_hash TEXT NOT NULL, tactic_id INTEGER NOT NULL, created_at INTEGER NOT NULL,
+    PRIMARY KEY(team_id,user_id,request_id)
+  ) STRICT;`);
   const readTactic = (row) => ({
     tacticId: row.tactic_id,
     title: row.title,
@@ -804,14 +825,38 @@ export function openFootballStore(databasePath) {
     getTactic,
     listVersions,
     getDesk,
-    saveTactic(tacticId, request) {
+    getTacticCreateReceipt(owner, requestId) {
+      createOwner(owner);
+      createRequestId(requestId);
+      const row = prepare("SELECT tactic_id FROM tactic_create_receipts WHERE team_id=? AND user_id=? AND request_id=?").get(owner.team_id, owner.id, requestId);
+      if (!row) throw new FootballError(404, "尚未找到此新建请求，请核对后再处理。");
+      return {requestId, tacticId: row.tactic_id, available: Boolean(prepare("SELECT 1 FROM tactics WHERE tactic_id=?").get(row.tactic_id))};
+    },
+    saveTactic(tacticId, request, owner) {
       if (!isObject(request)) reject("请提供战术和保存备注。");
       const tactic = validateTactic(request.tactic);
       const note = string(request.note ?? "", "保存备注");
+      const keyed = request.requestId !== undefined;
+      let requestId, payloadHash;
+      if (keyed) {
+        if (tacticId !== null) reject("新建请求编号不能用于更新战术。");
+        createOwner(owner);
+        if (Object.keys(request).some((key) => !["requestId", "tactic", "note"].includes(key))) reject("新建请求包含不支持的字段。");
+        requestId = createRequestId(request.requestId);
+        payloadHash = createHash("sha256").update(canonicalJson({tactic, note})).digest("hex");
+      }
       return transaction(() => {
+        if (keyed) {
+          const receipt = prepare("SELECT payload_hash,tactic_id FROM tactic_create_receipts WHERE team_id=? AND user_id=? AND request_id=?").get(owner.team_id, owner.id, requestId);
+          if (receipt) {
+            if (receipt.payload_hash !== payloadHash) throw new FootballError(409, "此请求编号已用于不同的新建内容。");
+            if (!prepare("SELECT 1 FROM tactics WHERE tactic_id=?").get(receipt.tactic_id)) throw new FootballError(410, "此请求已创建的战术已删除，不会重复创建。");
+            return getTactic(receipt.tactic_id);
+          }
+        }
         if (tacticId === null) {
           if (
-            tactic.presetName !== undefined &&
+            !keyed && tactic.presetName !== undefined &&
             tactic.presetEdition !== undefined
           ) {
             const previous = prepare(
@@ -847,6 +892,7 @@ export function openFootballStore(databasePath) {
           );
         }
         addVersion(tacticId, note, tactic.board);
+        if (keyed) prepare("INSERT INTO tactic_create_receipts(team_id,user_id,request_id,payload_hash,tactic_id,created_at) VALUES (?,?,?,?,?,?)").run(owner.team_id,owner.id,requestId,payloadHash,tacticId,Date.now());
         return getTactic(tacticId);
       });
     },

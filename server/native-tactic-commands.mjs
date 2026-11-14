@@ -517,6 +517,10 @@ function setupCommand(tactic, c, find, resolvePlayer) {
   return false;
 }
 
+export function readTacticFormations() {
+  return { formations: structuredClone(formations) };
+}
+
 export function readTacticCommands(store, tacticId) {
   const tactic = store.getTactic(tacticId);
   return {

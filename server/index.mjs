@@ -8,6 +8,7 @@ import { createWechatAuthService } from "./wechat-auth-service.mjs";
 import { createPlayerMediaStore } from "./player-media-store.mjs";
 import {
   readTacticCommands,
+  readTacticFormations,
   applyTacticCommands,
 } from "./native-tactic-commands.mjs";
 import {
@@ -799,6 +800,18 @@ export function createFootballServer({
       if (user.team_id !== 1)
         throw new FootballError(403, "无权访问其他球队的战术。");
       if (method !== "GET") admin();
+      if (pathname === "/api/tactic-formations") {
+        admin();
+        if (method !== "GET") throw new FootballError(405, "阵型目录仅支持读取。");
+        return send(response, 200, readTacticFormations());
+      }
+      if (pathname === "/api/tactic-create-receipts") {
+        admin();
+        if (method !== "GET") throw new FootballError(405, "新建回执仅支持读取。");
+        const query = new URL(request.url, "http://localhost").searchParams;
+        if ([...query.keys()].some((key) => key !== "requestId") || query.getAll("requestId").length !== 1) throw new FootballError(400, "请提供唯一的新建请求编号。");
+        return send(response, 200, store.getTacticCreateReceipt(user, query.get("requestId")));
+      }
       const nativeCommands = /^\/api\/tactics\/([1-9]\d*)\/commands$/.exec(
         pathname,
       );
@@ -832,7 +845,7 @@ export function createFootballServer({
       if (pathname === "/api/tactics") {
         if (method === "GET") return send(response, 200, store.listTactics());
         if (method === "POST")
-          return send(response, 201, store.saveTactic(null, body()));
+          return send(response, 201, store.saveTactic(null, body(), user));
       } else if (pathname === "/api/coaching-desk") {
         if (method === "GET") return send(response, 200, club.tacticalDesk());
         if (method === "PUT") {
