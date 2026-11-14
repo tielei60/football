@@ -120,3 +120,7 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 | 37 | miniprogram/pages/wechat-claim/index.wxml | 一次性邀请码，密码式输入；提交/离开清空原生控件 | 仅VM确认私有内存与生命周期，不代表真实IME/caret已验 |
 
 管理审批编号复用现有共享弹框输入，不新增模板输入实例。
+
+## 新建战术页增量
+
+| 38 | miniprogram/pages/tactic-create/index.wxml | 战术名称，沿用原生单行输入样式 | 新增自动检查，实际键盘/caret待验 |

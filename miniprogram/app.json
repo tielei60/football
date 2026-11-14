@@ -28,7 +28,8 @@
     "pages/player-photos/index",
     "pages/wechat-claim/index",
     "pages/wechat-invites/index",
-    "pages/player-ai/index"
+    "pages/player-ai/index",
+    "pages/tactic-create/index"
   ],
   "window": {
     "navigationBarTitleText": "足球俱乐部",

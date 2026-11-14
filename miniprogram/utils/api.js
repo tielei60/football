@@ -57,6 +57,15 @@ function persistSession() {
   wx.setStorageSync(STORAGE_KEY, { ...session, team });
 }
 function clearSession() {
+  // 退出只移除匿名创建草稿内容，保留最小回执以免未知结果被重复创建。
+  try {
+    for (const key of wx.getStorageInfoSync?.().keys || []) {
+      if (key.startsWith("football.tactic-create.v1:")) {
+        const receipt = wx.getStorageSync(key);
+        if (receipt?.requestId) wx.setStorageSync(key, { requestId: receipt.requestId });
+      }
+    }
+  } catch (_) { /* 存储失败不阻止会话失效。 */ }
   require("./media").clearImageCache();
   require("./player-photo-cache").clearAll();
   epoch += 1;

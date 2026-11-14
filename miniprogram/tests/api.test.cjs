@@ -27,6 +27,7 @@ function fixture(options = {}) {
   const wx = {
     request: (request) => requests.push(request),
     getStorageSync: (k) => storage.get(k),
+    getStorageInfoSync: () => ({keys:[...storage.keys()]}),
     setStorageSync: (k, v) => {
       if (options.writeFailure) throw Error("unavailable");
       storage.set(k, v);
@@ -255,3 +256,5 @@ test('old uncancelled handle cannot cancel a newer in-flight login',async()=>{
 });
 
 test("session clearing invokes dedicated photo cache cleanup",()=>{const h=fixture({stored:session()});h.api.clearSession();assert.equal(h.photoClears(),1);assert.equal(h.api.getSession(),null);});
+
+test("退出清理匿名战术草稿内容但保留核对编号，不动其他业务存储",()=>{const f=fixture();const k="football.tactic-create.v1:test:1:1";f.storage.set(k,{requestId:"request-123",payload:{tactic:{title:"演练"}},createdAt:Date.now()});f.storage.set("other",{keep:true});f.api.clearSession();assert.equal(JSON.stringify(f.storage.get(k)),JSON.stringify({requestId:"request-123"}));assert.equal(f.storage.get("other").keep,true);});

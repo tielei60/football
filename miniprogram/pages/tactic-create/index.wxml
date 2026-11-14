@@ -1,0 +1,20 @@
+<view class="page">
+  <view class="title">新建战术</view>
+  <page-state id="page-state" skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
+  <view wx:if="{{!loading&&!error&&admin}}" class="card section">
+    <view class="field"><view class="field-label">战术名称</view><input class="input" value="{{title}}" maxlength="300" placeholder="例如：前场压迫" bindinput="input" disabled="{{busy||pending}}"/></view>
+    <view class="field"><view class="field-label">比赛人数</view><business-picker bind:pickeropen="openBusinessPicker" title="比赛人数" range="{{counts}}" value="{{countIndex}}" disabled="{{busy||pending}}" bindchange="count"><view class="picker"><text class="picker-value">{{counts[countIndex]}} 人制</text></view></business-picker></view>
+    <view class="field"><view class="field-label">初始阵型</view><business-picker bind:pickeropen="openBusinessPicker" title="初始阵型" range="{{formations}}" value="{{formationIndex}}" disabled="{{busy||pending}}" bindchange="formation"><view class="picker"><text class="picker-value">{{formations[formationIndex]}}</text></view></business-picker></view>
+    <view class="hint">{{formationIndex?'仅放置匿名主队棋子，不关联球队成员。':'空白战术没有球员，可在创建后设置阵型与名单。'}} 不修改已有模板或历史比赛。</view>
+    <view wx:if="{{pending&&pendingSummary}}" class="hint feedback">待核对原任务：{{pendingSummary}}</view>
+    <view wx:if="{{actionError}}" class="hint feedback">{{actionError}}</view>
+    <button wx:if="{{!pending}}" id="create-tactic" size="mini" class="primary ui-button ui-block section" disabled="{{busy}}" loading="{{busy}}" bindtap="create">创建并编辑</button>
+    <block wx:else>
+      <button wx:if="{{createdId}}" id="enter-created" size="mini" class="primary ui-button ui-block section" disabled="{{busy}}" bindtap="enterCreated">进入已创建战术</button>
+      <button wx:elif="{{unavailable}}" size="mini" class="ui-button ui-block section" disabled="{{busy}}" bindtap="finishDeleted">已知晓，开始另一套战术</button>
+      <button wx:else id="recover-create" size="mini" class="primary ui-button ui-block section" disabled="{{busy}}" loading="{{busy}}" bindtap="recover">核对创建结果</button>
+      <button wx:if="{{canRetry&&!createdId&&!unavailable}}" size="mini" class="ui-button ui-block section" disabled="{{busy}}" bindtap="retry">使用原任务重试</button>
+    </block>
+  </view>
+</view>
+<business-dialog id="business-dialog"/>
