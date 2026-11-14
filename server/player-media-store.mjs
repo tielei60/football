@@ -109,6 +109,15 @@ export async function sanitizePlayerPhoto(value) {
 export function createPlayerMediaStore(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS club_player_albums(team_id INTEGER NOT NULL,player_id TEXT NOT NULL,revision INTEGER NOT NULL DEFAULT 1,cover_photo_id INTEGER,PRIMARY KEY(team_id,player_id),FOREIGN KEY(team_id,player_id) REFERENCES club_players(team_id,id)) STRICT;
  CREATE TABLE IF NOT EXISTS club_player_photos(id INTEGER PRIMARY KEY,team_id INTEGER NOT NULL,player_id TEXT NOT NULL,request_id TEXT NOT NULL,source_hash TEXT NOT NULL,original_caption TEXT NOT NULL,caption TEXT NOT NULL,mime_type TEXT NOT NULL,byte_size INTEGER NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,data_url TEXT,created_at INTEGER NOT NULL,sort_order INTEGER NOT NULL,is_deleted INTEGER NOT NULL DEFAULT 0,UNIQUE(team_id,player_id,request_id),FOREIGN KEY(team_id,player_id) REFERENCES club_players(team_id,id)) STRICT;`);
+  if (
+    !db
+      .prepare("PRAGMA table_info(club_player_photos)")
+      .all()
+      .some((c) => c.name === "origin_kind")
+  )
+    db.exec(
+      "ALTER TABLE club_player_photos ADD COLUMN origin_kind TEXT CHECK(origin_kind IS NULL OR origin_kind IN ('local-simulation','ai-generated'))",
+    );
   const q = (s) => db.prepare(s),
     tx = (fn) => {
       db.exec("BEGIN IMMEDIATE");
@@ -160,8 +169,15 @@ export function createPlayerMediaStore(db) {
       revision: a.revision,
       coverPhotoId: a.cover_photo_id,
       photos: q(
-        "SELECT id,caption,mime_type AS mimeType,byte_size AS byteSize,width,height,created_at AS createdAt,sort_order AS sortOrder FROM club_player_photos WHERE team_id=? AND player_id=? AND is_deleted=0 ORDER BY sort_order,id",
-      ).all(u.team_id, id),
+        "SELECT id,caption,mime_type AS mimeType,byte_size AS byteSize,width,height,created_at AS createdAt,sort_order AS sortOrder,origin_kind AS originKind FROM club_player_photos WHERE team_id=? AND player_id=? AND is_deleted=0 ORDER BY sort_order,id",
+      )
+        .all(u.team_id, id)
+        .map((p) => ({
+          ...p,
+          generated: Boolean(p.originKind),
+          aiGenerated: p.originKind === "ai-generated",
+          simulation: p.originKind === "local-simulation",
+        })),
     };
   }
   function row(u, id, pid) {

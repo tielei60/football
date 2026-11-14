@@ -200,3 +200,7 @@ GET `/api/tactics/:id/commands` 额外返回 `formations`，为 `{playerCount,id
 ## 微信邀请与身份认证（默认关闭）
 
 后端新增同队管理员邀请、认领核验编号、审批、绑定和原生微信认证接口。完整字段、16 KiB限制、旧密码兼容、归档撤销与未完成客户端边界见[微信邀请认证后端接线说明](wechat-integration-contract.md)。未配置启用时公开能力接口仅返回 `wechat:false`，不接受测试身份或自动注册。
+
+## 默认关闭的私有生成图片流程
+
+受控路由位于 `/api/players/:playerId/ai/*`，仅同队管理员及原操作者可操作；默认能力关闭，不接受上传或生成。详见[HTTP 契约](player-ai-http-contract.md)和[服务检查记录](player-ai-service-review.md)。本地演练仅几何样本，不能当作真实 AI；没有客户端状态转移/费用结算入口，也没有真实供应商默认配置。

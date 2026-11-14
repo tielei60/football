@@ -242,6 +242,16 @@ export function createClubStore(
   );
   migrateWechatIdentity(database);
   tx(() => {
+    if (
+      !q("PRAGMA table_info(club_players)")
+        .all()
+        .some((c) => c.name === "avatar_origin_kind")
+    )
+      database.exec(
+        "ALTER TABLE club_players ADD COLUMN avatar_origin_kind TEXT CHECK(avatar_origin_kind IS NULL OR avatar_origin_kind IN ('local-simulation','ai-generated'))",
+      );
+  });
+  tx(() => {
     for (const table of ["club_players", "club_matches", "club_seasons"]) {
       if (
         !q(`PRAGMA table_info(${table})`)
@@ -354,13 +364,14 @@ export function createClubStore(
           previous.avatar !== (p.avatar ?? null))
       )
         q(
-          "UPDATE club_players SET name=?,number=?,positions=?,preferred_foot=?,note=?,avatar=?,revision=revision+1 WHERE id=? AND team_id=1",
+          "UPDATE club_players SET name=?,number=?,positions=?,preferred_foot=?,note=?,avatar_origin_kind=CASE WHEN avatar IS ? THEN avatar_origin_kind ELSE NULL END,avatar=?,revision=revision+1 WHERE id=? AND team_id=1",
         ).run(
           p.name,
           p.number,
           JSON.stringify(p.positions),
           p.preferredFoot,
           p.note,
+          p.avatar ?? null,
           p.avatar ?? null,
           p.playerId,
         );
@@ -406,6 +417,10 @@ export function createClubStore(
       status: r.status,
       note: r.note,
       avatar: r.avatar,
+      avatarOriginKind: r.avatar_origin_kind ?? null,
+      avatarGenerated: Boolean(r.avatar_origin_kind),
+      avatarAiGenerated: r.avatar_origin_kind === "ai-generated",
+      avatarSimulation: r.avatar_origin_kind === "local-simulation",
       hasAccount: Boolean(r.has_account),
       passwordEnabled: Boolean(r.password_enabled),
     };
@@ -459,6 +474,10 @@ export function createClubStore(
         p.note,
         p.avatar,
       );
+      if (p.avatar !== old.avatar)
+        q(
+          "UPDATE club_players SET avatar_origin_kind=NULL WHERE team_id=? AND id=?",
+        ).run(teamId, id);
       if (p.status === "inactive") revokeWechatPlayer(database, teamId, id);
       // Preserve board placement and injury status; match history always refers to stable club IDs.
       if (teamId === 1)

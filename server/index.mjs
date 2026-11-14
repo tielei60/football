@@ -1,3 +1,5 @@
+import { createPlayerAiService } from "./player-ai-service.mjs";
+import { applyPlayerAiAdoption } from "./player-ai-adoption.mjs";
 import {
   createWechatProvider,
   WechatFoundationError,
@@ -164,6 +166,7 @@ export function createFootballServer({
     resolve(appDirectory, "data/football.sqlite"),
   staticDirectory = resolve(appDirectory, "dist"),
   maximumRequestBytes = 25 * 1024 * 1024,
+  aiPhotos = undefined,
   bootstrapAdmin = process.env.FOOTBALL_ADMIN_USERNAME &&
   process.env.FOOTBALL_ADMIN_PASSWORD
     ? {
@@ -202,7 +205,7 @@ export function createFootballServer({
   };
   const wechatProvider = createWechatProvider(wechat);
   const store = openFootballStore(databasePath);
-  let club, wechatAuth, playerMedia;
+  let club, wechatAuth, playerMedia, playerAi;
   try {
     club = createClubStore(store.database, store, {
       bootstrapAdmin,
@@ -211,12 +214,41 @@ export function createFootballServer({
     });
     wechatAuth = createWechatAuthService({ provider: wechatProvider, club });
     playerMedia = createPlayerMediaStore(store.database);
+    playerAi = createPlayerAiService(store.database, {
+      ...aiPhotos,
+      authenticate: (token, transport) => club.authenticate(token, transport),
+      getPlayer: (teamId, id) => club.getPlayer(teamId, id),
+      getAlbumRevision: (teamId, id) =>
+        store.database
+          .prepare(
+            "SELECT revision FROM club_player_albums WHERE team_id=? AND player_id=?",
+          )
+          .get(teamId, id)?.revision ?? 1,
+      applyAdoption: (input) =>
+        applyPlayerAiAdoption({ ...input, db: store.database }),
+    });
   } catch (error) {
     store.close();
     throw error;
   }
   const cookie = (token, clear = false) =>
     `football_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 604800}${secureCookies ? "; Secure" : ""}`;
+  const aiRate = new Map();
+  const checkAiRate = (user, write) => {
+    const now = Date.now();
+    for (const [key, value] of aiRate)
+      if (value.until <= now) aiRate.delete(key);
+    const key = `${user.team_id}:${user.id}:${write ? "write" : "read"}`;
+    let item = aiRate.get(key);
+    if (!item) {
+      if (aiRate.size >= 10000)
+        throw new FootballError(429, "AI请求容量已满，请稍后再试。");
+      item = { count: 0, until: now + 60000 };
+      aiRate.set(key, item);
+    }
+    if (++item.count > (write ? 30 : 120))
+      throw new FootballError(429, "AI操作过于频繁，请稍后再试。");
+  };
   const server = createServer(async (request, response) => {
     try {
       let pathname;
@@ -235,7 +267,10 @@ export function createFootballServer({
       if (pathname === "/api/health" && method === "GET")
         return send(response, 200, { ok: true });
       if (pathname === "/api/auth/capabilities" && method === "GET")
-        return send(response, 200, { wechat: wechatAuth.enabled });
+        return send(response, 200, {
+          wechat: wechatAuth.enabled,
+          aiPhotos: playerAi.enabled === true,
+        });
       const wechatPreauth =
         method === "POST" &&
         /^\/api\/auth\/wechat\/(claim|claim-status|login)$/.exec(pathname);
@@ -333,6 +368,10 @@ export function createFootballServer({
         method === "DELETE" &&
         /^\/api\/players\/[^/]+\/photos\/[1-9]\d*$/.test(pathname);
       const photoDelete =
+        (method === "DELETE" &&
+          /^\/api\/players\/[^/]+\/ai\/(sources|candidates)\/[^/]+$/.test(
+            pathname,
+          )) ||
         playerPhotoDelete ||
         (method === "DELETE" &&
           /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname));
@@ -346,7 +385,9 @@ export function createFootballServer({
           );
         parsedBody = await readRequest(
           request,
-          pathname === "/api/team" ||
+          (method === "POST" &&
+            /^\/api\/players\/[^/]+\/ai\/sources$/.test(pathname)) ||
+            pathname === "/api/team" ||
             (method === "POST" &&
               /^\/api\/players\/[^/]+\/photos$/.test(pathname)) ||
             (method === "POST" &&
@@ -411,6 +452,123 @@ export function createFootballServer({
           admin();
           return send(response, 200, club.saveVenue(user.team_id, id, body()));
         }
+      }
+      const aiRoute =
+        /^\/api\/players\/([^/]+)\/ai\/(capabilities|consents|sources|jobs|candidates|adoptions)(?:\/([^/]+))?(?:\/(cancel|revoke))?$/.exec(
+          pathname,
+        );
+      if (aiRoute) {
+        admin();
+        checkAiRate(user, method !== "GET");
+        const [, playerId, resource, id, action] = aiRoute;
+        const actor = { token, transport: nativeRequest ? "native" : "cookie" };
+        const params = new URL(request.url, "http://localhost").searchParams;
+        if (
+          [...params.keys()].some((key) => key !== "requestId") ||
+          params.getAll("requestId").length > 1
+        )
+          throw new FootballError(400, "AI查询参数无效。");
+        const requestId = params.get("requestId");
+        if (requestId && (method !== "GET" || id))
+          throw new FootballError(400, "查询参数不适用。");
+        if (
+          resource === "capabilities" &&
+          method === "GET" &&
+          !id &&
+          !requestId
+        )
+          return send(response, 200, playerAi.capabilities(actor, playerId));
+        if (resource === "consents") {
+          if (method === "POST" && !id)
+            return send(
+              response,
+              201,
+              playerAi.createConsent(actor, playerId, body()),
+            );
+          if (method === "GET" && !id && requestId)
+            return send(
+              response,
+              200,
+              playerAi.getConsentByRequest(actor, playerId, requestId),
+            );
+          if (method === "POST" && id && action === "revoke")
+            return send(
+              response,
+              200,
+              playerAi.revokeConsent(actor, playerId, id, body()),
+            );
+        }
+        if (resource === "sources") {
+          if (method === "POST" && !id)
+            return send(
+              response,
+              201,
+              await playerAi.uploadSource(actor, playerId, body()),
+            );
+          if (method === "GET" && !id && requestId)
+            return send(
+              response,
+              200,
+              playerAi.getSourceStatus(actor, playerId, requestId),
+            );
+          if (method === "DELETE" && id && !action) {
+            const input = body();
+            if (Object.keys(input).some((k) => k !== "revision"))
+              throw new FootballError(400, "来源删除参数无效。");
+            return send(
+              response,
+              200,
+              playerAi.deleteSource(actor, playerId, { ...input, id }),
+            );
+          }
+        }
+        if (resource === "jobs") {
+          if (method === "POST" && !id)
+            return send(
+              response,
+              202,
+              playerAi.createJob(actor, playerId, body()),
+            );
+          if (method === "GET" && id && !action)
+            return send(response, 200, playerAi.getJob(actor, playerId, id));
+          if (method === "GET" && !id && requestId)
+            return send(
+              response,
+              200,
+              playerAi.getJobByRequest(actor, playerId, requestId),
+            );
+          if (method === "POST" && id && action === "cancel")
+            return send(
+              response,
+              200,
+              playerAi.cancelJob(actor, playerId, id, body()),
+            );
+        }
+        if (resource === "candidates" && id && !action) {
+          if (method === "GET")
+            return send(
+              response,
+              200,
+              playerAi.getCandidate(actor, playerId, id),
+            );
+          if (method === "DELETE")
+            return send(
+              response,
+              200,
+              playerAi.deleteCandidate(actor, playerId, id, body()),
+            );
+        }
+        if (resource === "adoptions" && !id) {
+          if (method === "POST")
+            return send(response, 200, playerAi.adopt(actor, playerId, body()));
+          if (method === "GET" && requestId)
+            return send(
+              response,
+              200,
+              playerAi.getAdoptionByRequest(actor, playerId, requestId),
+            );
+        }
+        throw new FootballError(405, "不支持的AI操作。");
       }
       if (pathname === "/api/players") {
         if (method === "GET")
@@ -735,7 +893,10 @@ export function createFootballServer({
       else response.end();
     }
   });
-  server.once("close", () => store.close());
+  server.once("close", () => {
+    playerAi.close();
+    playerAi.drain().finally(() => store.close());
+  });
   server.requestTimeout = 30000;
   return server;
 }

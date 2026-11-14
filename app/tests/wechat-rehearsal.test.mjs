@@ -56,7 +56,7 @@ test("默认关闭、新私有匿名库、密码登录及环境隔离", async (t
   assert.equal(existsSync(join(r.directory, "no-static-files")), false);
   assert.equal(Object.keys(m.players).length, 4);
   const base = `http://127.0.0.1:${r.port}/api`;
-  assert.deepEqual(await (await fetch(`${base}/auth/capabilities`)).json(), { wechat: false });
+  assert.deepEqual(await (await fetch(`${base}/auth/capabilities`)).json(), { wechat: false, aiPhotos: false });
   const login = await post(`${base}/auth/native-login`, m.admin);
   assert.equal(login.status, 200);
 });
@@ -74,7 +74,7 @@ test("启用演练也拒绝任意微信交换，独立库不复用", async (t) =
   assert.notEqual(a.directory, b.directory);
   assert.notEqual(a.port, b.port);
   const base = `http://127.0.0.1:${a.port}/api`;
-  assert.deepEqual(await (await fetch(`${base}/auth/capabilities`)).json(), { wechat: true });
+  assert.deepEqual(await (await fetch(`${base}/auth/capabilities`)).json(), { wechat: true, aiPhotos: false });
   const response = await post(`${base}/auth/wechat/login`, { code: "arbitrary-fictional-code" });
   assert.equal(response.status, 502);
   const result = await response.json();

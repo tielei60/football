@@ -147,6 +147,7 @@ test("disabled capabilities are bool-only; exact native origin/body isolation be
   const f = await fixture(t, { enabled: false });
   assert.deepEqual((await f.call("/auth/capabilities")).body, {
     wechat: false,
+    aiPhotos: false,
   });
   assert.equal(
     (await f.call("/auth/wechat/login", "POST", { code: "test" })).status,
