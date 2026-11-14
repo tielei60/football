@@ -16,7 +16,7 @@
           /><text wx:else>{{player.initial}}</text></view
         ><view class="grow"
           ><view class="title">{{player.name}}</view
-          ><view class="muted"
+          ><view class="muted player-meta"
             >{{player.numberLabel}} 号 · {{player.positionLabel}}</view
           ><text class="tag"
             >{{player.status==='active'?'在队':'已归档'}}</text
@@ -25,7 +25,7 @@
       ><view class="divider"></view
       ><view class="between"
         ><text class="muted">惯用脚</text
-        ><text>{{player.preferredFoot || '未设置'}}</text></view
+        ><text class="foot-value">{{player.preferredFoot || '未设置'}}</text></view
       ></view
     ><block wx:if="{{record}}"
       ><view class="section-title">{{scopeLabel}} · 表现</view

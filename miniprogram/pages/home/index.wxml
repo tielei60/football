@@ -45,8 +45,8 @@
             >{{next.format ? next.format + '人制' : '赛制待定'}}</text
           ></view
         ><view class="match-title">对阵 {{next.opponent}}</view
-        ><view>{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
-        ><view class="muted">{{next.location || '地点待定'}}</view
+        ><view class="match-time">{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
+        ><view class="muted match-place">{{next.location || '地点待定'}}</view
         ><view class="divider"></view
         ><view class="between"
           ><text class="muted"
@@ -63,7 +63,7 @@
         data-id="{{item.id}}"
         bindtap="openMatch"
         ><view class="grow"
-          ><view class="bold break">{{item.opponent}}</view
+          ><view class="bold break recent-name">{{item.opponent}}</view
           ><view class="muted">{{item.dateLabel}}</view></view
         ><view class="score">{{item.scoreLabel}}</view></view
       ><view wx:if="{{!recent.length}}" class="card empty"

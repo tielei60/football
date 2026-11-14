@@ -24,7 +24,7 @@
   /><button wx:if="{{!loading && error && selectedSeasonId!==null}}" id="statistics-reset-year" class="ui-button ui-block" size="mini" bindtap="resetYearScope">改看自然年统计</button><block wx:if="{{!loading && !error && stats}}"
     ><view class="card"
       ><view class="between"
-        ><view class="bold">{{stats.filter.label}}</view
+        ><view class="bold scope-title">{{stats.filter.label}}</view
         ><text class="tag">{{stats.team.matches}} 场完赛</text></view
       ><view class="metrics" style="margin-top: 24rpx"
         ><view class="metric"
@@ -83,7 +83,7 @@
       场。榜单展示已记录的数据，不代表缺失记录为零。</view
     ><view class="section-title">对手交锋</view
     ><view wx:for="{{stats.opponents}}" wx:key="opponent" class="card"
-      ><view class="bold">{{item.opponent}}</view
+      ><view class="bold opponent-name">{{item.opponent}}</view
       ><view class="between"
         ><text class="muted"
           >{{item.matches}}场 · {{item.scoredMatches}}场完整比分</text

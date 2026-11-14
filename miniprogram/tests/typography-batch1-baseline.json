@@ -1,0 +1,296 @@
+{
+  "home": {
+    "markupSha256": "0a99147acd396f8075b60b761d3decd29480b29c7c07fc452f104c41b1d64f78",
+    "geometry": {
+      ".hero": {
+        "padding": "28rpx",
+        "border-radius": "24rpx",
+        "background": "linear-gradient(145deg,var(--surface),var(--brand-soft))",
+        "border": "1rpx solid #e8dcef",
+        "border-color": "var(--line)"
+      },
+      ".hero .title": {
+        "margin-top": "6rpx"
+      },
+      ".hero-metrics": {
+        "display": "grid",
+        "margin-top": "28rpx",
+        "gap": "16rpx",
+        "grid-template-columns": "repeat(3,minmax(0,1fr))",
+        "padding-top": "24rpx",
+        "border-top": "1rpx solid var(--line)"
+      },
+      ".hero-number": {
+        "display": "block",
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".next": {
+        "border-color": "var(--brand-soft)"
+      },
+      ".match-title": {
+        "margin": "20rpx 0 12rpx",
+        "overflow-wrap": "anywhere"
+      },
+      ".hero .avatar": {
+        "width": "96rpx",
+        "height": "96rpx",
+        "border-radius": "22rpx"
+      },
+      ".hero .grow": {
+        "min-width": "0"
+      },
+      ".card .score": {
+        "flex-shrink": "0",
+        "font-variant-numeric": "tabular-nums"
+      }
+    }
+  },
+  "schedule": {
+    "markupSha256": "a3fa7b6bd1a1b80ba16f8dc094d384e0de3094600e0bbed33102559834648149",
+    "geometry": {
+      ".page>.between": {
+        "gap": "20rpx",
+        "align-items": "center"
+      },
+      ".page>.between>view": {
+        "min-width": "0",
+        "flex": "1"
+      },
+      ".page>.between button": {
+        "width": "auto",
+        "flex-shrink": "0",
+        "margin": "0"
+      },
+      ".card .between": {
+        "gap": "16rpx"
+      },
+      ".card .grow": {
+        "min-width": "0"
+      },
+      ".card .tag": {
+        "flex-shrink": "0"
+      },
+      ".card .score": {
+        "white-space": "nowrap",
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".card .link": {
+        "text-align": "right",
+        "flex-shrink": "0"
+      },
+      ".card .muted": {
+        "overflow-wrap": "anywhere"
+      },
+      ".page>.between>button.ui-button[size=\"mini\"]": {
+        "flex": "0 0 auto",
+        "width": "auto",
+        "min-width": "148rpx",
+        "min-height": "76rpx",
+        "padding": "18rpx 22rpx",
+        "white-space": "nowrap",
+        "align-self": "center"
+      },
+      ".page>.between>.title,.page>.between>view": {
+        "min-width": "0"
+      }
+    }
+  },
+  "players": {
+    "markupSha256": "7c8fbc4f0129a9896d5cf1569a0cd88b716fe2ab509f8777ed0bed738ccf35ed",
+    "geometry": {
+      ".jersey": {
+        "font-variant-numeric": "tabular-nums",
+        "flex-shrink": "0"
+      },
+      ".card.row": {
+        "padding": "22rpx 24rpx",
+        "gap": "20rpx"
+      },
+      ".card .grow": {
+        "min-width": "0"
+      },
+      ".card .bold": {
+        "overflow-wrap": "anywhere"
+      },
+      ".card .muted": {
+        "margin-top": "4rpx",
+        "overflow-wrap": "anywhere"
+      },
+      ".avatar": {
+        "flex-shrink": "0",
+        "border": "1rpx solid var(--line)"
+      }
+    }
+  },
+  "statistics": {
+    "markupSha256": "ec12144b56fab9468bf1e9ce4a7c0822af7c66d493d71df32b6c029b595e57b1",
+    "geometry": {
+      ".rank-row": {
+        "padding": "22rpx 0",
+        "border-bottom": "1rpx solid #eee8f1",
+        "gap": "18rpx"
+      },
+      ".rank-row:last-child": {
+        "border": "0"
+      },
+      ".rank": {
+        "width": "34rpx",
+        "min-width": "56rpx"
+      },
+      ".rank-value": {
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".score-summary": {
+        "flex-wrap": "wrap",
+        "gap": "8rpx"
+      },
+      ".score-summary > text": {
+        "white-space": "nowrap"
+      },
+      ".metrics": {
+        "gap": "12rpx"
+      },
+      ".metric .number": {
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".rank-row .grow": {
+        "min-width": "0"
+      },
+      ".rank-row .bold": {
+        "overflow-wrap": "anywhere"
+      },
+      ".card>.bold": {
+        "overflow-wrap": "anywhere",
+        "word-break": "break-word"
+      },
+      ".filter-row .picker": {
+        "white-space": "normal"
+      },
+      ".card .between": {
+        "gap": "16rpx"
+      },
+      ".card .between>.muted": {
+        "min-width": "0",
+        "overflow-wrap": "anywhere"
+      },
+      ".card .between>text:last-child": {
+        "flex-shrink": "0"
+      },
+      ".rank,.rank-value": {
+        "flex-shrink": "0",
+        "white-space": "nowrap"
+      },
+      ".score-summary>text": {
+        "white-space": "normal",
+        "overflow-wrap": "anywhere",
+        "min-width": "0"
+      }
+    }
+  },
+  "me": {
+    "markupSha256": "30a557bf8fa48890d59932bc4c3d4a079a410bb9b7d3e3d6a07ca94a3a22316d",
+    "geometry": {
+      ".management-grid": {
+        "display": "grid",
+        "grid-template-columns": "repeat(2,minmax(0,1fr))",
+        "gap": "12rpx"
+      },
+      ".management-grid button": {
+        "width": "100%",
+        "margin": "0",
+        "min-width": "0",
+        "padding": "22rpx 12rpx"
+      },
+      ".card.row": {
+        "gap": "22rpx"
+      },
+      ".card.row .title": {
+        "overflow-wrap": "anywhere"
+      },
+      ".card.row .grow": {
+        "min-width": "0"
+      },
+      ".card.row .avatar": {
+        "width": "104rpx",
+        "height": "104rpx",
+        "flex-shrink": "0"
+      },
+      ".metrics": {
+        "gap": "10rpx"
+      },
+      ".metric .number": {
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".card .tag": {
+        "margin-top": "8rpx"
+      },
+      ".page>button.danger": {
+        "margin-top": "24rpx"
+      }
+    }
+  },
+  "login": {
+    "markupSha256": "d6b56a86c5d01ff5b5c31951f6c644d23c5e057fdd86cbcdd470ba2b377bb062",
+    "geometry": {
+      ".login": {
+        "padding-top": "100rpx"
+      },
+      ".brand-mark": {
+        "width": "88rpx",
+        "height": "88rpx",
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "center",
+        "background": "var(--brand)",
+        "border-radius": "24rpx",
+        "margin-bottom": "32rpx",
+        "box-shadow": "0 8rpx 24rpx rgba(99,50,119,.1)"
+      },
+      ".login-card": {
+        "margin-top": "42rpx",
+        "padding": "30rpx",
+        "border-radius": "24rpx"
+      },
+      ".login>.subtitle": {
+        "margin-top": "10rpx"
+      },
+      ".login-card .field": {
+        "margin-bottom": "24rpx"
+      },
+      ".login .hint": {
+        "margin-top": "24rpx"
+      }
+    }
+  },
+  "player-detail": {
+    "markupSha256": "425c2e0e2cf9da023ba816cef8f14c7122f72bd2766a497367294a14f98b2cf1",
+    "geometry": {
+      ".card .row": {
+        "gap": "22rpx"
+      },
+      ".card .grow": {
+        "min-width": "0"
+      },
+      ".card .title": {
+        "overflow-wrap": "anywhere"
+      },
+      ".avatar.large": {
+        "flex-shrink": "0",
+        "width": "112rpx",
+        "height": "112rpx"
+      },
+      ".card .tag": {
+        "margin-top": "10rpx"
+      },
+      ".metrics": {
+        "gap": "12rpx"
+      },
+      ".metric .number": {
+        "font-variant-numeric": "tabular-nums"
+      },
+      ".row.wrap": {
+        "gap": "12rpx"
+      }
+    }
+  }
+}

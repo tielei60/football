@@ -1,7 +1,80 @@
+/* 本页文字层级；不改变输入、按钮、列数或画布几何。 */
+.management-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12rpx;
+}
+.management-grid button {
+  width: 100%;
+  margin: 0;
+  font-size: 26rpx;
+  min-width: 0;
+  padding: 22rpx 12rpx;
+  line-height: 1.4;
+}
+.card.row {
+  gap: 22rpx;
+}
+.card.row .title {
+  font-size: 32rpx;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.card.row .grow {
+  min-width: 0;
+}
+.card.row .avatar {
+  width: 104rpx;
+  height: 104rpx;
+  flex-shrink: 0;
+}
+.metrics {
+  gap: 10rpx;
+}
+.metric .number {
+  font-size: 34rpx;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.metric .label {
+  font-size: 25rpx;
+}
+.card .tag {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+.page>button.danger {
+  margin-top: 24rpx;
+}
+.team-name {
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+.section-title, .account-heading {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.hint {
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+.error {
+  font-size: 26rpx;
+  font-weight: 500;
+}
 
-.management-grid{display:grid;grid-template-columns:1fr 1fr;gap:16rpx}.management-grid button{width:100%;margin:0;font-size:26rpx}
-
-/* Page-specific density, hierarchy and long-content safeguards. */
-.card.row{gap:22rpx}.card.row .title{font-size:32rpx;overflow-wrap:anywhere}.card.row .grow{min-width:0}.card.row .avatar{width:104rpx;height:104rpx;flex-shrink:0}.management-grid{gap:12rpx}.management-grid button{font-size:26rpx;min-width:0;padding:22rpx 12rpx;line-height:1.4}.metrics{gap:10rpx}.metric .number{font-size:34rpx;font-variant-numeric:tabular-nums}.metric .label{font-size:22rpx}.card .tag{margin-top:8rpx}.page>button.danger{margin-top:24rpx}
-
-.management-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* 小屏正文下限 12px，仅覆盖以上内容文字，不影响控件。 */
+@media (max-width: 375.000px) {
+  .card .tag, .hint { font-size: 12px; }
+}
+@media (max-width: 360.000px) {
+  .metric .label { font-size: 12px; }
+}
+@media (max-width: 346.154px) {
+  .team-name, .error { font-size: 12px; }
+}
+@media (max-width: 321.429px) {
+  .section-title, .account-heading { font-size: 12px; }
+}

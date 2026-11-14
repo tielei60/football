@@ -1,8 +1,48 @@
+/* 本页文字层级；不改变输入、按钮、列数或画布几何。 */
 .jersey {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #bba5c6;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--brand-ink);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.card.row {
+  padding: 22rpx 24rpx;
+  gap: 20rpx;
+}
+.card .grow {
+  min-width: 0;
+}
+.card .bold {
+  font-size: 30rpx;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.card .muted {
+  font-size: 25rpx;
+  margin-top: 4rpx;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.avatar {
+  flex-shrink: 0;
+  border: 1rpx solid var(--line);
+}
+.page>.title {
+  font-size: 34rpx;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.subtitle {
+  font-size: 24rpx;
+  line-height: 1.6;
 }
 
-/* Page-specific density, hierarchy and long-content safeguards. */
-.card.row{padding:22rpx 24rpx;gap:20rpx}.card .grow{min-width:0}.card .bold{font-size:29rpx;line-height:1.4;overflow-wrap:anywhere}.card .muted{font-size:24rpx;margin-top:4rpx;overflow-wrap:anywhere}.jersey{font-size:34rpx;font-weight:650;color:var(--brand-ink);font-variant-numeric:tabular-nums;flex-shrink:0}.avatar{flex-shrink:0;border:1rpx solid var(--line)}
+/* 小屏正文下限 12px，仅覆盖以上内容文字，不影响控件。 */
+@media (max-width: 375.000px) {
+  .subtitle { font-size: 12px; }
+}
+@media (max-width: 360.000px) {
+  .card .muted { font-size: 12px; }
+}

@@ -33,12 +33,12 @@
         >{{item.monthHeading}}</view
       ><view aria-role="button" class="card" data-id="{{item.id}}" bindtap="openMatch"
         ><view class="between"
-          ><text class="muted"
+          ><text class="muted match-time"
             >{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</text
           ><text class="tag {{item.status}}">{{item.statusLabel}}</text></view
         ><view class="between" style="margin-top: 20rpx"
           ><view class="grow"
-            ><view class="section-title break" style="margin: 0"
+            ><view class="section-title break match-name" style="margin: 0"
               >{{item.opponent}}</view
             ><view class="muted"
               >{{item.competition || '球队比赛'}}{{item.format ? ' · '+item.format+'人制' : ''}}</view

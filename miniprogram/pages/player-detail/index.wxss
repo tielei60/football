@@ -1,3 +1,68 @@
+/* 本页文字层级；不改变输入、按钮、列数或画布几何。 */
+.card .row {
+  gap: 22rpx;
+}
+.card .grow {
+  min-width: 0;
+}
+.card .title {
+  font-size: 34rpx;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+.avatar.large {
+  flex-shrink: 0;
+  width: 112rpx;
+  height: 112rpx;
+}
+.card .tag {
+  margin-top: 10rpx;
+}
+.metrics {
+  gap: 12rpx;
+}
+.metric .number {
+  font-size: 38rpx;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.row.wrap {
+  gap: 12rpx;
+}
+.hint {
+  font-size: 25rpx;
+  line-height: 1.65;
+}
+.player-meta {
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.metric .label, .card .between .muted {
+  font-size: 25rpx;
+}
+.foot-value {
+  font-size: 28rpx;
+}
+.tag {
+  font-size: 24rpx;
+  font-weight: 500;
+}
 
-/* Page-specific density, hierarchy and long-content safeguards. */
-.card .row{gap:22rpx}.card .grow{min-width:0}.card .title{font-size:34rpx;line-height:1.4;overflow-wrap:anywhere}.avatar.large{flex-shrink:0;width:112rpx;height:112rpx}.card .tag{margin-top:10rpx}.metrics{gap:12rpx}.metric .number{font-size:38rpx;font-variant-numeric:tabular-nums}.row.wrap{gap:12rpx}.hint{font-size:24rpx;line-height:1.7}
+/* 小屏正文下限 12px，仅覆盖以上内容文字，不影响控件。 */
+@media (max-width: 375.000px) {
+  .tag { font-size: 12px; }
+}
+@media (max-width: 360.000px) {
+  .metric .label, .card .between .muted, .hint { font-size: 12px; }
+}
+@media (max-width: 346.154px) {
+  .player-meta { font-size: 12px; }
+}
+@media (max-width: 321.429px) {
+  .section-title, .foot-value { font-size: 12px; }
+}

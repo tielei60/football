@@ -15,7 +15,7 @@
         /><text wx:else>{{player.initial || (session.user.role==='player'?'球':'管')}}</text></view
       ><view class="grow"
         ><view class="title">{{player.name || session.user.username}}</view
-        ><view class="muted">{{session.team.name}}</view
+        ><view class="muted team-name">{{session.team.name}}</view
         ><text class="tag"
           >{{session.user.role==='admin'?'管理员':session.user.role==='player'?'球员':'球队成员'}}</text
         ></view
@@ -39,7 +39,7 @@
       ><view class="hint">报名状态不等于实际出场。</view></view
     ><view class="card section"
       ><view aria-role="button" class="between" bindtap="togglePassword"
-        ><text class="bold">修改密码</text
+        ><text class="bold account-heading">修改密码</text
         ><text class="link">{{passwordOpen?'收起':'修改 ›'}}</text></view
       ><view wx:if="{{passwordOpen}}" style="margin-top: 24rpx"
         ><view class="field"
