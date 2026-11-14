@@ -1,0 +1,19 @@
+// 真实页面定义+延迟回调，spy只证明调用门禁，不代表原生绘图结果。
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../pages/tactic-setup/index.js'),'utf8');
+function harness(){let definition,token='fictional-owner',resolveSession;const ticks=[],queries=[],prepared=[],drawn=[];
+ const api={getSession:()=>({token}),ensureSession:()=>new Promise(r=>{resolveSession=r})};
+ const canvas={prepareSurface(node){prepared.push(node);return {node}},draw(ctx,board){drawn.push({ctx,board})}};
+ const wx={nextTick:f=>ticks.push(f),getWindowInfo:()=>({windowWidth:375,windowHeight:700,pixelRatio:3}),createSelectorQuery(){return{in(){return this},select(){return this},fields(){return this},exec(f){queries.push(f)}}}};
+ vm.runInNewContext(source,{Page:p=>definition=p,wx,require:id=>id.includes('tactic-canvas')?canvas:id.endsWith('/ui')?{abort(){}}:id.endsWith('/shared')?{api}:{}});
+ const preview={pieces:[]};const p={...definition,data:{...definition.data,loading:false,title:'未保存名称',tagsText:'未保存标签',favorite:true},_tactic:{board:{}},_formations:[{}],_choices:[1,2],_lineupDirty:true,_generation:1,_owner:token,_hidden:false,_disposed:false,plan:()=>({preview}),setData(x,cb){Object.assign(this.data,x);cb?.()}};
+ const tick=()=>{while(ticks.length)ticks.shift()();};const respond=(node={id:'old'})=>{let n=0;while(queries.length){assert.ok(++n<10);queries.shift()([{node,top:45}]);}};
+ return{p,tick,respond,ticks,queries,prepared,drawn,preview,setToken:v=>token=v,resolve:()=>resolveSession({user:{role:'admin'}})};
+}
+function assertDraft(p,tactic,choices){assert.equal(p._tactic,tactic);assert.equal(p._choices,choices);assert.equal(p._lineupDirty,true);assert.equal(p.data.title,'未保存名称');assert.equal(p.data.tagsText,'未保存标签');assert.equal(p.data.favorite,true);}
+for(const queued of ['nextTick','selector'])test('setup old '+queued+' cannot draw during hide/show session wait',()=>{const h=harness(),p=h.p,t=p._tactic,c=p._choices;p.draw();if(queued==='selector')h.tick();p.onHide();p.onShow();h.tick();h.respond();assert.equal(h.prepared.length,0);assert.equal(h.drawn.length,0);assertDraft(p,t,c);});
+test('setup hide/show ABA rejects old selector even when loading already false',()=>{const h=harness();h.p.draw();h.tick();h.p.onHide();h.p._hidden=false;h.p.setData({loading:false});h.respond();assert.equal(h.prepared.length,0);assert.equal(h.drawn.length,0);});
+test('real onShow resumes only new draw and preserves dirty metadata and lineup',async()=>{const h=harness(),p=h.p,t=p._tactic,c=p._choices;p.draw();h.tick();p.onHide();const shown=p.onShow();h.resolve();await shown;h.respond();assert.equal(h.prepared.length,0);h.tick();const node={id:'new'};h.respond(node);assert.equal(h.prepared.length,1);assert.equal(h.prepared[0],node);assert.equal(h.drawn[0].board,h.preview);assertDraft(p,t,c);});
+for(const state of ['loading','tactic','formations','owner'])test('setup delayed selector rechecks '+state,()=>{const h=harness();h.p.draw();h.tick();if(state==='loading')h.p.data.loading=true;if(state==='tactic')h.p._tactic=null;if(state==='formations')h.p._formations=[];if(state==='owner')h.setToken('different-owner');h.respond();assert.equal(h.prepared.length,0);assert.equal(h.drawn.length,0);});
+test('setup refresh invalidates previous preview before session resolves',()=>{const h=harness();h.p.draw();h.tick();h.p.refresh();h.respond();assert.equal(h.prepared.length,0);});
+test('setup unload rejects previous callbacks',()=>{const h=harness();h.p.draw();h.tick();h.p.onUnload();h.respond();assert.equal(h.prepared.length,0);assert.equal(h.drawn.length,0);});
