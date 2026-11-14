@@ -158,6 +158,7 @@ export async function startWechatRehearsal(phase = "disabled") {
         await new Promise((resolveClose, reject) =>
           server.close((error) => (error ? reject(error) : resolveClose())),
         );
+        await server.drained;
       },
     };
   } catch (error) {
@@ -172,6 +173,7 @@ export async function startWechatRehearsal(phase = "disabled") {
       } catch {}
       try {
         await new Promise((resolveClose) => server.close(() => resolveClose()));
+        await server.drained;
       } catch {}
     }
     try {

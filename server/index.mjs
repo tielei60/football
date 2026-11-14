@@ -893,9 +893,27 @@ export function createFootballServer({
       else response.end();
     }
   });
-  server.once("close", () => {
-    playerAi.close();
-    playerAi.drain().finally(() => store.close());
+  // Node 的 close 回调仅表示监听/连接关闭，不代表异步工作和 SQLite 已释放。
+  // 可信本机演练与测试可显式等待该 Promise，再清理自己的临时目录。
+  let resolveDrained, rejectDrained;
+  server.drained = new Promise((resolve, reject) => {
+    resolveDrained = resolve;
+    rejectDrained = reject;
+  });
+  // CLI 调用者不一定等待；保留可观察 rejection，同时避免未处理拒绝。
+  server.drained.catch(() => {});
+  server.once("close", async () => {
+    try {
+      playerAi.close();
+      await playerAi.drain();
+      store.close();
+      resolveDrained();
+    } catch (error) {
+      try {
+        store.close();
+      } catch {}
+      rejectDrained(error);
+    }
   });
   server.requestTimeout = 30000;
   return server;
