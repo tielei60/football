@@ -126,6 +126,7 @@ function fixture(options = {}) {
   );
   const p = {
     ...definition,
+    route: "pages/player-ai/index", options: {},
     data: structuredClone(definition.data),
     setData(v) {
       Object.assign(this.data, structuredClone(v));

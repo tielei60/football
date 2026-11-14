@@ -18,7 +18,24 @@ const statuses = [
   { label: "已完赛", value: "completed" },
   { label: "已取消", value: "cancelled" },
 ];
-Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);},
+Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);this._hidden=true;this._wasShown=true;this._view=(this._view||0)+1;this._epoch=(this._epoch||0)+1;},
+  async onShow(){
+    this._hidden=false;
+    if(!this._wasShown){this._wasShown=true;if(!pendingCreateDraft?.inFlight)return;}
+    const owner=s.api.getSession()?.token,view=this._view||0;
+    const op=this._saveAttempt||(pendingCreateDraft?.token===owner?pendingCreateDraft.operation:null);
+    if(op?.owner===owner&&op.done)await op.done;
+    if(this._hidden||this._disposed||(this._view||0)!==view||s.api.getSession()?.token!==owner)return;
+    if(this._formToken&&this._formToken!==owner){
+      this._saveAttempt=null;
+      this.setData({form:{opponent:'',competition:'',date:'',kickoff:'',location:'',homeScore:'',awayScore:'',analysis:''},savedId:null,busy:false,uncertain:false,conflict:false});
+      return this.refresh();
+    }
+    const saved=(!this.id&&pendingCreateDraft?.token===owner?pendingCreateDraft.savedId:null)||(op?.owner===owner?op.savedId:null);
+    if(saved){this.setData({savedId:saved,busy:false,loading:false,error:'',uncertain:false,actionError:'比赛已保存，请进入详情核对。'});return;}
+    if(op?.owner===owner){this.setData({busy:false,uncertain:!!(!this.id&&pendingCreateDraft),conflict:!!op.conflict,actionError:op.error||''});}
+    if(this.data.loading)return this.refresh();
+  },
   data: {
     loading: true,
     editing: false,
@@ -28,6 +45,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     conflict: false,
     uncertain: false,
     revision: null,
+    savedId: null,
     formats,
     sides,
     statuses,
@@ -50,12 +68,14 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     },
   },
   onLoad(q) {
+    this._hidden=false;this._view=0;
     this.id = q.id;
     this.setData({ editing: !!q.id });
     this.refresh();
   },
-  onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
+  onUnload(){this.onHide();return s.unload.apply(this,arguments);},
   refresh() {
+    this._formToken=s.api.getSession()?.token;
     return s.load(this, async (session) => {
       if (session.user.role !== "admin")
         throw new Error("仅管理员可以编辑比赛");
@@ -93,7 +113,8 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         venues,
         venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),
         draftOwner,
-        uncertain: !!draft,
+        uncertain: !!draft&&!draft.savedId,
+        savedId:draft?.savedId||null,
         revision: m?.revision ?? null,
         dateLabel: m
           ? s.dateLabel(m.date)
@@ -132,7 +153,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           seasons.findIndex((f) => f.id === (m?.seasonId ?? draft?.seasonId)),
         ),
         conflict: false,
-        actionError: draft ? "上次创建结果尚未确认，请先核对赛程。" : "",
+        actionError: draft?.savedId?"比赛已保存，请进入详情核对。":draft ? "上次创建结果尚未确认，请先核对赛程。" : "",
       };
     });
   },
@@ -173,17 +194,19 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   },
   confirmAbsent() {
     const attempt = pendingCreateDraft;
+    const token = s.api.getSession()?.token;
+    if(this._hidden||this._disposed||(attempt&&attempt.token!==token))return;
+    if(attempt?.savedId){this.setData({savedId:attempt.savedId,uncertain:false,actionError:"比赛已保存，请进入详情核对。"});return;}
     if (attempt?.inFlight) {
       this.setData({ actionError: "上次创建仍在处理中，请等待结果后再核对。" });
       return;
     }
-    const token = s.api.getSession()?.token;
     if (attempt && attempt.token !== token) return;
     ui.showModal(this,{
       title: "确认未创建比赛",
       content: "请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。",
       success: (result) => {
-        if (result.confirm && !this._disposed && pendingCreateDraft === attempt && !attempt?.inFlight && s.api.getSession()?.token === token) {
+        if (result.confirm && !this._disposed && pendingCreateDraft === attempt && !attempt?.inFlight && !attempt?.savedId && !this._hidden && s.api.getSession()?.token === token) {
           pendingCreateDraft = null;
           this.setData({ uncertain: false, actionError: "" });
         }
@@ -191,7 +214,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     });
   },
   async save() {
-    if (this.data.busy || this.data.conflict || this.data.uncertain) return;
+    if (this._hidden || this._disposed || this.data.savedId || this.data.busy || this.data.conflict || this.data.uncertain) return;
     if (!this.id && pendingCreateDraft && pendingCreateDraft.token === s.api.getSession()?.token) {
       this.setData({ uncertain: true, actionError: pendingCreateDraft.inFlight ? "上次创建仍在处理中，请等待结果。" : "上次创建结果尚未确认，请先核对赛程。" });
       return;
@@ -219,6 +242,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     };
     if (this.id) payload.revision = this.data.revision;
     const submissionToken = s.api.getSession()?.token;
+    const operation={owner:submissionToken,view:this._view||0,savedId:null};
+    operation.done=new Promise(resolve=>{operation.resolve=resolve;});
+    this._saveAttempt=operation;
+    const active=()=>this._saveAttempt===operation&&!this._disposed&&!this._hidden&&(this._view||0)===operation.view&&s.api.getSession()?.token===submissionToken;
     const attempt = !this.id ? {
       owner: this.data.draftOwner,
       token: submissionToken,
@@ -229,6 +256,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       seasonId: payload.seasonId,
       venueId: payload.venueId,
       inFlight: true,
+      operation,
     } : null;
     if (attempt) pendingCreateDraft = attempt;
     this.setData({ busy: true, actionError: "" });
@@ -238,10 +266,12 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         this.id ? "PUT" : "POST",
         payload,
       );
-      if (attempt && pendingCreateDraft === attempt) pendingCreateDraft = null;
-      if (!this._disposed) {
-        ui.showToast(this,{ title: "比赛已保存", icon: "success" });
-        wx.redirectTo({ url: "/pages/match-detail/index?id=" + result.id });
+      if(!Number.isSafeInteger(result?.id)||result.id<1||(this.id&&String(result.id)!==String(this.id)))throw new Error('保存响应编号异常，请先核对比赛结果。');
+      operation.savedId=result.id;
+      if(attempt&&pendingCreateDraft===attempt){attempt.savedId=result.id;attempt.inFlight=false;}
+      if(active()){
+        this.setData({savedId:result.id,uncertain:false,actionError:'比赛已保存，请进入详情核对。'});
+        this.openSaved();
       }
     } catch (error) {
       const status = error.status || error.statusCode || 0;
@@ -250,8 +280,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         if (uncertain) attempt.inFlight = false;
         else pendingCreateDraft = null;
       }
-      if (!this._disposed) {
-        const conflict = status === 409;
+      operation.conflict=status===409||!!(this.id&&(status===0||status>=500));
+      operation.error=error.message||"保存结果需要核对";
+      if (active()) {
+        const conflict = operation.conflict;
         this.setData({
           conflict,
           uncertain,
@@ -264,7 +296,15 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         if ((error.status || error.statusCode) === 401) s.fail(this, error);
       }
     } finally {
-      if (!this._disposed) this.setData({ busy: false });
+      operation.resolve();
+      if (active()) this.setData({ busy: false });
     }
   },
+  openSaved(){
+    const id=this.data.savedId,owner=s.api.getSession()?.token,view=this._view||0;
+    if(this._hidden||this._disposed||(this._formToken&&this._formToken!==owner)||!Number.isSafeInteger(id)||id<1||this._saveAttempt?.owner&&this._saveAttempt.owner!==owner)return;
+    const draft=pendingCreateDraft;
+    wx.redirectTo({url:'/pages/match-detail/index?id='+id,success:()=>{if(draft&&pendingCreateDraft===draft&&draft.token===owner&&draft.savedId===id)pendingCreateDraft=null;},fail:()=>{if(!this._hidden&&!this._disposed&&(this._view||0)===view&&s.api.getSession()?.token===owner)this.setData({actionError:'比赛已保存，但未能打开详情。请点击“进入已保存比赛”，不要重新创建。'});}});
+  },
+
 });

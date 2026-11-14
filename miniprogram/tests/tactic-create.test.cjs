@@ -59,6 +59,7 @@ function fixture(request, storage = new Map()) {
     ),
     context,
   );
+  page.options = {}; // 微信真实 Page.options 为路由参数，不是业务方法。
   page.data = JSON.parse(JSON.stringify(page.data));
   page.setData = (x) => Object.assign(page.data, x);
   return {
@@ -263,3 +264,5 @@ test("过期草稿移除内容保留核对收据，不自动重试", async () =>
 });
 
 test("持久写失败不得POST且保留输入",async()=>{const bad=new Map();bad.set=()=>{throw Error("存储失败")};const f=fixture(null,bad);await f.page.onShow();f.page.data.title="演练";await f.page.create();assert.equal(f.calls.filter(x=>x[1]==="POST").length,0);assert.equal(f.page.data.title,"演练");assert.match(f.page.data.actionError,/存储失败/);});
+
+test("各页面不声明覆盖微信Page保留options或route属性的方法",()=>{const root=path.join(__dirname,"../pages");for(const dir of fs.readdirSync(root)){const file=path.join(root,dir,"index.js");if(fs.existsSync(file))assert.doesNotMatch(fs.readFileSync(file,"utf8"),/\b(?:options|route)\s*\([^)]*\)\s*\{/ ,dir);}});

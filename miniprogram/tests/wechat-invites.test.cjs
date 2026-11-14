@@ -28,7 +28,7 @@ function setup(options = {}) {
     wx: { setClipboardData(config) { clipboard.push(config.data); config.success(); } },
     console, Date, Math, Map, Number, String, encodeURIComponent
   });
-  const page = { ...definition, data: structuredClone(definition.data), setData(value) { Object.assign(this.data, structuredClone(value)); } };
+  const page = { ...definition, route: "pages/wechat-invites/index", options: {}, data: structuredClone(definition.data), setData(value) { Object.assign(this.data, structuredClone(value)); } };
   page.onLoad({ id: 'p1' });
   return { page, requests, modals, clipboard, api, active, setList(value) { list = value; }, setSession(value) { session = value; } };
 }

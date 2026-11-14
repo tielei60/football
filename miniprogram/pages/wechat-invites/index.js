@@ -20,7 +20,7 @@ Page({
   stamp() { return { turn: this._turn, token: s.api.getSession()?.token }; },
   current(stamp) { return !this._disposed && !this._hidden && stamp.turn === this._turn && !!stamp.token && stamp.token === s.api.getSession()?.token; },
   ready() { return !this._disposed && !this._hidden && !this.data.businessUiBlocking && this.data.authorized && this.data.enabled && !this.data.loading && !this.data.error && !this.data.busy && !this.data.loadingMore && !this.data.needsRefresh && s.api.getSession()?.token === this._owner; },
-  route(tail) { return '/players/' + encodeURIComponent(this.id) + '/wechat-' + tail; },
+  apiPath(tail) { return '/players/' + encodeURIComponent(this.id) + '/wechat-' + tail; },
   async refresh() {
     if (this._hidden || this.data.busy || this.data.loadingMore) return;
     this._turn = (this._turn || 0) + 1;
@@ -42,8 +42,8 @@ Page({
       const players = await s.api.request('/players');
       const player = players.find(p => p.id === this.id);
       if (!player) throw Error('球员不存在或不可访问');
-      const binding = await s.api.request(this.route('binding'));
-      const list = player.status === 'active' ? await s.api.request(this.route('invites')) : { items: [], activeInvite: null, nextCursor: null };
+      const binding = await s.api.request(this.apiPath('binding'));
+      const list = player.status === 'active' ? await s.api.request(this.apiPath('invites')) : { items: [], activeInvite: null, nextCursor: null };
       if (!this.current(stamp)) return;
       const activeInvite = list.activeInvite ? view(list.activeInvite) : null;
       if (!activeInvite || this._credential?.id !== activeInvite.id || activeInvite.status !== 'pending') this._credential = null;
@@ -58,7 +58,7 @@ Page({
     const stamp = this.stamp(), cursor = this._cursor;
     this.setData({ loadingMore: true, actionError: '' });
     try {
-      const list = await s.api.request(this.route('invites') + '?cursor=' + encodeURIComponent(cursor));
+      const list = await s.api.request(this.apiPath('invites') + '?cursor=' + encodeURIComponent(cursor));
       if (!this.current(stamp)) return;
       const byId = new Map(this.data.items.map(x => [x.id, x]));
       list.items.map(view).forEach(x => byId.set(x.id, x));
@@ -88,7 +88,7 @@ Page({
     return ui.showModal(this, { title: '创建微信邀请', content: '为“' + this.data.playerName + '”创建 24 小时有效邀请。仅交给本人，认领后仍需管理员核对身份。', confirmText: '创建邀请', success: r => {
       if (!r.confirm || !this.current(stamp) || !this.ready()) return;
       this._createId ||= 'invite-' + Date.now() + '-' + ++serial + '-' + Math.random().toString(36).slice(2);
-      return this.mutate(this.route('invites'), { requestId: this._createId }, result => {
+      return this.mutate(this.apiPath('invites'), { requestId: this._createId }, result => {
         this._createId = null;
         this._credential = /^[a-f0-9]{64}$/.test(result.credential || '') ? { id: result.id, value: result.credential } : null;
         if (result.credentialUnavailable) return ['pending', 'claimed'].includes(result.status)
@@ -117,14 +117,14 @@ Page({
         body.confirmationCode = String(r.content || '').trim().toUpperCase();
         if (!/^[A-F0-9]{8}$/.test(body.confirmationCode)) { this.setData({ actionError: '请输入本人提供的 8 位核验编号' }); return; }
       }
-      return this.mutate(this.route('invites') + '/' + invite.id + '/' + action, body, () => { this._credential = null; this._createId = null; });
+      return this.mutate(this.apiPath('invites') + '/' + invite.id + '/' + action, body, () => { this._credential = null; this._createId = null; });
     } });
   },
   unbind() {
     if (!this.ready() || !this.data.binding?.bound) return;
     const stamp = this.stamp(), revision = this.data.binding.revision;
     return ui.showModal(this, { title: '解除微信绑定', content: '将使该球员退出登录并撤销待处理邀请。' + (this.data.binding.passwordEnabled ? '原账号密码能力保留。' : '该球员需重新邀请绑定后才能登录。'), confirmText: '确认解绑', danger: true, success: r => {
-      if (r.confirm && this.current(stamp) && this.ready() && revision === this.data.binding?.revision) return this.mutate(this.route('binding/revoke'), { revision }, () => { this._credential = null; this._createId = null; });
+      if (r.confirm && this.current(stamp) && this.ready() && revision === this.data.binding?.revision) return this.mutate(this.apiPath('binding/revoke'), { revision }, () => { this._credential = null; this._createId = null; });
     } });
   }
 });

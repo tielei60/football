@@ -71,7 +71,7 @@ Page({
     return this.refresh();
   },
   openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
-  route(path) {
+  apiPath(path) {
     return "/players/" + encodeURIComponent(this.id) + "/ai" + path;
   },
   stamp() {
@@ -151,7 +151,7 @@ Page({
         session.team.id +
         ":" +
         encodeURIComponent(this.id);
-      const cap = await s.api.request(this.route("/capabilities"));
+      const cap = await s.api.request(this.apiPath("/capabilities"));
       if (
         this._hidden ||
         this._disposed ||
@@ -377,7 +377,7 @@ Page({
     inFlight.set(key, id);
     try {
       const result = await s.api.request(
-        this.route(path),
+        this.apiPath(path),
         method,
         method === "DELETE" ? payload : { ...payload, requestId: id },
       );
@@ -557,7 +557,7 @@ Page({
       jobId === this._record.jobId &&
       sourceId === this._record.source?.id;
     const job = await s.api.request(
-      this.route("/jobs/" + encodeURIComponent(this._record.jobId)),
+      this.apiPath("/jobs/" + encodeURIComponent(this._record.jobId)),
     );
     if (!current()) return;
     this.setData({
@@ -577,7 +577,7 @@ Page({
       if (!current()) return;
       try {
         const image = await s.api.request(
-          this.route("/candidates/" + encodeURIComponent(candidate.id)),
+          this.apiPath("/candidates/" + encodeURIComponent(candidate.id)),
         );
         if (!current()) return;
         const imageKey = "candidate:" + candidate.id + ":" + image.revision;
@@ -636,7 +636,7 @@ Page({
         adoption: "adoptions",
       }[pending.kind];
       const result = await s.api.request(
-        this.route(
+        this.apiPath(
           "/" +
             part +
             "?requestId=" +
@@ -875,7 +875,7 @@ Page({
         return this.perform(async (active) => {
           this._picturesEpoch = (this._picturesEpoch || 0) + 1;
           await s.api.request(
-            this.route("/jobs/" + encodeURIComponent(job.id) + "/cancel"),
+            this.apiPath("/jobs/" + encodeURIComponent(job.id) + "/cancel"),
             "POST",
             { revision: job.revision },
           );

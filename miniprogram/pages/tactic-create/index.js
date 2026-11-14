@@ -134,7 +134,7 @@ Page({
             this._payload.tactic.board.playerCount,
           ),
         });
-      this.options();
+      this.rebuildFormationOptions();
       if (this._payload)
         this.setData({
           formationIndex: Math.max(
@@ -151,7 +151,7 @@ Page({
       if (this.active(owner, turn)) this.setData({ loading: false });
     }
   },
-  options() {
+  rebuildFormationOptions() {
     const selected = this._choices?.[this.data.formationIndex]?.id;
     this._choices = [
       null,
@@ -179,7 +179,7 @@ Page({
     if (!Number.isInteger(i) || !model.COUNTS[i]) return;
     this.setData({ countIndex: i, formationIndex: 0 });
     this._choices = [];
-    this.options();
+    this.rebuildFormationOptions();
   },
   formation(e) {
     if (!this.ready() || this.data.pending) return;

@@ -5,7 +5,7 @@ const root=path.join(__dirname,'../pages');
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
 const read=(p,e)=>fs.readFileSync(path.join(root,p,'index.'+e),'utf8');
 for(const [page,b] of Object.entries(baseline))test(`match typography ${page}: structure, existing geometry and scope unchanged`,()=>{
- const markup=read(page,'wxml').replace(/\sclass="[^"]*"/g,'');assert.equal(hash(markup),b.markupSha256);
+ const markup=read(page,'wxml').replace('<button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button>','').replace('busy || conflict || uncertain || savedId','busy || conflict || uncertain').replace(/\sclass="[^"]*"/g,'');assert.equal(hash(markup),b.markupSha256);
  const css=read(page,'wxss'),start=css.indexOf('\n/* 比赛文字层级：');assert.ok(start>=0);
  assert.equal(hash(css.slice(0,start)),b.cssPrefixSha256);
  const extra=css.slice(start).replace(/\/\*[\s\S]*?\*\//g,'');

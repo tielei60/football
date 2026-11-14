@@ -644,6 +644,7 @@ test("5xx unknown creation retains draft only for same login and requires explic
   assert.equal(page.data.uncertain, true);
   page.onUnload();
   page.data.form.opponent = "";
+  page._hidden=false; // 新页面实例可见；onUnload后的旧实例不能直接模拟可见页面。
   await page.refresh();
   assert.equal(page.data.form.opponent, "保留这个对手");
   assert.equal(page.data.uncertain, true);
@@ -658,6 +659,7 @@ test("5xx unknown creation retains draft only for same login and requires explic
   page.onUnload();
   account = { ...account, token: "new-login" };
   page.data.form.opponent = "";
+  page._hidden=false; // 新页面实例可见；onUnload后的旧实例不能直接模拟可见页面。
   await page.refresh();
   assert.equal(page.data.uncertain, false);
   assert.equal(page.data.form.opponent, "");
@@ -707,7 +709,7 @@ test('in-flight create is locked across page instances and cannot be manually un
   page.data.form.opponent = '请求中的比赛'; page.data.form.date = '2026-11-15';
   const clean = structuredClone(page.data);
   const pending = page.save(); page.onUnload();
-  const next = { ...page, data: clean, _disposed: false };
+  const next = { ...page, data: clean, _disposed: false, _hidden: false };
   await next.refresh();
   assert.equal(next.data.uncertain, true);
   assert.equal(next.data.form.opponent, '请求中的比赛');
@@ -729,7 +731,7 @@ test('unloaded creation clears known 4xx but retains network and 5xx outcomes', 
     await page.refresh(); page.data.form.opponent = '结果待定'; page.data.form.date = '2026-11-15';
     const clean = structuredClone(page.data), pending = page.save(); page.onUnload();
     reject(Object.assign(new Error('response'), { status })); await pending;
-    const next = { ...page, data: clean, _disposed: false };
+    const next = { ...page, data: clean, _disposed: false, _hidden: false };
     await next.refresh(); assert.equal(next.data.uncertain, status === 0 || status >= 500);
   }
 });
@@ -743,10 +745,10 @@ test('old create success cannot clear the newer login attempt', async () => {
   await page.refresh(); page.data.form.opponent = '原请求'; page.data.form.date = '2026-11-15';
   const clean = structuredClone(page.data), first = page.save(); page.onUnload();
   account = { ...account, token: 'new' };
-  const next = { ...page, data: clean, _disposed: false }; await next.refresh();
+  const next = { ...page, data: clean, _disposed: false, _hidden: false }; await next.refresh();
   next.data.form.opponent = '新请求'; const second = next.save(); next.onUnload();
   finish[0]({ id: 8 }); await first;
-  const again = { ...next, data: { ...structuredClone(next.data), busy: false }, _disposed: false };
+  const again = { ...next, data: { ...structuredClone(next.data), busy: false }, _disposed: false, _hidden: false };
   await again.refresh(); assert.equal(again.data.uncertain, true); assert.equal(again.data.form.opponent, '新请求');
   again.confirmAbsent(); assert.equal(again.data.uncertain, true);
   finish[1]({ id: 9 }); await second;
@@ -765,3 +767,19 @@ test('old login unload uses only its handle and cannot clear newer identity',asy
  page.data.username='fictional';page.data.password='test-only';const pending=page.submit();page.onUnload();settle({});await pending;
  assert.equal(cancels,1);assert.equal(events.some(e=>e[0]==='clear'),false);assert.equal(events.some(e=>e[0]==='switchTab'),false);
 });
+
+function saveFixture(){
+ let resolve,reject,account={token:'save-owner',expiresAt:999,user:{id:1,teamId:1,role:'admin'},team:{id:1}};
+ const h=setup('match-edit',{getSession:()=>account,ensureSession:async()=>({user:account.user,team:account.team}),request:async(url,method)=>method==='POST'||method==='PUT'?new Promise((a,b)=>{resolve=a;reject=b;}):url==='/seasons'||url==='/venues'?[]:match({revision:3})});
+ h.finish=value=>resolve(value);h.fail=status=>reject(Object.assign(Error('failed'),{status}));h.changeOwner=()=>account={...account,token:'other-owner'};
+ h.prepare=async()=>{await h.page.refresh();h.page.data.form.opponent='匿名演练';h.page.data.form.date='2026-11-15';};return h;
+}
+test('保存隐藏后成功不导航，返回展示已保存入口且不能重复POST',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.finish({id:7});await p;assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);await h.page.onShow();assert.equal(h.page.data.savedId,7);assert.equal(h.page.data.uncertain,false);h.page.openSaved();const nav=h.events.find(e=>e[0]==='redirectTo')[1];nav.fail();assert.match(h.page.data.actionError,/已保存/);assert.equal(h.page.data.savedId,7);await h.page.save();assert.equal(h.page.data.busy,false);nav.success();});
+test('隐藏后先返回等待旧保存结束，只更新结果不自动导航',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();const shown=h.page.onShow();h.finish({id:8});await Promise.all([p,shown]);assert.equal(h.page.data.savedId,8);assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);});
+test('卸载重入的新实例等待原创建结果并显示savedId，不困于uncertain',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onUnload();const next={...h.page,data:structuredClone(h.page.data),_disposed:false,_hidden:false,_wasShown:false,_saveAttempt:null};await next.refresh();const shown=next.onShow();h.finish({id:9});await Promise.all([p,shown]);assert.equal(next.data.savedId,9);assert.equal(next.data.uncertain,false);assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);});
+test('旧账号保存响应不能导航或在新账号显示savedId',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.changeOwner();h.finish({id:10});await p;await h.page.onShow();assert.equal(h.page.data.savedId,null);assert.equal(h.page.data.form.opponent,'');assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);});
+for(const id of [undefined,0,-1,1.5,'12'])test('非法保存结果ID '+id+'进入未知核对而非错误导航',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.finish({id});await p;assert.equal(h.page.data.uncertain,true);assert.equal(h.page.data.savedId,null);assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);});
+for(const status of [409,500])test('编辑隐藏期间'+status+'返回保留冲突不重放保存',async()=>{const h=saveFixture();h.page.id='1';await h.prepare();const p=h.page.save();h.page.onHide();h.fail(status);await p;await h.page.onShow();assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.savedId,null);assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);});
+test('换账号手工确认不泄露旧保存ID',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.finish({id:17});await p;h.changeOwner();h.page._hidden=false;h.page.confirmAbsent();assert.equal(h.page.data.savedId,null);});
+test('已保存结果返回时清除被隐藏中断的loading',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.page.data.loading=true;h.finish({id:18});await p;await h.page.onShow();assert.equal(h.page.data.loading,false);assert.equal(h.page.data.savedId,18);});
+test('初次加载中隐藏再返回重新加载，不遗留loading',async()=>{let release,calls=0;const account={token:'A',user:{id:1,teamId:1,role:'admin'},team:{id:1}};const h=setup('match-edit',{getSession:()=>account,ensureSession:()=>{calls++;return calls===1?new Promise(r=>release=r):Promise.resolve(account);},request:async()=>[]});h.page.onLoad({});await h.page.onShow();h.page.onHide();const show=h.page.onShow();release(account);await show;assert.equal(h.page.data.loading,false);assert.equal(h.page.data.error,'');});
