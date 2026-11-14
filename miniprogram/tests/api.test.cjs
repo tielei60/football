@@ -237,3 +237,18 @@ test("stale ensureSession cannot replace new login or release its newer check", 
  test("credential persistence omits large team images", async () => {
  const f=fixture();const pending=f.api.login("user","password");const data=session();data.team.crest="data:image/png;base64,"+"A".repeat(1500000);f.complete(0,200,data);await pending;assert.equal(f.storage.get(key).team.crest,null);assert.ok(JSON.stringify(f.storage.get(key)).length<1000);
  });
+
+test('cancel only owns its login epoch; late success revokes original token without clearing newer login',async()=>{
+ const f=fixture();const a=f.api.beginLogin('fictional-a','test-only');const rejected=assert.rejects(a.promise,/取消/);
+ a.cancel();const b=f.api.beginLogin('fictional-b','test-only');f.complete(1,200,session('b'));await b.promise;
+ a.cancel();assert.equal(f.api.getSession().token,token('b'));
+ f.complete(0,200,session('a'));await rejected;
+ assert.equal(f.api.getSession().token,token('b'));
+ const revoke=f.requests[2];assert.equal(revoke.url,origin+'/api/auth/logout');assert.equal(revoke.header.Authorization,'Bearer '+token('a'));
+ f.complete(2,204);b.cancel();assert.equal(f.api.getSession().token,token('b'));
+});
+test('old uncancelled handle cannot cancel a newer in-flight login',async()=>{
+ const f=fixture();const a=f.api.beginLogin('a','test-only');const rejected=assert.rejects(a.promise,/取消/);
+ const b=f.api.beginLogin('b','test-only');a.cancel();f.complete(1,200,session('b'));await b.promise;
+ f.complete(0,200,session('a'));await rejected;assert.equal(f.api.getSession().token,token('b'));f.complete(2,204);
+});

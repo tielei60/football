@@ -148,10 +148,12 @@ async function request(path, method = "GET", data) {
     throw error;
   }
 }
-async function login(username, password) {
+function beginLogin(username, password) {
   clearSession();
-  const origin = baseUrl();
   const captured = epoch;
+  let settled = false;
+  const promise = (async () => {
+  const origin = baseUrl();
   const result = await transport(
     "/auth/native-login",
     "POST",
@@ -189,6 +191,16 @@ async function login(username, password) {
     /* login remains usable until process exit */
   }
   return session;
+  })().finally(() => { settled = true; });
+  return {
+    promise,
+    cancel() {
+      if (!settled && captured === epoch) clearSession();
+    },
+  };
+}
+function login(username, password) {
+  return beginLogin(username, password).promise;
 }
 async function logout() {
   const current = getSession();
@@ -236,6 +248,7 @@ function ensureSession() {
 module.exports = {
   request,
   login,
+  beginLogin,
   logout,
   getSession,
   ensureSession,

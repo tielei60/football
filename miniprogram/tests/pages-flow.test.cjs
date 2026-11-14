@@ -21,6 +21,7 @@ function setup(name, overrides = {}, wxOverrides = {}) {
     },
     ...overrides,
   };
+  if (!api.beginLogin) api.beginLogin = (...args) => { let settled=false; const promise=api.login(...args).finally(()=>{settled=true;}); return {promise,cancel(){if(!settled)api.clearSession();}}; };
   const wx = new Proxy(
     {
       stopPullDownRefresh() {},
@@ -750,4 +751,17 @@ test('old create success cannot clear the newer login attempt', async () => {
   again.confirmAbsent(); assert.equal(again.data.uncertain, true);
   finish[1]({ id: 9 }); await second;
   await again.refresh(); assert.equal(again.data.uncertain, false);
+});
+
+for(const success of [true,false]) test('hidden login '+(success?'success':'failure')+' cannot navigate or report stale error',async()=>{
+ let settle,cancelled=0;
+ const {page,events}=setup('login',{beginLogin(){return {promise:new Promise((resolve,reject)=>{settle=()=>success?resolve({}):reject(new Error('late'));}),cancel(){cancelled++;}};}});
+ page.data.username='fictional';page.data.password='test-only';const pending=page.submit();page.onHide();page.onShow();settle();await pending;
+ assert.equal(cancelled,1);assert.equal(page.data.password,'');assert.equal(page.data.busy,false);assert.equal(page.data.error,'');assert.equal(events.some(e=>e[0]==='switchTab'),false);
+});
+test('old login unload uses only its handle and cannot clear newer identity',async()=>{
+ let settle,cancels=0;
+ const {page,events}=setup('login',{beginLogin(){return {promise:new Promise(r=>settle=r),cancel(){cancels++;}};}});
+ page.data.username='fictional';page.data.password='test-only';const pending=page.submit();page.onUnload();settle({});await pending;
+ assert.equal(cancels,1);assert.equal(events.some(e=>e[0]==='clear'),false);assert.equal(events.some(e=>e[0]==='switchTab'),false);
 });
