@@ -3,7 +3,7 @@
 所有响应均为 JSON，错误格式为 `{message}`。同源 fetch 会自动携带会话 Cookie。浏览器写请求必须具有同源 `Origin`（由浏览器提供），或符合配置的 `FOOTBALL_PUBLIC_ORIGIN`。原生 Bearer 请求使用下文独立的鉴权传输方式，不携带 Cookie 或 Origin。不提供公开注册。命令行 `FOOTBALL_ADMIN_USERNAME=owner FOOTBALL_ADMIN_PASSWORD='at least 10 chars' node server/bootstrap-admin.mjs` 仅用于初始化首个管理员。
 
 - POST `/api/auth/login` `{username,password}` -> 下述会话对象
-- GET `/api/auth/me` -> `{user:{id,username,role:'admin'|'player',playerId:string|null,teamId:number},team:{id,name,crest,revision}}`；未登录返回 401
+- GET `/api/auth/me` -> `{user:{id,username,role:'admin'|'player',playerId:string|null,teamId:number,passwordEnabled:boolean},team:{id,name,crest,revision}}`；未登录返回 401
 - POST `/api/auth/logout` `{}` -> 204
 - PUT `/api/auth/password` `{currentPassword,newPassword}` -> 204，撤销会话，需重新登录
 - GET `/api/team` -> `{id:number,name:string,crest:string|null,revision:number}`（已认证的本队成员）
@@ -14,7 +14,11 @@
 - PUT `/api/players/:id` 提交部分 Player 字段及 `revision` -> Player（管理员）
 - POST `/api/players/:id/account` `{username,password}` -> `{id,username,role,playerId,teamId}`（管理员，为球员创建登录账号）
 - PUT `/api/players/:id/password` `{newPassword}` -> 204（管理员，重置密码并撤销会话）
-  Player = `{id:string,revision:number,name,number:number|null,positions:string[],preferredFoot:string,status:'active'|'inactive',note:string,avatar:string|null,hasAccount:boolean}`。保留已有旧版字符串 ID，新记录生成新 ID。不提供破坏性的球员删除操作，以 inactive 状态归档。战术工作台和俱乐部名单按稳定 ID 同步。修改俱乐部球员资料会递增战术工作台 edition，过期工作台保存返回 409，不会覆盖新资料。归档会撤销该球员的会话。
+  Player = `{id:string,revision:number,name,number:number|null,positions:string[],preferredFoot:string,status:'active'|'inactive',note:string,avatar:string|null,avatarOriginKind:'ai-generated'|'local-simulation'|null,avatarGenerated:boolean,avatarAiGenerated:boolean,avatarSimulation:boolean,hasAccount:boolean,passwordEnabled:boolean}`。保留已有旧版字符串 ID，新记录生成新 ID。不提供破坏性的球员删除操作，以 inactive 状态归档。战术工作台和俱乐部名单按稳定 ID 同步。修改俱乐部球员资料会递增战术工作台 edition，过期工作台保存返回 409，不会覆盖新资料。归档会撤销该球员的会话。
+
+`hasAccount/passwordEnabled` 是服务端按目标球员及同队账号派生的只读能力字段，覆盖球员列表、详情和保存响应。无账号时两者均为false；已有微信专用账号可为hasAccount=true、passwordEnabled=false。它不同于 `/auth/me` 当前登录者的同名字段，管理目标账号时不得拿当前管理员的能力代替。客户端提交这些布尔值不会开通密码；修改/重置密码仍须走原服务端权限与账号规则。
+
+头像来源也是服务端只读投影：无来源标记时avatarOriginKind为null，其余生成布尔为false；本地模拟标为local-simulation、avatarSimulation=true、avatarAiGenerated=false，不冒充真实AI。avatarGenerated仅表示有生成来源标记。手动实际更换或移除头像会清除旧来源标记，未改变头像的其他资料更新保留标记。客户端不能通过提交来源字段证明图片来源或授权，不返回密码哈希或内部凭据。
 
 - GET `/api/seasons` -> Season[]
 - POST `/api/seasons` `{name,startDate,endDate}` -> Season（管理员）
@@ -204,3 +208,8 @@ GET `/api/tactics/:id/commands` 额外返回 `formations`，为 `{playerCount,id
 ## 默认关闭的私有生成图片流程
 
 受控路由位于 `/api/players/:playerId/ai/*`，仅同队管理员及原操作者可操作；默认能力关闭，不接受上传或生成。详见[HTTP 契约](player-ai-http-contract.md)和[服务检查记录](player-ai-service-review.md)。本地演练仅几何样本，不能当作真实 AI；没有客户端状态转移/费用结算入口，也没有真实供应商默认配置。
+
+
+## 原生战术新建目录与收据
+
+管理员目录 `GET /api/tactic-formations`、兼容 `POST /api/tactics` 可选顶层requestId，以及同账号新建收据查询的事务/恢复/删除边界，见[原生战术新建接口](native-tactic-create-api.md)。此组仍遵循既有team1战术资源范围，不表示任意多球队战术已实现。
