@@ -1,0 +1,13 @@
+.title{font-size:36rpx;font-weight:650;color:var(--ink);line-height:1.4}
+.invite-subtitle{font-size:28rpx;font-weight:500;color:var(--muted);margin:8rpx 0 24rpx;overflow-wrap:anywhere}
+.invite-heading{font-size:28rpx;font-weight:600;color:var(--ink);line-height:1.5}
+.binding-status{font-size:32rpx;font-weight:600;color:var(--brand);margin:16rpx 0}
+.invite-between{display:flex;justify-content:space-between;align-items:center;gap:16rpx}
+.hint{font-size:25rpx;color:var(--muted);line-height:1.65;margin-top:12rpx;overflow-wrap:anywhere}
+.invite-actions{display:flex;gap:16rpx;margin-top:20rpx}
+.page .invite-actions>button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;margin:0;min-height:44px;padding:16rpx 12rpx;font-size:26rpx;line-height:1.5;white-space:normal}
+.page .card>button.ui-block[size="mini"]{margin-top:20rpx;min-height:44px;font-size:26rpx}
+.history-heading{margin-top:32rpx}.history-row{display:flex;flex-direction:column;gap:4rpx}.history-status{font-size:27rpx;font-weight:500;color:var(--ink)}
+.error{font-size:26rpx;line-height:1.6;overflow-wrap:anywhere}
+
+.page>block button.ui-block[size="mini"],.page button.ui-block[size="mini"]{box-sizing:border-box;min-height:44px;width:100%;max-width:100%;white-space:normal;line-height:1.5}

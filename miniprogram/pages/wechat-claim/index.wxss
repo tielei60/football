@@ -1,0 +1,9 @@
+.title{font-size:34rpx;font-weight:650;color:var(--ink)}
+.section-title{font-size:28rpx;font-weight:600}
+.field-label{font-size:26rpx;font-weight:500}
+.hint{font-size:25rpx;line-height:1.6;color:var(--muted)}
+.confirmation{font-size:36rpx;font-weight:650;letter-spacing:4rpx;color:var(--brand-ink);margin:24rpx 0;overflow-wrap:anywhere}
+.input{margin:14rpx 0}
+.error{font-size:26rpx;line-height:1.6}
+@media(max-width:360px){.hint{font-size:12px}}
+@media(max-width:346px){.field-label,.error{font-size:12px}}

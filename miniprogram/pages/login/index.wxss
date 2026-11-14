@@ -60,3 +60,6 @@
 @media (max-width: 346.154px) {
   .field-label, .error { font-size: 12px; }
 }
+
+/* 微信入口复用主布局，不改变密码输入几何。 */
+.wechat-entry{padding-top:0}

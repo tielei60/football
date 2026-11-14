@@ -90,6 +90,7 @@ function sessionView(session) {
       username: session.user.username,
       role: session.user.role,
       playerId: session.user.playerId,
+      passwordEnabled: session.user.passwordEnabled !== false,
     },
     team: { id: session.team.id, name: session.team.name },
   };

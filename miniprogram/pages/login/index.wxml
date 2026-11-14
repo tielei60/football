@@ -33,4 +33,5 @@
   ><view class="hint">使用球队分配的账号。账号或密码问题请联系球队管理员。</view></view
 >
 
+<view wx:if="{{wechatEnabled}}" class="page wechat-entry"><view class="card"><button class="primary ui-button ui-block" bindtap="wechatLogin" disabled="{{busy}}" size="mini">微信登录</button><button class="ui-button ui-block" bindtap="acceptInvite" disabled="{{busy}}" size="mini">接受球队邀请</button><view class="hint">仅限已获邀请并批准的球队成员，不开放注册。</view></view></view>
 <business-dialog id="business-dialog"/>

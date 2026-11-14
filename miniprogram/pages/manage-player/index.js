@@ -1,4 +1,4 @@
-const ui=require('../../utils/ui');
+const ui = require("../../utils/ui");
 const a = require("../manage-team/admin");
 const standard = [
   "门将",
@@ -16,14 +16,65 @@ const standard = [
   "待定",
 ];
 Page({
- openPhotos(){if(this._disposed||this._hidden||this.data.loading||this.data.error||this.data.busy||!this.id)return;wx.navigateTo({url:'/pages/player-photos/index?id='+encodeURIComponent(this.id)});},
-openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
+  async openWechat() {
+    if (
+      this._hidden ||
+      this._disposed ||
+      this.data.loading ||
+      this.data.busy ||
+      !this.id
+    )
+      return;
+    const token = a.s.api.getSession()?.token,
+      epoch = this._epoch;
+    try {
+      const c = await a.s.api.capabilities();
+      if (
+        this._hidden ||
+        this._disposed ||
+        epoch !== this._epoch ||
+        token !== a.s.api.getSession()?.token
+      )
+        return;
+      if (!c.wechat) {
+        ui.showToast(this, { title: "微信邀请尚未启用", icon: "none" });
+        return;
+      }
+      wx.navigateTo({
+        url: "/pages/wechat-invites/index?id=" + encodeURIComponent(this.id),
+      });
+    } catch (e) {
+      if (
+        !this._hidden &&
+        !this._disposed &&
+        token === a.s.api.getSession()?.token
+      )
+        ui.showToast(this, { title: "暂时无法读取微信配置", icon: "none" });
+    }
+  },
+
+  openPhotos() {
+    if (
+      this._disposed ||
+      this._hidden ||
+      this.data.loading ||
+      this.data.error ||
+      this.data.busy ||
+      !this.id
+    )
+      return;
+    wx.navigateTo({
+      url: "/pages/player-photos/index?id=" + encodeURIComponent(this.id),
+    });
+  },
+  openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
   createKind: "player",
   confirmNotCreated: a.confirmNotCreated,
   data: {
     loading: true,
     error: "",
     authorized: false,
+    wechatEnabled: false,
     busy: false,
     conflict: false,
     uncertain: false,
@@ -47,32 +98,65 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
     username: "",
     password: "",
   },
-  onShow() { return a.show.call(this); },
+  async onShow() {
+    const beforeEpoch = this._epoch;
+    await a.show.call(this);
+    // 首次载入及本次重新载入由 refresh 统一提交能力，避免早于权限结果返回。
+    if (this.data.loading || beforeEpoch !== this._epoch) return;
+    const token = a.s.api.getSession()?.token,
+      epoch = this._epoch,
+      view = this._adminView || 0;
+    if (!this.data.authorized || this._hidden || this._disposed) return;
+    try {
+      const c = await a.s.api.capabilities();
+      if (
+        !this._hidden &&
+        !this._disposed &&
+        epoch === this._epoch && view === (this._adminView || 0) &&
+        token === a.s.api.getSession()?.token
+      )
+        this.setData({ wechatEnabled: c.wechat });
+    } catch (_) {
+      if (!this._hidden && !this._disposed && epoch === this._epoch && view === (this._adminView || 0) &&
+          token === a.s.api.getSession()?.token)
+        this.setData({ wechatEnabled: false });
+    }
+  },
   onLoad(q) {
     this.id = q.id;
-    this.refresh();
+    return this.refresh();
   },
-  onUnload() {ui.abort(this);
+  onUnload() {
+    ui.abort(this);
     this.setData({ password: "" });
     a.unload.call(this);
   },
-  onHide() {a.hide.call(this);
-    this.setData({ password: "" });
+  onHide() {
+    a.hide.call(this);
+    this.setData({ password: "", wechatEnabled: false });
   },
   refresh() {
     if (this.data.busy) return;
     this._imageData = undefined;
+    this.setData({ wechatEnabled: false });
     return a.load(this, async () => {
       const p = this.id
         ? (await a.s.api.request("/players")).find((x) => x.id === this.id)
         : null;
       if (this.id && !p) throw new Error("球员不存在");
+      // 能力读取失败不阻断已有球员管理，最终提交沿用 a.load 的身份与代次门禁。
+      let wechatEnabled = false;
+      if (!this._hidden && !this._disposed) {
+        try { wechatEnabled = (await a.s.api.capabilities()).wechat === true; }
+        catch (_) { /* 保持关闭，不影响密码账号管理。 */ }
+      }
       const selected = p?.positions || ["待定"];
       const feet = ["未设置", "右脚", "左脚", "双脚"];
       if (p?.preferredFoot && !feet.includes(p.preferredFoot))
         feet.push(p.preferredFoot);
       return {
         id: this.id || "",
+        wechatEnabled,
         revision: p?.revision || null,
         status: p?.status || "active",
         hasAccount: !!p?.hasAccount,
@@ -163,11 +247,13 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
     return a.act(
       this,
       () =>
-        !this.id ? a.createRequest(this, "/players", payload) : a.s.api.request(
-          this.id ? "/players/" + encodeURIComponent(this.id) : "/players",
-          this.id ? "PUT" : "POST",
-          payload,
-        ),
+        !this.id
+          ? a.createRequest(this, "/players", payload)
+          : a.s.api.request(
+              this.id ? "/players/" + encodeURIComponent(this.id) : "/players",
+              this.id ? "PUT" : "POST",
+              payload,
+            ),
       (p) => {
         this.id = p.id;
         this._imageData = undefined;
@@ -176,7 +262,7 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
           revision: p.revision,
           hasAccount: p.hasAccount,
         });
-        ui.showToast(this,{ title: "球员已保存" });
+        ui.showToast(this, { title: "球员已保存" });
       },
       !this.id,
     );
@@ -184,7 +270,7 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
   archive() {
     if (this.data.busy || !this.id) return;
     const status = this.data.status === "active" ? "inactive" : "active";
-    ui.showModal(this,{
+    ui.showModal(this, {
       title: status === "inactive" ? "归档球员" : "恢复球员",
       content:
         status === "inactive"
@@ -202,7 +288,7 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
               ),
             (p) => {
               this.setData({ revision: p.revision, status: p.status });
-              ui.showToast(this,{ title: "状态已更新" });
+              ui.showToast(this, { title: "状态已更新" });
             },
           );
       },
@@ -231,7 +317,7 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
       this.setData({ actionError: "请填写账号和至少 10 位密码" });
       return;
     }
-    ui.showModal(this,{
+    ui.showModal(this, {
       title: this.data.hasAccount ? "重置登录密码" : "开通球员账号",
       content: this.data.hasAccount
         ? "重置后该球员所有现有会话失效。是否继续？"
@@ -262,7 +348,9 @@ openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(
               hasAccount: true,
               accountOpen: false,
             });
-            ui.showToast(this,{ title: existing ? "密码已重置" : "账号已开通" });
+            ui.showToast(this, {
+              title: existing ? "密码已重置" : "账号已开通",
+            });
           },
           true,
         ).finally(() => {

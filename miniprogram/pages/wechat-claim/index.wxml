@@ -1,0 +1,27 @@
+<view class="page">
+<page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
+<block wx:if="{{!loading&&!error}}">
+<view class="title">接受球队邀请</view>
+<view wx:if="{{!enabled}}" class="card empty">微信邀请尚未启用，请使用球队账号登录。</view>
+<block wx:else>
+<view class="card">
+<view class="field-label">邀请码</view>
+<input wx:if="{{showInput}}" class="input" password bindinput="credential" maxlength="64" disabled="{{busy}}" placeholder="输入管理员提供的邀请码"/>
+<view class="hint">{{hasCredential?'已收到邀请码。请确认此邀请由球队管理员交付。':'邀请码仅用于本次认领，不保存到本机。'}}</view>
+<button class="primary ui-button ui-block" bindtap="submit" disabled="{{busy||!hasCredential}}" loading="{{busy}}" size="mini">提交或恢复认领</button>
+</view>
+<view wx:if="{{status}}" class="card">
+<view class="section-title">{{statusLabel}}</view>
+<view wx:if="{{confirmationCode}}" class="confirmation">{{confirmationCode}}</view>
+<view wx:if="{{status==='claimed'}}" class="hint">请通过原有联系渠道把核验编号告知管理员。审核前没有球队访问权限。</view>
+<view wx:if="{{status==='approved'}}" class="hint">审批记录不代表当前绑定仍有效，请重新登录核验。</view>
+<button class="ui-button ui-block" bindtap="status" disabled="{{busy}}" size="mini">刷新申请状态</button>
+<button wx:if="{{status==='approved'}}" class="primary ui-button ui-block" bindtap="login" disabled="{{busy}}" size="mini">微信登录</button>
+</view>
+<view wx:if="{{actionError}}" class="error">{{actionError}}</view>
+<view class="hint">仅限受邀成员，不开放注册。离开页面后需重新输入邀请码；无需提供手机号、头像或昵称。</view>
+</block>
+<button class="ui-button ui-block" bindtap="back" disabled="{{busy}}" size="mini">返回登录</button>
+</block>
+</view>
+<business-dialog id="business-dialog"/>

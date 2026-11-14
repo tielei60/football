@@ -112,3 +112,11 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 | 36 | miniprogram/pages/player-photos/index.wxml | 上传照片说明 | 复用input几何，VM逻辑测试；caret待测 |
 
 以上为两个新增模板实例，循环可能展示多份；不并入历史34项实际聚焦通过结论。
+
+## 新增微信邀请输入（尚未实际聚焦验证）
+
+| 编号 | 模板 | 字段与状态 | 证据边界 |
+| --- | --- | --- | --- |
+| 37 | miniprogram/pages/wechat-claim/index.wxml | 一次性邀请码，密码式输入；提交/离开清空原生控件 | 仅VM确认私有内存与生命周期，不代表真实IME/caret已验 |
+
+管理审批编号复用现有共享弹框输入，不新增模板输入实例。

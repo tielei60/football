@@ -48,7 +48,12 @@ function sessionValid(value) {
 }
 function persistSession() {
   // Large crest images belong to the view cache, not the credential storage record.
-  const team = { id: session.team.id, name: session.team.name, revision: session.team.revision, crest: null };
+  const team = {
+    id: session.team.id,
+    name: session.team.name,
+    revision: session.team.revision,
+    crest: null,
+  };
   wx.setStorageSync(STORAGE_KEY, { ...session, team });
 }
 function clearSession() {
@@ -154,49 +159,166 @@ function beginLogin(username, password) {
   const captured = epoch;
   let settled = false;
   const promise = (async () => {
-  const origin = baseUrl();
-  const result = await transport(
-    "/auth/native-login",
-    "POST",
-    { username, password },
-    null,
-    { "X-Football-Client": "native-v1" },
-    origin,
-  );
-  let currentOrigin;
-  try {
-    currentOrigin = baseUrl();
-  } catch (_) {
-    currentOrigin = null;
-  }
-  if (captured !== epoch || origin !== currentOrigin) {
-    // A cancelled successful login can still create a server session. Revoke it
-    // at its original issuer without letting a late response replace new login.
-    if (sessionValid(result))
-      transport("/auth/logout", "POST", {}, result.token, null, origin).catch(
-        () => {},
-      );
-    throw failure("登录操作已取消，请重试。", 401);
-  }
-  if (!sessionValid(result)) throw failure("登录响应无效，请联系管理员。");
-  session = {
-    token: result.token,
-    expiresAt: result.expiresAt,
-    user: result.user,
-    team: result.team,
-    serverOrigin: origin,
-  };
-  try {
-    persistSession();
-  } catch (_) {
-    /* login remains usable until process exit */
-  }
-  return session;
-  })().finally(() => { settled = true; });
+    const origin = baseUrl();
+    const result = await transport(
+      "/auth/native-login",
+      "POST",
+      { username, password },
+      null,
+      { "X-Football-Client": "native-v1" },
+      origin,
+    );
+    let currentOrigin;
+    try {
+      currentOrigin = baseUrl();
+    } catch (_) {
+      currentOrigin = null;
+    }
+    if (captured !== epoch || origin !== currentOrigin) {
+      // A cancelled successful login can still create a server session. Revoke it
+      // at its original issuer without letting a late response replace new login.
+      if (sessionValid(result))
+        transport("/auth/logout", "POST", {}, result.token, null, origin).catch(
+          () => {},
+        );
+      throw failure("登录操作已取消，请重试。", 401);
+    }
+    if (!sessionValid(result)) throw failure("登录响应无效，请联系管理员。");
+    session = {
+      token: result.token,
+      expiresAt: result.expiresAt,
+      user: result.user,
+      team: result.team,
+      serverOrigin: origin,
+    };
+    try {
+      persistSession();
+    } catch (_) {
+      /* login remains usable until process exit */
+    }
+    return session;
+  })().finally(() => {
+    settled = true;
+  });
   return {
     promise,
     cancel() {
       if (!settled && captured === epoch) clearSession();
+    },
+  };
+}
+async function capabilities() {
+  const origin = baseUrl();
+  const result = await transport(
+    "/auth/capabilities",
+    "GET",
+    undefined,
+    null,
+    null,
+    origin,
+  );
+  if (origin !== baseUrl()) throw failure("服务地址已变化，请重试");
+  return { wechat: result?.wechat === true };
+}
+function beginWechat(action, input = {}) {
+  if (!["login", "claim", "claim-status"].includes(action))
+    throw failure("不支持的微信操作");
+  if (action === "login") clearSession();
+  const captured = epoch;
+  let origin;
+  try {
+    origin = baseUrl();
+  } catch (e) {
+    return { promise: Promise.reject(e), cancel() {} };
+  }
+  const capturedInput = {
+    credential: input.credential,
+    requestId: input.requestId,
+    inviteId: input.inviteId,
+  };
+  let cancelled = false,
+    settled = false;
+  const active = () => !cancelled && captured === epoch && origin === baseUrl();
+  const promise = (async () => {
+    if (
+      action === "claim" &&
+      (!/^[a-f0-9]{64}$/.test(capturedInput.credential || "") ||
+        typeof capturedInput.requestId !== "string" ||
+        !capturedInput.requestId ||
+        capturedInput.requestId.length > 128)
+    )
+      throw failure("邀请参数不正确");
+    if (
+      action === "claim-status" &&
+      !/^[a-f0-9]{32}$/.test(capturedInput.inviteId || "")
+    )
+      throw failure("申请编号不正确");
+    const code = await new Promise((resolve, reject) => {
+      if (typeof wx.login !== "function") {
+        reject(failure("此环境不支持微信登录，请使用账号密码"));
+        return;
+      }
+      wx.login({
+        timeout: 15000,
+        success: (r) =>
+          typeof r.code === "string" && r.code
+            ? resolve(r.code)
+            : reject(failure("未取得微信登录凭据，请重试")),
+        fail: () => reject(failure("微信登录未完成，请主动重试")),
+      });
+    });
+    if (!active()) throw failure("微信操作已取消");
+    const payload =
+      action === "claim"
+        ? {
+            code,
+            credential: capturedInput.credential,
+            requestId: capturedInput.requestId,
+          }
+        : action === "claim-status"
+          ? { code, inviteId: capturedInput.inviteId }
+          : { code };
+    const result = await transport(
+      "/auth/wechat/" + action,
+      "POST",
+      payload,
+      null,
+      { "X-Football-Client": "native-v1" },
+      origin,
+    );
+    let current = false;
+    try {
+      current = active();
+    } catch (_) {}
+    if (!current) {
+      if (action === "login" && sessionValid(result))
+        transport("/auth/logout", "POST", {}, result.token, null, origin).catch(
+          () => {},
+        );
+      throw failure("微信操作已取消，请重新打开");
+    }
+    if (action !== "login") return result;
+    if (!sessionValid(result)) throw failure("登录响应无效，请联系管理员");
+    session = {
+      token: result.token,
+      expiresAt: result.expiresAt,
+      user: result.user,
+      team: result.team,
+      serverOrigin: origin,
+    };
+    try {
+      persistSession();
+    } catch (_) {}
+    return session;
+  })().finally(() => {
+    settled = true;
+  });
+  return {
+    promise,
+    cancel() {
+      if (settled) return;
+      cancelled = true;
+      if (action === "login" && captured === epoch) clearSession();
     },
   };
 }
@@ -250,6 +372,8 @@ module.exports = {
   request,
   login,
   beginLogin,
+  beginWechat,
+  capabilities,
   logout,
   getSession,
   ensureSession,

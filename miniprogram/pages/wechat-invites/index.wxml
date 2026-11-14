@@ -1,0 +1,38 @@
+<view class="page">
+  <page-state loading="{{loading}}" error="{{error}}" skeleton-type="cards" bind:retry="refresh"/>
+  <block wx:if="{{!loading&&!error&&authorized}}">
+    <view class="title">微信邀请</view>
+    <view wx:if="{{!enabled}}" class="card empty">微信登录尚未启用，原账号密码登录不受影响。</view>
+    <block wx:else>
+      <view class="invite-subtitle">{{playerName}}</view>
+      <view class="card">
+        <view class="invite-heading">当前绑定</view>
+        <view class="binding-status">{{binding.bound?'已绑定微信':'尚未绑定'}}</view>
+        <view wx:if="{{archived}}" class="hint">球员已归档，恢复在队后才能创建邀请。</view>
+        <button size="mini" wx:if="{{binding.bound}}" class="ui-button ui-block" bindtap="unbind" disabled="{{busy||needsRefresh||loadingMore}}">解除绑定</button>
+        <button size="mini" wx:elif="{{!activeInvite&&!archived}}" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||needsRefresh||loadingMore}}" loading="{{busy}}">创建邀请</button>
+      </view>
+      <view wx:if="{{activeInvite}}" class="card">
+        <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag">{{activeInvite.label}}</text></view>
+        <view class="hint">有效期至 {{activeInvite.expires}}</view>
+        <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'复制凭据后，仅交给这名球员本人。':'邀请凭据无法再次显示。若未交付，可撤销后重新创建。'}}</view>
+        <button size="mini" wx:if="{{canCopy}}" class="primary ui-button ui-block" bindtap="copy" disabled="{{busy||needsRefresh||loadingMore}}">复制邀请凭据</button>
+        <view wx:if="{{activeInvite.status==='claimed'}}" class="hint">请联系球员本人核对确认编号，再批准申请。</view>
+        <view wx:if="{{activeInvite.status==='claimed'}}" class="invite-actions">
+          <button size="mini" class="primary ui-button" data-action="approve" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">核对并批准</button>
+          <button size="mini" class="ui-button" data-action="reject" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">拒绝申请</button>
+        </view>
+        <button size="mini" class="ui-button ui-block" data-action="revoke" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">撤销邀请</button>
+      </view>
+      <view wx:if="{{actionError}}" class="error" aria-role="alert">{{actionError}}</view>
+      <button size="mini" class="ui-button ui-block" bindtap="refresh" disabled="{{busy||loadingMore}}">重新载入</button>
+      <view class="invite-heading history-heading">邀请记录</view>
+      <view wx:if="{{!items.length}}" class="card empty">暂无邀请记录</view>
+      <view wx:for="{{items}}" wx:key="id" class="card history-row">
+        <text class="history-status">{{item.label}}</text><text class="hint">有效期至 {{item.expires}}</text>
+      </view>
+      <button size="mini" wx:if="{{hasMore}}" class="ui-button ui-block" bindtap="more" loading="{{loadingMore}}" disabled="{{busy||loadingMore||needsRefresh}}">加载更多</button>
+    </block>
+  </block>
+</view>
+<business-dialog id="business-dialog"/>

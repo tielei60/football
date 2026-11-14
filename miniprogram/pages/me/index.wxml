@@ -37,7 +37,7 @@
           ><text class="label">未回应</text></view
         ></view
       ><view class="hint">报名状态不等于实际出场。</view></view
-    ><view class="card section"
+    ><view wx:if="{{session.user.passwordEnabled!==false}}" class="card section"
       ><view aria-role="button" class="between" bindtap="togglePassword"
         ><text class="bold account-heading">修改密码</text
         ><text class="link">{{passwordOpen?'收起':'修改 ›'}}</text></view
