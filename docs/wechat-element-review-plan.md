@@ -205,3 +205,27 @@
 - **仍待验收**：修复后 320 selector、重试按钮、光标保持、长按钮文字和弹层滚动，以及普通紧凑工具、日历等剩余元素；日期辅助语义需实际读屏检查。此前其他轮次证据不冒充本轮复测，静态模板断言不能替代真实验证，本节不代表全站满足 44px、全部流程通过或完成无障碍验收。
 
 - **官方 CLI 替代路径**：本轮 `simulator_refresh`、导航、按钮 `size` 和截图均曾成功；刷新后的首次尺寸调用超时，稍后重试成功。此前自定义组件内部节点用普通 selector / 穿透 selector 查询返回找不到元素，尚未确认其内部 tap/scroll 的可用选择方式。因此 CLI 并非整体不可用，但其替代本轮剩余组件交互及改密 UI 流程的稳定性尚未验证；后续可按官方文档评估实际元素动作，不用修改 page.data 或调用业务方法替代交互验收。
+
+### 10.1 官方 CLI 与最终清理补测
+
+- 官方帮助确认元素动作支持 `tap`、`input`、`scrollTo` 等，但当前包装接口只有页面 selector，未确认自定义组件内部的作用域查询方法；未安装新依赖或修改工具配置。
+- 实际官方 `input` 输入搜索 `99999` 成功，截图 `/tmp/football-elements-cli-search-empty.png` 显示该值及“暂时没有记录”；实际点击“历史队员”后读取状态为 `inactive`，再点击“在队球员”成功。没有用页面数据注入或业务方法调用代替动作。
+- `input --value ''` 被工具参数校验拒绝（要求非空字符串）；外层 `ok:true` 不代表动作成功。此限制尚不能支撑完整输入清理或改密流程验证。
+- 最后按官方支持的 `reLaunch` 重建球员页，读取 `search` 为空串、`positionIndex` 为 0，再导航首页成功。该步骤仅清理临时验收状态，不计作清空输入框或选择“全部位置”的控件交互通过。因此上一段430门将面板交接状态已由此清理取代，目前停在430首页。
+- 额外一次 CUA 运行时 reset 后重新选择应用，首次根据新界面树点击可见球员标签仍返回窗口发生变化错误，随后停止，未重复盲点。密码测试仍未执行；组件滚动、320 selector、重试按钮及可见光标复验仍待稳定工具支持。
+
+### 10.2 官方 CLI 五个球员主页面正常态检查（430 宽）
+
+使用隔离演练球员身份，通过官方 `automation_navigate` 的 `switchTab` 打开页面，再用 `pageScrollTo` 分别请求顶部（0）、中段（450）和底部（100000），保存模拟器截图并逐张查看。没有注入页面数据或直接调用业务方法。
+
+| 页面 | 实际观察 | 证据文件（本机临时文件） |
+| --- | --- | --- |
+| 首页 home | 身份、长虚构队名、下一场比赛卡、主按钮及最近赛果完整可读；未知比分显示“—”，未观察到溢出或重叠。页面实际滚动，最后一张赛果可达。 | `/tmp/football-elements-430-home-top.png`、`/tmp/football-elements-430-home-middle.png`、`/tmp/football-elements-430-home-bottom.png` |
+| 赛程 schedule | 待比赛分段、月份、日期周几、比赛卡和报名入口正常显示；球员身份没有创建/草稿管理入口。当前仅一场待比赛，内容不足一屏，中段/底部截图与顶部一致，不作为长页滚动证据。 | `/tmp/football-elements-430-schedule-top.png`、`/tmp/football-elements-430-schedule-middle.png`、`/tmp/football-elements-430-schedule-bottom.png` |
+| 球员 players | 搜索已清空、位置恢复全部；头像、姓名、位置及号码对齐，长虚构球员姓名可读；实际滚动至最后一名球员，无底部遮挡。 | `/tmp/football-elements-430-players-top.png`、`/tmp/football-elements-430-players-middle.png`、`/tmp/football-elements-430-players-bottom.png` |
+| 统计 statistics | 2026 自然年触发器、指标、进球榜和未知值“—”正常显示；长姓名及底部交锋卡可读，实际滚动覆盖榜单中段和交锋区域，无横向溢出。 | `/tmp/football-elements-430-statistics-top.png`、`/tmp/football-elements-430-statistics-middle.png`、`/tmp/football-elements-430-statistics-bottom.png` |
+| 我的 me | 球员身份、报名四格、收起的改密区、战术入口和退出按钮完整可见，未出现按钮堆叠；内容不足一屏，三张截图一致。 | `/tmp/football-elements-430-me-top.png`、`/tmp/football-elements-430-me-middle.png`、`/tmp/football-elements-430-me-bottom.png` |
+
+**范围限制**：以上 15 张截图已逐张查看，仅覆盖 430 宽下当前正常态与实际导航/滚动；没有新增业务按钮点击、弹层选择、错误恢复、输入焦点或可见光标验收，不代表五页全部功能、全站 25 页或 320/375 全页通过。短页无可滚动内容与长页确实发生滚动分别记录。截图为本机临时证据，不随仓库提交图片。
+
+**交接**：采集完成后停在“我的”，密码区未展开，未登录退出或修改密码，未修改业务数据、源码或工具配置。为生命周期修复交还操作窗口；共享组件内部定位和 CUA 窗口控制限制仍未解决。
