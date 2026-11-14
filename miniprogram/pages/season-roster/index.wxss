@@ -1,0 +1,5 @@
+.heading{margin-bottom:24rpx}.member{padding:24rpx;border-bottom:1rpx solid var(--line)}.member:last-child{border-bottom:0}.member-name{font-size:29rpx;font-weight:650}.number{width:140rpx;min-width:0}.number input{text-align:center}.member .grow{flex:1;min-width:0}.member button{margin:0;width:auto;min-width:0}.roster-card{padding:0;overflow:hidden}.picker-row business-picker{flex:1;min-width:0}.picker-row button{margin:0;width:auto}.member-meta{margin-top:8rpx}.footer{margin-top:24rpx}.read-number{font-size:32rpx;font-weight:650;color:var(--brand)}
+/* Page-specific density, hierarchy and long-content safeguards. */
+.heading{margin-bottom:22rpx}.member{padding:24rpx 22rpx}.member-name{font-size:28rpx;line-height:1.4;overflow-wrap:anywhere}.member-meta{font-size:23rpx;line-height:1.55}.member .row{gap:14rpx}.member button.small{padding:14rpx 16rpx;font-size:24rpx}.number{width:120rpx;flex-shrink:0}.number input{padding:0 8rpx;font-variant-numeric:tabular-nums}.picker-row{gap:14rpx}.footer .hint{line-height:1.65}
+
+.member .row{flex-wrap:wrap}.member .row .grow{min-width:180rpx}.member button.ui-button[size="mini"]{white-space:nowrap}

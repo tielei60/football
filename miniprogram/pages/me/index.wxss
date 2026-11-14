@@ -1,0 +1,7 @@
+
+.management-grid{display:grid;grid-template-columns:1fr 1fr;gap:16rpx}.management-grid button{width:100%;margin:0;font-size:26rpx}
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.card.row{gap:22rpx}.card.row .title{font-size:32rpx;overflow-wrap:anywhere}.card.row .grow{min-width:0}.card.row .avatar{width:104rpx;height:104rpx;flex-shrink:0}.management-grid{gap:12rpx}.management-grid button{font-size:26rpx;min-width:0;padding:22rpx 12rpx;line-height:1.4}.metrics{gap:10rpx}.metric .number{font-size:34rpx;font-variant-numeric:tabular-nums}.metric .label{font-size:22rpx}.card .tag{margin-top:8rpx}.page>button.danger{margin-top:24rpx}
+
+.management-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

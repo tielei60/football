@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "编辑球场",
+  "usingComponents": {
+    "page-state": "/components/page-state/index"
+  }
+}

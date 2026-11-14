@@ -24,6 +24,9 @@ jobs:
       - run: npm audit --omit=dev
       - run: npm run build
       - run: npm run test:unit
+      - name: Check native mini program
+        working-directory: miniprogram
+        run: npm ci && npm run setup && npm run check
       - run: npm run test:server
       - run: npm run demo:check
       - run: npm run test:bundle

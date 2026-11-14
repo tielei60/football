@@ -1,0 +1,77 @@
+<view class="page"
+  ><page-state id="page-state" skeleton-type="detail"
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error && session}}"
+    ><view aria-role="button" class="card row" bindtap="profile"
+      ><view class="avatar large"
+        ><image
+          wx:if="{{player.avatar}}"
+          src="{{player.avatar}}"
+          data-target="player"
+          binderror="imageError"
+          mode="aspectFill"
+        /><text wx:else>{{player.initial || (session.user.role==='player'?'球':'管')}}</text></view
+      ><view class="grow"
+        ><view class="title">{{player.name || session.user.username}}</view
+        ><view class="muted">{{session.team.name}}</view
+        ><text class="tag"
+          >{{session.user.role==='admin'?'管理员':session.user.role==='player'?'球员':'球队成员'}}</text
+        ></view
+      ></view
+    ><view wx:if="{{session.user.role==='admin'}}" class="card section"><view class="section-title">球队管理</view><view class="management-grid"><button disabled="{{loading}}" data-page="team" bindtap="manage" class="ui-button" size="mini">球队资料</button><button disabled="{{loading}}" data-page="players" bindtap="manage" class="ui-button" size="mini">球员与账号</button><button disabled="{{loading}}" data-page="seasons" bindtap="manage" class="ui-button" size="mini">赛季管理</button><button disabled="{{loading}}" data-page="venues" bindtap="manage" class="ui-button" size="mini">球场管理</button></view></view><view wx:if="{{registration}}" class="section"
+      ><view class="section-title">{{year}} 年，我的报名</view
+      ><view class="metrics"
+        ><view class="metric"
+          ><text class="number">{{registration.yes}}</text
+          ><text class="label">参加</text></view
+        ><view class="metric"
+          ><text class="number">{{registration.no}}</text
+          ><text class="label">请假</text></view
+        ><view class="metric"
+          ><text class="number">{{registration.maybe}}</text
+          ><text class="label">待定</text></view
+        ><view class="metric"
+          ><text class="number">{{registration.unanswered}}</text
+          ><text class="label">未回应</text></view
+        ></view
+      ><view class="hint">报名状态不等于实际出场。</view></view
+    ><view class="card section"
+      ><view aria-role="button" class="between" bindtap="togglePassword"
+        ><text class="bold">修改密码</text
+        ><text class="link">{{passwordOpen?'收起':'修改 ›'}}</text></view
+      ><view wx:if="{{passwordOpen}}" style="margin-top: 24rpx"
+        ><view class="field"
+          ><input
+            class="input"
+            password
+            placeholder="当前密码"
+            value="{{currentPassword}}"
+            data-field="currentPassword" disabled="{{loading || (busy)}}"
+            bindinput="input"
+            maxlength="256" /></view
+        ><view class="field"
+          ><input
+            class="input"
+            password
+            placeholder="新密码，至少10个字符"
+            value="{{newPassword}}"
+            data-field="newPassword" disabled="{{loading || (busy)}}"
+            bindinput="input"
+            maxlength="256" /></view
+        ><button
+          class="primary ui-button ui-block"
+          loading="{{busy}}"
+          disabled="{{loading || (busy)}}"
+          bindtap="changePassword"
+         size="mini">保存并重新登录</button></view
+      ></view
+    ><button disabled="{{loading}}" bindtap="tactics" class="ui-button ui-block" size="mini">球队战术板</button><view class="hint"
+      >球队资料仅用于本俱乐部管理。</view
+    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
+    ><button class="danger ui-button ui-block" disabled="{{loading || (busy)}}" bindtap="logout" size="mini">退出 / 切换账号</button></block
+  ></view
+>
+
+<business-dialog id="business-dialog"/>

@@ -1,0 +1,3 @@
+.position-options{display:flex;flex-wrap:wrap;gap:14rpx}.position-options .selected{background:var(--brand);color:#fff}.admin-header{margin-bottom:28rpx}.picture-preview{width:140rpx;height:140rpx;border-radius:28rpx;background:var(--brand-soft)}
+/* Page-specific density, hierarchy and long-content safeguards. */
+.admin-header{gap:16rpx;align-items:center;margin-bottom:22rpx}.admin-header .title{min-width:0;font-size:34rpx}.admin-header button{width:auto;flex-shrink:0;margin:0}.card{padding:22rpx 24rpx}.card .grow{min-width:0}.card .bold{overflow-wrap:anywhere}.card .tag{flex-shrink:0}.card .muted{line-height:1.6;font-size:24rpx}

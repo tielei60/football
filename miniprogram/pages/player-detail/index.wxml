@@ -1,0 +1,63 @@
+<view class="page"
+  ><page-state id="page-state" skeleton-type="detail"
+    loading="{{loading}}"
+    error="{{error}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error && player}}"
+    ><view class="card"
+      ><view class="row"
+        ><view class="avatar large"
+          ><image
+            wx:if="{{player.avatar}}"
+            src="{{player.avatar}}"
+            data-target="player"
+            binderror="imageError"
+            mode="aspectFill"
+          /><text wx:else>{{player.initial}}</text></view
+        ><view class="grow"
+          ><view class="title">{{player.name}}</view
+          ><view class="muted"
+            >{{player.numberLabel}} 号 · {{player.positionLabel}}</view
+          ><text class="tag"
+            >{{player.status==='active'?'在队':'已归档'}}</text
+          ></view
+        ></view
+      ><view class="divider"></view
+      ><view class="between"
+        ><text class="muted">惯用脚</text
+        ><text>{{player.preferredFoot || '未设置'}}</text></view
+      ></view
+    ><block wx:if="{{record}}"
+      ><view class="section-title">{{scopeLabel}} · 表现</view
+      ><view class="metrics"
+        ><view class="metric"
+          ><text class="number">{{record.appearances}}</text
+          ><text class="label">确认出场</text></view
+        ><view class="metric"
+          ><text class="number">{{record.goalsLabel}}</text
+          ><text class="label">已记录进球</text></view
+        ><view class="metric"
+          ><text class="number">{{record.assistsLabel}}</text
+          ><text class="label">已记录助攻</text></view
+        ></view
+      ><view class="hint"
+        >进球有记录 {{record.goalsKnownMatches}} 场 · 助攻有记录
+        {{record.assistsKnownMatches}} 场 · 出场待确认
+        {{record.unknownAppearances}} 场 · 未录入名单
+        {{record.unrecordedMatches}} 场</view
+      ><view class="card"
+        ><view class="section-title">报名记录</view
+        ><view class="row wrap"
+          ><text class="tag">参加 {{record.registration.yes}}</text
+          ><text class="tag">请假 {{record.registration.no}}</text
+          ><text class="tag">待定 {{record.registration.maybe}}</text
+          ><text class="tag"
+            >未回应 {{record.registration.unanswered}}</text
+          ></view
+        ></view
+      ></block
+    ></block
+  ></view
+>
+
+<business-dialog id="business-dialog"/>

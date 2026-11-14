@@ -1,0 +1,17 @@
+.title{font-size:32rpx;font-weight:650;margin-bottom:16rpx}.row{display:flex;gap:10rpx;align-items:center;margin:12rpx 0}.grow{flex:1;min-width:0}.small{font-size:24rpx;padding:8rpx 14rpx;line-height:1.6;flex-shrink:0}.picker{font-size:25rpx;padding:12rpx;background:var(--brand-soft);border-radius:12rpx}.board-wrap{background:#e8eff1;border-radius:16rpx;overflow:hidden}.board-wrap canvas{display:block;margin:auto}.hint{font-size:23rpx;line-height:1.5;color:var(--muted);margin:10rpx 0}input{background:#fff;border:1rpx solid #e7deec;border-radius:12rpx;padding:12rpx;font-size:26rpx}.card label{display:block;margin:18rpx 0}.card .picker{margin:10rpx 0}
+
+.row button{width:auto;min-width:0;margin:0;flex-shrink:0}.row business-picker,.row input{min-width:0}.picker{box-sizing:border-box}.row business-picker:not(.grow){flex:1}
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.title{font-size:32rpx;line-height:1.4;overflow-wrap:anywhere}.row{gap:10rpx}.small{min-height:64rpx;font-size:23rpx}.picker{background:var(--brand-soft);color:var(--brand-ink);line-height:1.5;overflow-wrap:anywhere}.row input{min-height:64rpx;box-sizing:border-box}.board-wrap{border:1rpx solid var(--line)}.card label{font-size:24rpx;color:var(--muted)}.card label input{margin-top:8rpx;color:var(--ink)}.hint{font-size:23rpx;line-height:1.6}
+
+.canvas-focus{padding:8rpx 16rpx 16rpx}.canvas-focus .row{margin:6rpx 0;gap:8rpx}.canvas-focus .picker{padding:10rpx;min-height:60rpx;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.canvas-focus .small{min-height:60rpx;padding:8rpx 12rpx}.canvas-focus .board-wrap{margin-top:8rpx}
+
+/* Compact selectors keep the portrait pitch dominant. */
+.picker{background:#fff;border:1rpx solid #e8e1ef;border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
+.canvas-focus .picker,.canvas-focus .editor-tools .picker{min-height:60rpx;padding:10rpx 12rpx}
+.canvas-focus .picker-value,.editor-tools .picker-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.page button.small{min-width:0;width:auto;margin:0;line-height:1.5;box-sizing:border-box}
+.page button.primary:not(.small){width:100%;min-width:0;margin:16rpx 0;line-height:1.5;padding:18rpx 20rpx}
+input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing:border-box}

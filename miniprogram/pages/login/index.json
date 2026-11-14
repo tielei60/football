@@ -1,0 +1,5 @@
+{
+  "navigationBarTitleText": "登录俱乐部",
+  "enablePullDownRefresh": false,
+  "usingComponents": { "page-state": "/components/page-state/index" }
+}

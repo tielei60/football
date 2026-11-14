@@ -1,0 +1,16 @@
+.title{font-size:32rpx;font-weight:650;margin:14rpx 0}.row,.slot{display:flex;align-items:center;gap:12rpx;margin:12rpx 0}.grow{flex:1;min-width:0}.row button{width:auto;min-width:0;flex-shrink:0;margin:0}.small{font-size:25rpx;padding:8rpx 16rpx}.picker{box-sizing:border-box;background:var(--brand-soft);border-radius:12rpx;padding:14rpx;font-size:26rpx;min-width:0}.slot>text{width:105rpx;font-size:25rpx;color:var(--muted)}.card label{display:block;font-size:26rpx;margin:12rpx 0}input,textarea{box-sizing:border-box;background:#fff;border:1rpx solid #e7deec;border-radius:12rpx;padding:12rpx;width:100%;font-size:27rpx}.hint{font-size:24rpx;line-height:1.6;color:var(--muted);margin:12rpx 0}.preview{border-radius:16rpx;background:#e8eff1;margin-top:20rpx;padding:12rpx}.preview canvas{display:block;margin:auto}
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.title{font-size:32rpx;line-height:1.4}.card label{font-size:24rpx;color:var(--muted)}.card input,.card textarea{margin-top:8rpx;color:var(--ink)}.roster{padding:6rpx 0}.slot{gap:12rpx}.slot>text{width:96rpx;flex-shrink:0;font-size:23rpx;color:var(--muted);font-variant-numeric:tabular-nums}.slot .picker{font-size:25rpx;line-height:1.5;white-space:normal;overflow-wrap:anywhere}.preview{border:1rpx solid var(--line);padding:16rpx}.hint{font-size:23rpx;line-height:1.65}
+
+.preview-toggle{width:100%;margin:8rpx 0;font-size:26rpx;min-height:72rpx;line-height:40rpx;padding:12rpx}.preview-focus{padding:8rpx 16rpx 16rpx}.preview-focus .preview{padding:0;margin-top:8rpx}.preview-focus .preview-toggle{margin:0}.preview-focus .hint{font-size:22rpx}
+
+/* Compact selectors keep the portrait pitch dominant. */
+.picker{background:#fff;border:1rpx solid #e8e1ef;border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
+.canvas-focus .picker,.canvas-focus .editor-tools .picker{min-height:60rpx;padding:10rpx 12rpx}
+.canvas-focus .picker-value,.editor-tools .picker-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Native input has a default fixed height; include padding without clipping glyphs. */
+.card input{height:84rpx;min-height:84rpx;line-height:48rpx;padding:0 14rpx;box-sizing:border-box}
+
+.page button.preview-toggle{width:100%;min-width:0;box-sizing:border-box}
+.page button.primary{width:100%;min-width:0;margin:20rpx 0 0;line-height:1.5;padding:18rpx 20rpx}

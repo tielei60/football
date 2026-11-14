@@ -1,0 +1,89 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/schedule/index",
+    "pages/players/index",
+    "pages/statistics/index",
+    "pages/me/index",
+    "pages/login/index",
+    "pages/match-detail/index",
+    "pages/player-detail/index",
+    "pages/match-edit/index",
+    "pages/manage-team/index",
+    "pages/manage-players/index",
+    "pages/manage-player/index",
+    "pages/manage-seasons/index",
+    "pages/manage-season/index",
+    "pages/manage-venues/index",
+    "pages/manage-venue/index",
+    "pages/match-roster/index",
+    "pages/season-roster/index",
+    "pages/match-media/index",
+    "pages/tactics/index",
+    "pages/tactic-board/index",
+    "pages/tactic-compose/index",
+    "pages/tactic-transfer/index",
+    "pages/tactic-setup/index",
+    "pages/tactic-export/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "足球俱乐部",
+    "navigationBarBackgroundColor": "#F8F5FA",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F8F5FA",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#827589",
+    "selectedColor": "#8845A0",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/home.png",
+        "selectedIconPath": "assets/home-active.png"
+      },
+      {
+        "pagePath": "pages/schedule/index",
+        "text": "赛程",
+        "iconPath": "assets/schedule.png",
+        "selectedIconPath": "assets/schedule-active.png"
+      },
+      {
+        "pagePath": "pages/players/index",
+        "text": "球员",
+        "iconPath": "assets/players.png",
+        "selectedIconPath": "assets/players-active.png"
+      },
+      {
+        "pagePath": "pages/statistics/index",
+        "text": "统计",
+        "iconPath": "assets/statistics.png",
+        "selectedIconPath": "assets/statistics-active.png"
+      },
+      {
+        "pagePath": "pages/me/index",
+        "text": "我的",
+        "iconPath": "assets/me.png",
+        "selectedIconPath": "assets/me-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于管理员选择球场位置，方便球队成员查看比赛地点"
+    }
+  },
+  "requiredPrivateInfos": [
+    "chooseLocation"
+  ],
+  "usingComponents": {
+    "business-dialog": "/components/business-dialog/index",
+    "business-picker": "/components/business-picker/index",
+    "loading-skeleton": "/components/loading-skeleton/index"
+  }
+}

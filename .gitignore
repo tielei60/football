@@ -21,3 +21,8 @@ playwright-report/
 # Fictional local demo manifests contain per-run credentials.
 demo-manifest.json
 .football-demo-owned
+
+# 微信小程序本机配置；使用 example 模板初始化。
+/miniprogram/config.js
+/miniprogram/project.config.json
+/miniprogram/project.private.config.json

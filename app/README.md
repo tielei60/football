@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/CJ-cooper6/coco-tacticx">
-    <img src="https://raw.githubusercontent.com/CJ-cooper6/coco-tacticx/refs/heads/main/public/logo.svg" alt="Logo" width="80" height="80">
+    <img src="https://raw.githubusercontent.com/CJ-cooper6/coco-tacticx/refs/heads/main/public/logo.svg" alt="项目标志" width="80" height="80">
   </a>
 
   <p align="center">
@@ -14,7 +14,7 @@
   <div align="center">
   <figure>
     <a target="_blank" rel="noopener">
-      <img src="https://raw.githubusercontent.com/CJ-cooper6/coco-tacticx/refs/heads/main/public/case-2.png" alt="showcase"/>
+      <img src="https://raw.githubusercontent.com/CJ-cooper6/coco-tacticx/refs/heads/main/public/case-2.png" alt="界面展示"/>
     </a>
   </figure>
 </div>

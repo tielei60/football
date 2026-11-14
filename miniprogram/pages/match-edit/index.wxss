@@ -1,0 +1,3 @@
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.field-label{font-size:24rpx;line-height:1.5;margin-bottom:10rpx}.filter-row{align-items:flex-start;gap:16rpx}.filter-row>.grow{min-width:0}.card .picker{white-space:normal;line-height:1.45;overflow-wrap:anywhere}.card textarea{min-height:180rpx;line-height:1.65}.title{font-size:34rpx}.subtitle{line-height:1.6}.actions{gap:14rpx}.page button.small.ghost{font-size:24rpx}

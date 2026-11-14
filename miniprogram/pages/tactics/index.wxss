@@ -1,0 +1,4 @@
+.tag { margin-top: 14rpx; }
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.title{font-size:34rpx;line-height:1.4;overflow-wrap:anywhere}.card .between{gap:18rpx;align-items:flex-start}.card .bold{font-size:29rpx;min-width:0;line-height:1.5;overflow-wrap:anywhere}.card .link{flex-shrink:0;font-size:24rpx}.card .muted{margin:8rpx 0 14rpx;font-size:24rpx}.card .tag{font-size:22rpx}.input.section{margin-bottom:24rpx}

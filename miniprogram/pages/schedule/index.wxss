@@ -1,0 +1,7 @@
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.page>.between{gap:18rpx;align-items:flex-start}.page>.between>view{min-width:0;flex:1}.page>.between button{width:auto;flex-shrink:0;margin:0}.card .between{gap:16rpx}.card .grow{min-width:0}.card .tag{flex-shrink:0}.card .score{font-size:34rpx;white-space:nowrap;font-variant-numeric:tabular-nums}.card .link{font-size:23rpx;text-align:right;flex-shrink:0}.section-title{font-size:28rpx}.card .muted{line-height:1.6;overflow-wrap:anywhere}
+
+.page>.between{align-items:center;gap:20rpx}
+.page>.between>button.ui-button[size="mini"]{flex:0 0 auto;width:auto;min-width:148rpx;min-height:76rpx;padding:18rpx 22rpx;line-height:1.4;white-space:nowrap;align-self:center}
+.page>.between>.title,.page>.between>view{min-width:0}

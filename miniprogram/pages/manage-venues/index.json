@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "球场管理",
+  "usingComponents": {
+    "page-state": "/components/page-state/index"
+  }
+}

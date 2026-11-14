@@ -1,0 +1,31 @@
+.position-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+}
+.position-options button.small {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 12rpx 8rpx;
+  line-height: 1.5;
+}
+.position-options .selected {
+  background: var(--brand);
+  color: #fff;
+}
+.admin-header { margin-bottom: 28rpx; }
+.picture-preview {
+  width: 140rpx;
+  height: 140rpx;
+  flex-shrink: 0;
+  border-radius: 28rpx;
+  background: var(--brand-soft);
+}
+.row > .avatar { flex-shrink: 0; }
+.row > .stack { flex: 1; min-width: 0; }
+.row > .stack button { width: 100%; min-width: 0; margin: 0; }
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.admin-header{gap:16rpx;align-items:flex-start;margin-bottom:22rpx}.admin-header .title{font-size:34rpx}.picture-preview,.row>.avatar{width:116rpx;height:116rpx;border-radius:24rpx}.position-options{gap:10rpx}.position-options button.small{font-size:24rpx;min-height:72rpx}.field-label{font-size:24rpx;margin-bottom:10rpx}.card textarea{min-height:160rpx;line-height:1.65}.stack{gap:10rpx}

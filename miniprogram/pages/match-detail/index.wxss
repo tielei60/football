@@ -1,0 +1,46 @@
+.match-hero {
+  text-align: center;
+  background: linear-gradient(160deg, #fff, #f3ebf7);
+}
+.teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin: 30rpx 0;
+  font-weight: 650;
+}
+.teams view {
+  flex: 1;
+  word-break: break-word;
+}
+.teams .score {
+  font-size: 40rpx;
+  white-space: nowrap;
+}
+.detail-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 30rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0ecf3;
+}
+.detail-line:last-child {
+  border: 0;
+}
+.detail-line text:last-child {
+  text-align: right;
+}
+
+.match-cover{width:100%;height:330rpx;border-radius:24rpx;margin-bottom:20rpx;background:#eee7f2}
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:18rpx;align-items:center}.teams>view{font-size:30rpx;line-height:1.4;overflow-wrap:anywhere;min-width:0}.teams>.score{font-size:40rpx;white-space:nowrap;font-variant-numeric:tabular-nums}.detail-line{gap:20rpx;align-items:flex-start;line-height:1.6}.detail-line>text:first-child{flex:1;min-width:0;overflow-wrap:anywhere}.detail-line>text.muted:first-child{flex:0 0 132rpx}.detail-line>text:last-child{min-width:0;text-align:right;overflow-wrap:anywhere}.match-cover{border-radius:22rpx}.match-hero .between{gap:14rpx}.match-hero .muted{font-size:24rpx}.fixed-actions{border-top:1rpx solid var(--line);box-shadow:0 -8rpx 30rpx rgba(41,36,49,.04)}.fixed-actions .actions button{padding:18rpx 10rpx}.card .bold{overflow-wrap:anywhere}.prewrap{line-height:1.75}
+
+button.ui-block[size="mini"]{min-height:88rpx;margin-top:16rpx}
+button.ui-block+view.card{margin-top:20rpx}
+
+.venue-location-card{margin-top:20rpx}.venue-location-title,.venue-location-address{overflow-wrap:anywhere;word-break:break-word}.venue-location-address{margin-top:8rpx;line-height:1.6}
+.match-venue-map{display:block;box-sizing:border-box;width:100%;height:460rpx;margin-top:22rpx;border-radius:18rpx;border:1rpx solid var(--line);overflow:hidden}
+.page button.venue-location-open[size="mini"]{margin-top:24rpx;min-height:84rpx}.venue-location-note{margin-top:12rpx;color:var(--muted);font-size:23rpx;line-height:1.5}.venue-location-empty{margin-top:18rpx;padding:18rpx;background:var(--canvas);border-radius:14rpx;color:var(--muted);font-size:25rpx;line-height:1.6}
+@media(min-width:600px){.match-venue-map{height:360px}}

@@ -1,0 +1,37 @@
+<view wx:if="{{modal}}" class="dialog-layer {{modal.pickerState.mode==='selector'?'selector-layer':''}}" catchtouchmove="swallow">
+ <view class="shade" bindtap="mask" aria-hidden="true"/>
+ <view class="dialog {{modal.kind==='picker'?'picker-dialog':''}} {{modal.pickerState.mode==='selector'?'selector-dialog':''}}" aria-role="dialog" aria-label="{{modal.title}}" aria-modal="true" catchtap="swallow">
+  <view wx:if="{{modal.pickerState.mode!=='selector'}}" class="eyebrow" aria-hidden="true">{{modal.danger?'请谨慎操作':'球队工作台'}}</view><view class="heading">{{modal.title}}</view><view wx:if="{{modal.pickerState.mode==='selector'}}" class="selector-count">共 {{modal.pickerState.rows.length}} 项</view>
+  <scroll-view scroll-y class="body-scroll" scroll-into-view="{{selectorAnchor}}" style="height:{{bodyHeight}}rpx;">
+   <block wx:if="{{modal.kind!=='picker'}}"><text class="body">{{modal.content}}</text><input wx:if="{{modal.editable}}" class="dialog-input" value="{{inputValue}}" placeholder="{{modal.placeholderText}}" maxlength="{{modal.maxlength}}" password="{{modal.password}}" focus="{{inputFocus}}" confirm-type="done" bindinput="input" bindconfirm="confirm" aria-label="{{modal.placeholderText||modal.title}}" adjust-position/></block>
+   <view wx:else class="picker-panel">
+    <view wx:if="{{modal.pickerState.error}}" class="picker-error">{{modal.pickerState.error}}</view>
+    <view wx:if="{{modal.pickerState.mode==='date'}}" class="picker-heading">
+     <button size="mini" class="nav-step" data-delta="-1" bindtap="pickerNavigate" aria-label="上一组日期">‹</button>
+     <button size="mini" class="calendar-heading" bindtap="pickerYears" aria-label="选择年份">{{modal.pickerState.heading}} ▾</button>
+     <button size="mini" class="nav-step" data-delta="1" bindtap="pickerNavigate" aria-label="下一组日期">›</button>
+    </view>
+    <scroll-view wx:if="{{pickerYearMode}}" scroll-y class="year-scroll" scroll-into-view="picker-year-{{modal.pickerState.viewYear}}">
+     <view class="year-grid"><button size="mini" wx:for="{{modal.pickerState.yearOptions}}" wx:key="value" id="picker-year-{{item.value}}" class="option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerYear" aria-label="{{item.label}}">{{item.label}}</button></view>
+    </scroll-view>
+    <block wx:elif="{{modal.pickerState.mode==='time'}}">
+     <view class="time-labels"><text>小时</text><text>分钟</text></view><view class="time-columns">
+      <scroll-view scroll-y class="time-scroll" scroll-into-view="{{hourAnchor}}"><button size="mini" wx:for="{{modal.pickerState.hours}}" id="picker-hour-{{index}}" wx:key="value" class="option time-option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.label}}时" aria-checked="{{item.selected}}">{{item.label}}</button></scroll-view>
+      <scroll-view scroll-y class="time-scroll" scroll-into-view="{{minuteAnchor}}"><button size="mini" wx:for="{{modal.pickerState.minutes}}" id="picker-minute-{{index}}" wx:key="value" class="option time-option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.label}}分" aria-checked="{{item.selected}}">{{item.label}}</button></scroll-view>
+     </view>
+    </block>
+    <block wx:elif="{{modal.pickerState.mode==='date'&&modal.pickerState.fields==='day'}}">
+     <view class="calendar-grid weekdays"><text wx:for="{{modal.pickerState.weekdays}}" wx:key="*this">{{item}}</text></view>
+     <view class="calendar-grid"><button size="mini" wx:for="{{modal.pickerState.days}}" wx:key="value" class="day {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.value}}" aria-checked="{{item.selected}}">{{item.label}}</button></view>
+    </block>
+    <view wx:else class="option-list {{modal.pickerState.mode==='date'?'year-grid':''}}">
+     <button size="mini" wx:for="{{modal.pickerState.rows}}" wx:key="value" id="picker-option-{{item.value}}" class="option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.label}}" aria-checked="{{item.selected}}"><text class="option-label">{{item.label}}</text><text wx:if="{{modal.pickerState.mode==='selector'}}" class="selection-mark {{item.selected?'checked':''}}" aria-hidden="true">{{item.selected?'✓':''}}</text><text wx:elif="{{item.selected}}" aria-hidden="true">✓</text></button>
+     <view wx:if="{{!modal.pickerState.rows.length}}" class="picker-empty">暂无可选项</view>
+    </view>
+    <view wx:if="{{pickerSummary && modal.pickerState.mode!=='selector'}}" class="picker-summary">{{pickerSummary}}</view>
+   </view>
+  </scroll-view>
+  <view class="buttons {{modal.showCancel?'two':'one'}}"><button size="mini" wx:if="{{modal.showCancel}}" id="business-cancel" class="cancel" bindtap="cancel" aria-label="{{modal.cancelText}}">{{modal.cancelText}}</button><button size="mini" id="business-confirm" class="confirm {{modal.danger?'danger':''}}" bindtap="confirm" disabled="{{modal.kind==='picker'&&!modal.pickerState.valid}}" aria-label="{{modal.confirmText}}">{{modal.confirmText}}</button></view>
+ </view>
+</view>
+<view wx:if="{{transient}}" class="transient-layer {{transient.mask?'masked':''}}" aria-role="alert" aria-label="{{transient.title}}"><view wx:if="{{transient.mask}}" class="loading-shade" catchtouchmove="swallow" catchtap="swallow"/><view class="notice {{transient.type==='loading'?'loading':'toast'}}" catchtap="swallow"><view wx:if="{{transient.type==='loading'}}" class="spinner" aria-hidden="true"/><text wx:elif="{{transient.icon==='success'}}" class="notice-icon success" aria-hidden="true">✓</text><text wx:elif="{{transient.icon==='error'}}" class="notice-icon danger-text" aria-hidden="true">!</text><text class="notice-text">{{transient.title||'正在处理，请稍候'}}</text></view></view>

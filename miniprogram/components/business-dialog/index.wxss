@@ -1,0 +1,55 @@
+.dialog-layer,.transient-layer{position:fixed;inset:0;z-index:10000;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;box-sizing:border-box}.shade,.loading-shade{position:absolute;inset:0;background:rgba(36,24,48,.36)}.dialog-layer{display:flex;align-items:center;justify-content:center;padding:36rpx 28rpx calc(36rpx + env(safe-area-inset-bottom))}.dialog{position:relative;width:100%;max-width:620rpx;background:#fff;border:1rpx solid #eee6f2;border-radius:32rpx;padding:34rpx;box-shadow:0 24rpx 90rpx rgba(56,28,72,.2)}.eyebrow{font-size:21rpx;letter-spacing:2rpx;color:#8845a0;margin-bottom:12rpx}.heading{font-size:34rpx;line-height:1.4;font-weight:650;color:#292431;word-break:break-all}.body-scroll{max-height:48vh;margin-top:22rpx}.body{font-size:28rpx;line-height:1.65;color:#706578;white-space:pre-wrap;word-break:break-word}.dialog-input{box-sizing:border-box;margin-top:22rpx;width:100%;height:92rpx;padding:0 22rpx;border:2rpx solid #c4a4d3;background:#faf7fc;border-radius:16rpx;font-size:30rpx;color:#292431}.buttons{display:grid;gap:16rpx;margin-top:32rpx}.buttons.two{grid-template-columns:repeat(2,minmax(0,1fr))}.buttons.one{grid-template-columns:minmax(0,1fr)}button{box-sizing:border-box;margin:0;width:100%;min-width:0;min-height:88rpx;border:0;border-radius:18rpx;padding:22rpx 12rpx;font-size:28rpx;line-height:1.5;font-weight:600}button::after{border:0}.cancel{background:#f2edf5;color:#75647e}.confirm{background:#8845a0;color:#fff}.confirm.danger{background:#b04758}.transient-layer{z-index:9999;pointer-events:none}.transient-layer.masked{pointer-events:auto}.loading-shade{background:rgba(36,24,48,.18)}.notice{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:18rpx;box-sizing:border-box;width:max-content;max-width:620rpx;padding:24rpx 30rpx;border:1rpx solid #e5dceb;border-radius:22rpx;background:#fff;box-shadow:0 12rpx 48rpx rgba(56,28,72,.16)}.toast{top:calc(28rpx + env(safe-area-inset-top))}.loading{top:42%;min-width:280rpx}.notice-text{font-size:27rpx;line-height:1.5;color:#42334d;word-break:break-word}.notice-icon{font-size:35rpx;font-weight:700;flex-shrink:0}.success{color:#527f64}.danger-text{color:#b04758}.spinner{width:34rpx;height:34rpx;flex-shrink:0;border:4rpx solid #e7d8ee;border-top-color:#8845a0;border-radius:50%;animation:business-spin .8s linear infinite}@keyframes business-spin{to{transform:rotate(360deg)}}.dialog{box-sizing:border-box;max-height:calc(100vh - 72rpx - env(safe-area-inset-bottom));display:flex;flex-direction:column;min-height:0}.heading,.eyebrow,.buttons{flex-shrink:0}.body-scroll{min-height:0;flex:1;max-height:48vh}.heading{max-height:18vh;overflow:hidden}@media (max-height:450px){.dialog-layer{padding:12rpx 24rpx}.dialog{max-height:calc(100vh - 24rpx);padding:18rpx 28rpx}.eyebrow{display:none}.heading{font-size:30rpx;max-height:14vh}.body-scroll{margin-top:12rpx;max-height:40vh}.buttons{margin-top:16rpx}}
+
+.picker-dialog{max-width:680rpx}.picker-heading{display:flex;align-items:center;gap:10rpx;margin-bottom:18rpx}.nav-step{width:64rpx;min-height:64rpx;flex-shrink:0;padding:4rpx;font-size:40rpx;background:#f2edf5;color:#633277}.calendar-heading{flex:1;min-width:0;min-height:64rpx;background:#fff;color:#633277;padding:12rpx;font-size:28rpx}.option-list{display:flex;flex-direction:column;gap:10rpx}.option{display:flex;align-items:center;justify-content:space-between;gap:12rpx;box-sizing:border-box;width:100%;min-width:0;min-height:78rpx;margin:0;padding:18rpx 22rpx;background:#f7f4f9;color:#42334d;text-align:left;font-size:27rpx;font-weight:500}.option-label{flex:1;min-width:0;word-break:break-word}.option.selected,.day.selected{background:#8845a0;color:#fff}.option[disabled],.day[disabled]{opacity:.32}.year-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10rpx}.year-grid .option{justify-content:center;padding:14rpx 6rpx;font-size:25rpx}.year-scroll{height:340rpx}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8rpx}.weekdays{color:#81788b;text-align:center;font-size:24rpx;margin-bottom:12rpx}.day{min-width:0;width:100%;min-height:64rpx;padding:14rpx 0;margin:0;font-size:25rpx;font-weight:500;background:#f7f4f9;color:#42334d;border-radius:12rpx}.time-labels,.time-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20rpx}.time-labels{text-align:center;color:#81788b;font-size:24rpx;margin-bottom:10rpx}.time-scroll{height:320rpx}.time-option{justify-content:center;margin-bottom:8rpx}.picker-summary{padding:20rpx 4rpx 0;color:#633277;font-size:25rpx;text-align:center;word-break:break-word}.picker-error{color:#b04758;padding:12rpx 0;font-size:26rpx}.picker-empty{padding:30rpx;color:#81788b;text-align:center;font-size:26rpx}
+
+.body-scroll{flex:0 1 auto}
+
+/* Explicit sizes keep native scroll-view/button intrinsic widths inside the card. */
+.dialog,.body-scroll,.picker-panel,.time-columns,.time-scroll,.buttons{box-sizing:border-box;min-width:0}
+.body-scroll,.picker-panel,.time-columns,.buttons{width:100%;max-width:100%}
+.buttons,.buttons.two,.buttons.one{display:flex;gap:16rpx}
+.buttons>button{flex:1 1 0;width:0;min-width:0;max-width:100%;box-sizing:border-box;margin:0}
+.time-columns{display:flex;gap:20rpx}
+.time-scroll{flex:1 1 0;width:0;min-width:0}
+.time-option{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+
+/* Override WeChat button:not([size=mini]) width with explicit component selectors. */
+.picker-panel .picker-heading{display:flex;width:100%;min-width:0;box-sizing:border-box;gap:10rpx}
+.picker-panel button.nav-step{flex:0 0 64rpx;width:64rpx;min-width:64rpx;max-width:64rpx;margin:0;box-sizing:border-box}
+.picker-panel button.calendar-heading{flex:1 1 0;width:0;min-width:0;max-width:100%;margin:0;box-sizing:border-box;white-space:nowrap}
+.picker-panel .calendar-grid{display:flex;flex-wrap:wrap;flex-direction:row;width:100%;min-width:0;gap:0;box-sizing:border-box}
+.picker-panel .calendar-grid button.day,.picker-panel .calendar-grid.weekdays>text{flex:0 0 calc(14.285714% - 8rpx);width:calc(14.285714% - 8rpx);min-width:0;max-width:calc(14.285714% - 8rpx);margin:4rpx;box-sizing:border-box;text-align:center}
+.picker-panel .year-grid{display:flex;flex-wrap:wrap;flex-direction:row;width:100%;min-width:0;gap:0;box-sizing:border-box}
+.picker-panel .year-grid button.option{flex:0 0 calc(33.333333% - 10rpx);width:calc(33.333333% - 10rpx);min-width:0;max-width:calc(33.333333% - 10rpx);margin:5rpx;box-sizing:border-box}
+.picker-panel .option-list:not(.year-grid) button.option,.picker-panel button.time-option{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.picker-panel .year-scroll{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+
+.dialog button[disabled]{opacity:.48;box-shadow:none}
+.dialog button:focus-visible{outline:3rpx solid #bd93cf;outline-offset:3rpx}
+.dialog button.confirm{box-shadow:0 4rpx 12rpx rgba(99,50,119,.12)}
+.dialog button{word-break:break-word}
+@media(prefers-reduced-motion:reduce){.spinner{animation:none}}
+
+/* Mini is only an opt-out of WeChat default width, not a source of control spacing. */
+.dialog button[size="mini"]{box-sizing:border-box;font-size:28rpx;line-height:1.5}
+.dialog .buttons>button[size="mini"]{flex:1 1 0;width:0;min-width:0;min-height:88rpx;margin:0;padding:22rpx 12rpx;white-space:normal}
+.dialog .picker-panel button.nav-step[size="mini"]{flex:0 0 64rpx;width:64rpx;min-width:64rpx;max-width:64rpx;height:64rpx;min-height:64rpx;padding:0;margin:0;line-height:64rpx;font-size:36rpx;white-space:nowrap}
+.dialog .picker-panel button.calendar-heading[size="mini"]{flex:1 1 0;width:0;min-width:0;height:64rpx;min-height:64rpx;padding:0 8rpx;margin:0;line-height:64rpx;font-size:28rpx;white-space:nowrap}
+.dialog .picker-panel .calendar-grid button.day[size="mini"]{flex:0 0 calc(14.285714% - 8rpx);width:calc(14.285714% - 8rpx);min-width:0;max-width:calc(14.285714% - 8rpx);height:64rpx;min-height:64rpx;max-height:64rpx;margin:4rpx;padding:0;line-height:64rpx;font-size:25rpx;white-space:nowrap;word-break:normal;overflow:hidden}
+.dialog .picker-panel .year-grid button.option[size="mini"]{flex:0 0 calc(33.333333% - 10rpx);width:calc(33.333333% - 10rpx);min-width:0;max-width:calc(33.333333% - 10rpx);min-height:78rpx;margin:5rpx;padding:14rpx 4rpx;line-height:1.5;font-size:25rpx;white-space:nowrap;word-break:normal}
+.dialog .picker-panel .option-list:not(.year-grid) button.option[size="mini"]{width:100%;min-width:0;max-width:100%;min-height:78rpx;margin:0;padding:18rpx 22rpx;line-height:1.5;font-size:27rpx;white-space:normal}
+.dialog .picker-panel button.time-option[size="mini"]{width:100%;min-width:0;max-width:100%;min-height:78rpx;margin:0 0 8rpx;padding:18rpx 12rpx;line-height:1.5;font-size:27rpx;white-space:nowrap;word-break:normal}
+
+/* Ordinary choices use a quiet bottom sheet; date/time geometry stays unchanged. */
+.dialog-layer.selector-layer{align-items:flex-end;padding:0 16rpx calc(16rpx + env(safe-area-inset-bottom))}
+.dialog.selector-dialog{max-width:720rpx;border-radius:30rpx;padding:30rpx 28rpx 26rpx;box-shadow:0 -12rpx 64rpx rgba(56,28,72,.12)}
+.selector-dialog .heading{font-size:32rpx;line-height:1.45}
+.selector-count{margin-top:8rpx;font-size:23rpx;line-height:1.5;color:var(--muted,#716779)}
+.selector-dialog .body-scroll{margin-top:20rpx;max-height:48vh}
+.selector-dialog .option-list{gap:8rpx}
+.dialog.selector-dialog .picker-panel .option-list button.option[size="mini"]{display:flex;align-items:center;justify-content:space-between;gap:20rpx;min-height:84rpx;padding:18rpx 18rpx;border:1rpx solid var(--line,#eae5ef);border-radius:16rpx;background:var(--surface,#fff);color:var(--ink,#292431);font-size:27rpx;font-weight:500;text-align:left}
+.dialog.selector-dialog .picker-panel .option-list button.option.selected[size="mini"]{background:var(--brand-soft,#f0e7f5);color:var(--brand-ink,#633277);border-color:#d8c2e2;font-weight:600}
+.selector-dialog .option-label{display:block;flex:1 1 0;min-width:0;white-space:normal;word-break:break-word;line-height:1.6}
+.selection-mark{display:flex;align-items:center;justify-content:center;flex:0 0 34rpx;width:34rpx;height:34rpx;box-sizing:border-box;border:2rpx solid #d8cddd;border-radius:50%;font-size:23rpx;line-height:1;background:var(--surface,#fff)}
+.selection-mark.checked{border-color:var(--brand,#8845a0);background:var(--brand,#8845a0);color:#fff}
+.selector-dialog .buttons{margin-top:22rpx;padding-top:20rpx;border-top:1rpx solid var(--line,#eae5ef)}

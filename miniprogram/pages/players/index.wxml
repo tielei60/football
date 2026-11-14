@@ -1,0 +1,58 @@
+<view class="page"
+  ><view class="title">我们的队员</view
+  ><view class="subtitle">熟悉彼此，一起配合</view
+  ><input disabled="{{loading}}"
+    class="input"
+    style="margin-top: 26rpx"
+    placeholder="搜索姓名或号码"
+    value="{{search}}"
+    bindinput="search"
+    maxlength="100"
+  /><view class="tabs"
+    ><view aria-role="button"
+      class="tab {{status==='active'?'active':''}}"
+      data-status="active"
+      bindtap="changeTab"
+      >在队球员</view
+    ><view aria-role="button"
+      class="tab {{status==='inactive'?'active':''}}"
+      data-status="inactive"
+      bindtap="changeTab"
+      >历史队员</view
+    ></view
+  ><business-picker title="球员位置" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
+    range="{{positions}}"
+    value="{{positionIndex}}"
+    bindchange="position"
+    style="display: block; margin-bottom: 22rpx"
+    ><view class="picker"><text class="picker-value">{{positions[positionIndex]}}</text></view></business-picker
+  ><page-state id="page-state" skeleton-type="list"
+    loading="{{loading}}"
+    error="{{error}}"
+    empty="{{!visible.length}}"
+    bind:retry="refresh"
+  /><block wx:if="{{!loading && !error}}"
+    ><view aria-role="button"
+      wx:for="{{visible}}"
+      wx:key="id"
+      class="card row"
+      data-id="{{item.id}}"
+      bindtap="openPlayer"
+      ><view class="avatar"
+        ><image
+          wx:if="{{item.avatar}}"
+          src="{{item.avatar}}"
+          data-target="list"
+          data-index="{{index}}"
+          binderror="imageError"
+          mode="aspectFill"
+        /><text wx:else>{{item.initial}}</text></view
+      ><view class="grow"
+        ><view class="bold">{{item.name}}</view
+        ><view class="muted">{{item.positionLabel}}</view></view
+      ><text class="jersey">{{item.numberLabel}}</text></view
+    ></block
+  ></view
+>
+
+<business-dialog id="business-dialog"/>

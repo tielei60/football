@@ -1,0 +1,28 @@
+.rank-row {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eee8f1;
+}
+.rank-row:last-child {
+  border: 0;
+}
+.rank {
+  width: 34rpx;
+  color: #a18aad;
+  font-weight: 650;
+}
+.rank-value {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+
+.score-summary { flex-wrap: wrap; gap: 12rpx 20rpx; }
+.score-summary > text { white-space: nowrap; }
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.metrics{gap:12rpx}.metric .number{font-size:38rpx;font-variant-numeric:tabular-nums}.rank-row{gap:18rpx;padding:22rpx 0}.rank-row .grow{min-width:0}.rank-row .bold{overflow-wrap:anywhere}.rank-value{font-size:34rpx;color:var(--brand-ink);font-variant-numeric:tabular-nums}.score-summary{flex-wrap:wrap;gap:8rpx;font-size:25rpx}.card>.bold{overflow-wrap:anywhere}.filter-row .picker{white-space:normal;line-height:1.45}
+
+.card .between{gap:16rpx}.card .between>.muted{min-width:0;overflow-wrap:anywhere}.card .between>text:last-child{flex-shrink:0}.card>.bold{line-height:1.5;word-break:break-word}
+
+.rank,.rank-value{flex-shrink:0;white-space:nowrap}.rank{min-width:56rpx}
+.score-summary>text{white-space:normal;overflow-wrap:anywhere;min-width:0}

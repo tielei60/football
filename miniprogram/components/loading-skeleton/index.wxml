@@ -1,0 +1,12 @@
+<view class="skeleton {{animated?'animated':''}} {{variant}}" aria-role="status" aria-label="{{label}}" aria-busy="true">
+ <view class="sr-only">{{label}}</view>
+ <view aria-hidden="true">
+  <view wx:if="{{variant==='detail'}}" class="hero"><view class="block crest"/><view class="block title"/><view class="block short"/><view class="metrics"><view class="block metric"/><view class="block metric"/><view class="block metric"/></view></view>
+  <view class="items">
+   <view wx:for="{{items}}" wx:key="*this" class="item">
+    <block wx:if="{{variant==='form'}}"><view class="block field-label"/><view class="block field"/></block>
+    <block wx:else><view wx:if="{{variant!=='detail'}}" class="block avatar"/><view class="lines"><view class="block line"/><view class="block line medium"/><view wx:if="{{variant==='cards'}}" class="block line short"/></view></block>
+   </view>
+  </view>
+ </view>
+</view>

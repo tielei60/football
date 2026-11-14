@@ -1,0 +1,34 @@
+.hero {
+  padding: 30rpx;
+  border-radius: 30rpx;
+  background: linear-gradient(135deg, #f0e3f5, #eaf3fa);
+  border: 1rpx solid #e8dcef;
+}
+.hero .title {
+  font-size: 38rpx;
+  margin-top: 6rpx;
+}
+.hero-metrics {
+  display: flex;
+  margin-top: 34rpx;
+  gap: 48rpx;
+  color: var(--muted);
+  font-size: 22rpx;
+}
+.hero-number {
+  display: block;
+  font-size: 42rpx;
+  color: var(--brand-ink);
+  font-weight: 750;
+}
+.next {
+  border-color: #d8c3e2;
+}
+.match-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin: 24rpx 0 14rpx;
+}
+
+/* Page-specific density, hierarchy and long-content safeguards. */
+.hero{padding:28rpx;border-radius:24rpx;background:linear-gradient(145deg,var(--surface),var(--brand-soft));border-color:var(--line)}.hero .title{font-size:36rpx;line-height:1.35}.hero .subtitle{font-size:20rpx;letter-spacing:1rpx}.hero-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16rpx;margin-top:28rpx;padding-top:24rpx;border-top:1rpx solid var(--line)}.hero-number{font-size:38rpx;line-height:1.25;color:var(--brand-ink);font-variant-numeric:tabular-nums}.match-title{font-size:32rpx;line-height:1.4;overflow-wrap:anywhere;margin:20rpx 0 12rpx}.next{border-color:var(--brand-soft)}.hero .avatar{width:96rpx;height:96rpx;border-radius:22rpx}.hero .grow{min-width:0}.card .score{flex-shrink:0;font-variant-numeric:tabular-nums}

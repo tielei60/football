@@ -1,0 +1,3 @@
+.position-options{display:flex;flex-wrap:wrap;gap:14rpx}.position-options .selected{background:var(--brand);color:#fff}.admin-header{margin-bottom:28rpx}.picture-preview{width:140rpx;height:140rpx;border-radius:28rpx;background:var(--brand-soft)}
+/* Page-specific density, hierarchy and long-content safeguards. */
+.admin-header{font-size:34rpx;margin-bottom:22rpx}.field-label{font-size:24rpx;margin-bottom:10rpx}.field{margin-bottom:24rpx}.hint{font-size:24rpx;line-height:1.7}.page>button{margin-top:16rpx}

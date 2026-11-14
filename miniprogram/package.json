@@ -1,0 +1,14 @@
+{
+  "name": "football-native-miniprogram",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "npm test && node scripts/check-templates.cjs",
+    "setup": "node scripts/setup-config.cjs",
+    "pretest": "npm run setup"
+  },
+  "devDependencies": {
+    "miniprogram-compiler": "0.2.3"
+  }
+}
