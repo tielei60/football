@@ -14,7 +14,7 @@
           mode="aspectFill"
         /><text wx:else>{{player.initial || (session.user.role==='player'?'球':'管')}}</text></view
       ><view class="grow"
-        ><view class="title">{{player.name || session.user.username}}</view
+        ><text wx:if="{{player.avatarGenerated}}" class="tag generated-origin">{{player.avatarOriginLabel}}</text><view class="title">{{player.name || session.user.username}}</view
         ><view class="muted team-name">{{session.team.name}}</view
         ><text class="tag"
           >{{session.user.role==='admin'?'管理员':session.user.role==='player'?'球员':'球队成员'}}</text

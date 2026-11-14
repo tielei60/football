@@ -47,6 +47,10 @@ function clear(k, id) {
   if (receipt(k)?.requestId === id) wx.removeStorageSync(k);
 }
 Page({
+  openAi() {
+    if (!this.data.admin || this._hidden || this._disposed || this.data.busy || this.data.loading) return;
+    wx.navigateTo({url: "/pages/player-ai/index?id=" + encodeURIComponent(this.id)});
+  },
   data: {
     loading: true,
     error: "",
@@ -232,6 +236,8 @@ Page({
         photos: list.photos.map((x) => ({
           id: x.id,
           caption: x.caption || "",
+          generated: x.generated === true,
+          originLabel: x.simulation === true || x.originKind === "local-simulation" ? "模拟图" : x.aiGenerated === true ? "AI 生成" : "生成图",
           draft: local
             ? (this.data.photos.find((p) => p.id === x.id)?.draft ??
               x.caption ??

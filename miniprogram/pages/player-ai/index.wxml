@@ -1,0 +1,71 @@
+<view class="page">
+  <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
+  <block wx:if="{{!loading&&!error&&admin}}">
+    <view class="title">{{playerName}}</view>
+    <view class="subtitle">出场照与头像</view>
+    <view wx:if="{{!enabled}}" class="card">
+<view class="section-title">生成服务尚未启用</view>
+<view class="muted">暂不接收照片。服务端完成处理方、授权及费用策略配置后才能使用。</view>
+</view>
+    <block wx:else>
+      <view wx:if="{{mode==='local-simulation'}}" class="ai-warning">本地模拟，不是真实 AI 生成。仅使用内置几何样本，不上传个人照片。</view>
+      <view wx:if="{{disclosureText}}" class="card muted">{{disclosureText}}</view>
+      <view class="card">
+        <view class="section-title">1 · 用途与素材</view>
+        <text class="field-label">用途</text>
+        <business-picker title="照片用途" range="{{purposes}}" value="{{purposeIndex}}" data-field="purposeIndex" bindchange="select" bind:pickeropen="openBusinessPicker" disabled="{{busy||pending||sourceReady||setupLocked}}">
+<view class="picker">
+<text class="picker-value">{{purposes[purposeIndex]}}</text>
+</view>
+</business-picker>
+        <text class="field-label">风格</text>
+        <business-picker title="照片风格" range="{{styles}}" range-key="label" value="{{styleIndex}}" data-field="styleIndex" bindchange="select" bind:pickeropen="openBusinessPicker" disabled="{{busy||pending||sourceReady||setupLocked}}">
+<view class="picker">
+<text class="picker-value">{{styles[styleIndex].label||'暂无可用风格'}}</text>
+</view>
+</business-picker>
+        <block wx:if="{{uploadMode==='sample'}}">
+<text class="field-label">模拟样本</text>
+<business-picker title="内置几何样本" range="{{samples}}" range-key="label" value="{{sampleIndex}}" data-field="sampleIndex" bindchange="select" bind:pickeropen="openBusinessPicker" disabled="{{busy||pending||sourceReady||setupLocked}}">
+<view class="picker">
+<text class="picker-value">{{samples[sampleIndex].label||'暂无可用样本'}}</text>
+</view>
+</business-picker>
+</block>
+        <block wx:elif="{{uploadMode==='file'}}">
+<view class="hint">仅选择已获本人及必要监护授权的 PNG/JPG，最多 2 MB。</view>
+<image wx:if="{{preview}}" src="{{preview}}" mode="aspectFit" class="ai-picture"/>
+<button id="ai-choose" class="ui-button ui-block" size="mini" bindtap="choose" disabled="{{busy||pending||sourceReady}}">选择原图</button>
+</block>
+        <button id="ai-prepare" class="primary ui-button ui-block" size="mini" bindtap="prepare" disabled="{{busy||pending||sourceReady||!styles.length}}">{{sourceReady?'素材已准备':uploadMode==='sample'?'准备模拟样本':'上传私有原图'}}</button>
+      </view>
+      <view class="card">
+<view class="section-title">2 · 生成与核对</view>
+<view class="muted">{{priceLabel}}</view>
+<button id="ai-generate" class="primary ui-button ui-block" size="mini" bindtap="generate" disabled="{{busy||pending||!sourceReady||job}}">{{mode==='local-simulation'?'生成模拟候选':'生成候选'}}</button>
+<view wx:if="{{job}}" class="ai-status">{{job.label}}</view>
+<view class="ai-actions" wx:if="{{job}}">
+<button size="mini" class="ui-button" bindtap="poll" disabled="{{busy||pending}}">刷新状态</button>
+<button size="mini" class="ui-button" bindtap="cancel" disabled="{{busy||pending||!job.canCancel}}">取消处理</button>
+</view>
+</view>
+      <view wx:if="{{pending}}" class="card">
+<view class="error">上次操作结果未确认，不会自动重新提交。</view>
+<button id="ai-recover" size="mini" class="ui-button ui-block" bindtap="recover" disabled="{{busy}}">核对操作结果</button>
+<button bindtap="retryPending" disabled="{{busy}}" size="mini" class="ui-button ui-block">明确重试原请求</button>
+<button wx:if="{{canResetAdoption}}" bindtap="resetAdoption" disabled="{{busy}}" size="mini" class="ui-button ui-block">重新核对采用目标</button>
+</view>
+      <view wx:for="{{candidates}}" wx:key="id" class="card">
+<view class="section-title">3 · 预览与采用</view>
+<image wx:if="{{item.src}}" class="ai-picture" src="{{item.src}}" mode="aspectFit" data-id="{{item.id}}" bindtap="preview"/>
+<view wx:else class="hint">预览暂不可用，请刷新状态重试。</view>
+<view class="ai-warning">{{item.label}}</view>
+<button size="mini" class="primary ui-button ui-block" bindtap="adopt" data-id="{{item.id}}" disabled="{{busy||pending||!!adopted||!item.src}}">{{item.target==='avatar'?'设为头像':'新增照片并设为封面'}}</button>
+</view>
+      <view wx:if="{{adopted}}" class="card">{{adopted}}</view>
+<button wx:if="{{hasSource}}" bindtap="removeSource" disabled="{{busy||pending}}" size="mini" class="danger ui-button ui-block">删除私有素材 / 开始新任务</button>
+    </block>
+    <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
+  </block>
+</view>
+<business-dialog id="business-dialog"/>

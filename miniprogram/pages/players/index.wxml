@@ -48,7 +48,7 @@
           mode="aspectFill"
         /><text wx:else>{{item.initial}}</text></view
       ><view class="grow"
-        ><view class="bold">{{item.name}}</view
+        ><text wx:if="{{item.avatarGenerated}}" class="tag generated-origin">{{item.avatarOriginLabel}}</text><view class="bold">{{item.name}}</view
         ><view class="muted">{{item.positionLabel}}</view></view
       ><text class="jersey">{{item.numberLabel}}</text></view
     ></block

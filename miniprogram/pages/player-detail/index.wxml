@@ -15,7 +15,7 @@
             mode="aspectFill"
           /><text wx:else>{{player.initial}}</text></view
         ><view class="grow"
-          ><view class="title">{{player.name}}</view
+          ><text wx:if="{{player.avatarGenerated}}" class="tag generated-origin">{{player.avatarOriginLabel}}</text><view class="title">{{player.name}}</view
           ><view class="muted player-meta"
             >{{player.numberLabel}} 号 · {{player.positionLabel}}</view
           ><text class="tag"
