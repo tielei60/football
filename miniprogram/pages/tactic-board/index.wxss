@@ -14,8 +14,9 @@
 .board-shortcuts .shortcut-primary{background:var(--brand);color:#fff}
 .playback-controls{gap:10rpx;margin:12rpx 0;min-width:0}
 .playback-controls button.small{width:160rpx;min-width:0;flex:0 0 160rpx;box-sizing:border-box;margin:0;padding:14rpx 8rpx;font-size:24rpx;line-height:36rpx}
-.playback-controls slider.grow{flex:1;min-width:0;margin:0 4rpx}
-.playback-controls>text{font-size:20rpx;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* 播放滑块端点保留固定像素净距，避免原生滑块圆钮遮住时间；不改变画布。 */
+.playback-controls slider.grow{flex:1;min-width:0;margin:0 18px}
+.playback-controls>text{flex:0 0 auto;font-size:20rpx;font-variant-numeric:tabular-nums;white-space:nowrap}
 
 .canvas-focus{padding:8rpx 16rpx 16rpx}.canvas-focus>.section{margin-top:0}.canvas-focus .edit-actions{margin-top:0;gap:10rpx}.canvas-focus .edit-action{padding:8rpx 0;line-height:40rpx;min-height:64rpx}.canvas-focus .editor-tools{margin-top:8rpx}.canvas-focus .editor-tools button.small{padding:10rpx 0}.canvas-focus .editor-tools .picker{min-height:60rpx;padding:10rpx}.canvas-focus .board-wrap{margin-top:8rpx}.selection-status{font-size:22rpx;line-height:28rpx;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
