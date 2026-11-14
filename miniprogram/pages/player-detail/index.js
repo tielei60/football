@@ -1,6 +1,8 @@
 const ui=require('../../utils/ui');
 const s = require("../shared");
-Page({onHide(){ui.abort(this);return s.hide.apply(this,arguments);},
+Page({
+ openPhotos(){if(this._disposed||this._hidden||this.data.loading||this.data.error||this.data.busy||!this.id)return;wx.navigateTo({url:'/pages/player-photos/index?id='+encodeURIComponent(this.id)});},
+onHide(){ui.abort(this);return s.hide.apply(this,arguments);},
   data: {
     loading: true,
     error: "",

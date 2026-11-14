@@ -1,3 +1,4 @@
+import { createPlayerMediaStore } from './player-media-store.mjs';
 import { readTacticCommands, applyTacticCommands } from "./native-tactic-commands.mjs";
 import { readTacticPositions, moveTacticPositions } from "./native-tactic-positions.mjs";
 import { createServer } from "node:http";
@@ -185,6 +186,7 @@ export function createFootballServer({
   };
   const store = openFootballStore(databasePath);
   const club = createClubStore(store.database, store, { bootstrapAdmin });
+  const playerMedia = createPlayerMediaStore(store.database);
   const cookie = (token, clear = false) =>
     `football_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 604800}${secureCookies ? "; Secure" : ""}`;
   const server = createServer(async (request, response) => {
@@ -278,7 +280,8 @@ export function createFootballServer({
       // Read untrusted input before authenticating. A password reset, logout, or
       // archival during a slow upload must invalidate that pending write too.
       let parsedBody;
-      const photoDelete = method === "DELETE" && /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname);
+      const playerPhotoDelete = method === "DELETE" && /^\/api\/players\/[^/]+\/photos\/[1-9]\d*$/.test(pathname);
+      const photoDelete = playerPhotoDelete || method === "DELETE" && /^\/api\/matches\/[1-9]\d*\/photos\/[1-9]\d*$/.test(pathname);
       if (!["GET", "HEAD", "OPTIONS", "DELETE"].includes(method) || photoDelete) {
         const largeBody =
           /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
@@ -286,7 +289,7 @@ export function createFootballServer({
           );
         parsedBody = await readRequest(
           request,
-          (pathname === "/api/team" || (method === "POST" && /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname)))
+          (pathname === "/api/team" || (method === "POST" && /^\/api\/players\/[^/]+\/photos$/.test(pathname)) || (method === "POST" && /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname)))
             ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
             : largeBody
               ? maximumRequestBytes
@@ -350,6 +353,19 @@ export function createFootballServer({
             club.savePlayer(user.team_id, null, body()),
           );
         }
+      }
+      const playerPhotos = /^\/api\/players\/([^/]+)\/photos(?:\/(cover|order|[1-9]\d*))?$/.exec(pathname);
+      if (playerPhotos) {
+        const [,id,part]=playerPhotos;
+        if (!part && method==='GET') return send(response,200,playerMedia.list(user,id));
+        if (part && !['cover','order'].includes(part) && method==='GET') return send(response,200,playerMedia.get(user,id,routeId(part)));
+        admin();
+        if (!part && method==='POST') return send(response,201,await playerMedia.add(user,id,body(),()=>club.authenticate(token,nativeRequest?'native':'cookie')));
+        if (part==='cover' && method==='PUT') return send(response,200,playerMedia.cover(user,id,body()));
+        if (part==='order' && method==='PUT') return send(response,200,playerMedia.order(user,id,body()));
+        if (part && !['cover','order'].includes(part) && method==='PUT') return send(response,200,playerMedia.caption(user,id,routeId(part),body()));
+        if (part && !['cover','order'].includes(part) && method==='DELETE') return send(response,200,playerMedia.remove(user,id,routeId(part),body()));
+        throw new FootballError(405,'球员照片操作方式不支持。');
       }
       const playerRoute =
         /^\/api\/players\/([^/]+)(?:\/(account|password))?$/.exec(pathname);

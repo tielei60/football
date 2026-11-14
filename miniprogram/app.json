@@ -24,7 +24,8 @@
     "pages/tactic-compose/index",
     "pages/tactic-transfer/index",
     "pages/tactic-setup/index",
-    "pages/tactic-export/index"
+    "pages/tactic-export/index",
+    "pages/player-photos/index"
   ],
   "window": {
     "navigationBarTitleText": "足球俱乐部",

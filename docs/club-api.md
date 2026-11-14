@@ -8,6 +8,7 @@
 - PUT `/api/auth/password` `{currentPassword,newPassword}` -> 204，撤销会话，需重新登录
 - GET `/api/team` -> `{id:number,name:string,crest:string|null,revision:number}`（已认证的本队成员）
 - PUT `/api/team` `{revision:number,name?:string,crest?:string|null}` -> Team（仅本队管理员）。名称会去除首尾空白，不能为空，最多 200 个字符。队徽接受 image/png、image/jpeg、image/webp 或 image/gif 的规范 base64 数据 URL，必须匹配位图文件签名，解码后最多 2 MiB。拒绝外部 URL、SVG、错误编码及不匹配的文件签名。请求大小上限为 3 MiB。将 crest 设为 null 可移除队徽。必须提供 revision，缺失或无效返回 428，过期返回 409。登录和 auth/me 返回完整的当前球队对象。
+- 球员照片集：`/api/players/:id/photos`，管理员上传、排序、封面、说明及删除；同队成员只读可见照片，头像独立。详细方法、revision、幂等及限制见[球员照片集接口](player-photo-album-api.md)。
 - GET `/api/players` -> Player[]
 - POST `/api/players` 提交 Player 字段 -> Player（管理员）
 - PUT `/api/players/:id` 提交部分 Player 字段及 `revision` -> Player（管理员）

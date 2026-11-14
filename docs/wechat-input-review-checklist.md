@@ -103,3 +103,12 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 - 所有表单草稿离页丢弃未保存；搜索清空；最终恢复 375 × 812 首页。
 - **尚未验证：手机真机软键盘抬起/遮挡、中文输入法候选组合、不同系统和微信版本。** 本轮使用开发者工具硬件键盘及中文粘贴，不能替代真机 IME 验收。
 - 代码回归：255 项通过；官方模板 111 次虚拟渲染通过。二者验证代码/模板，不替代以上真实聚焦观察。
+
+## 新增球员照片集输入（本轮尚未真实聚焦验证）
+
+| 编号 | 模板 | 字段与状态 | 证据边界 |
+| --- | --- | --- | --- |
+| 35 | miniprogram/pages/player-photos/index.wxml | 每张照片说明，管理员可编辑 | 复用input几何，VM逻辑测试；caret待测 |
+| 36 | miniprogram/pages/player-photos/index.wxml | 上传照片说明 | 复用input几何，VM逻辑测试；caret待测 |
+
+以上为两个新增模板实例，循环可能展示多份；不并入历史34项实际聚焦通过结论。

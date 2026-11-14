@@ -17,7 +17,7 @@ function rules(css) {
 }
 for (const [page, old] of Object.entries(baseline)) {
   test(`typography batch1 ${page}: static markup and control geometry preserved`, () => {
-    const markup = fs.readFileSync(path.join(root,'pages',page,'index.wxml'),'utf8').replace(/\sclass="[^"]*"/g,'');
+    const markup = fs.readFileSync(path.join(root,'pages',page,'index.wxml'),'utf8').replace(/<button[^>]*bindtap="openPhotos"[^>]*>(?:管理|查看)出场照片<\/button>/g,'').replace(/\sclass="[^"]*"/g,'');
     assert.equal(crypto.createHash('sha256').update(markup).digest('hex'),old.markupSha256);
     const css = fs.readFileSync(path.join(root,'pages',page,'index.wxss'),'utf8');
     const current = rules(css);

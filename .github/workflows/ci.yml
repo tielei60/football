@@ -24,6 +24,7 @@ jobs:
       - run: npm audit --omit=dev
       - run: npm run build
       - run: npm run test:unit
+      - run: npx playwright install --with-deps chromium
       - name: Check native mini program
         working-directory: miniprogram
         run: npm ci && npm run setup && npm run check
@@ -50,7 +51,6 @@ jobs:
           curl --fail --silent -H 'Content-Type: application/json' -H 'Origin: http://127.0.0.1:13002' \
             -d '{"username":"ciadmin","password":"ci-only-password-123"}' \
             http://127.0.0.1:13002/api/auth/login | grep '"role":"admin"'
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Save visual review evidence
         uses: actions/upload-artifact@v4

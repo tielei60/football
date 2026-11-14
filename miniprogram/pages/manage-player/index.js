@@ -15,7 +15,9 @@ const standard = [
   "前锋",
   "待定",
 ];
-Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
+Page({
+ openPhotos(){if(this._disposed||this._hidden||this.data.loading||this.data.error||this.data.busy||!this.id)return;wx.navigateTo({url:'/pages/player-photos/index?id='+encodeURIComponent(this.id)});},
+openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
   createKind: "player",
   confirmNotCreated: a.confirmNotCreated,
   data: {
