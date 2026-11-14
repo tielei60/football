@@ -1,1 +1,7 @@
-{"navigationBarTitleText":"出场照与头像","enablePullDownRefresh":false}
+{
+  "navigationBarTitleText": "出场照与头像",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "page-state": "/components/page-state/index"
+  }
+}
