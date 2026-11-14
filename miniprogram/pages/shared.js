@@ -53,6 +53,7 @@ async function load(page, work) {
   page.setData({ loading: true, error: "" });
   try {
     const session = await api.ensureSession();
+    if (epoch !== page._epoch || page._disposed) return;
     const result = await work(session);
     if (epoch === page._epoch && !page._disposed) safeSetData(page, result);
   } catch (error) {

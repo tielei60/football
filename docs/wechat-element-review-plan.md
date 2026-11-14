@@ -160,3 +160,19 @@
 只把这些通用原则转化为原生验收标准。WXML 不是 DOM，WXSS 也不能按现代浏览器完整能力假设：不生搬 HTML dialog/popover/inert、DOM 焦点方法、容器查询、浏览器 polyfill、Lighthouse 或浏览器原生验证接口。原生输入类型、焦点、键盘、读屏属性与 Canvas/map 层级均须结合目标微信基础库实测。也不为了指南建议擅自新增深色主题、自动隐藏系统 TabBar、遥测或外部服务。
 
 本阶段没有实施全站审查修复，也没有运行 legacy-scan；指南检索成功不构成应用已经符合其全部要求的证据。
+
+## 8. 第 1 组执行记录：交互边界与焦点颜色（2026-11-14）
+
+状态：**完成保守颜色修正；仅静态及官方模板检查通过，真实视觉与交互待电脑解锁后验证。** 这不是整组元素或全站通过结论。
+
+- 在 `miniprogram/app.wxss` 新增独立 `--control-border:#8d7b96`、`--focus:#8845a0`，与装饰用 `--line:#eae5ef` 分开。
+- 交互边界用于共享 input/textarea、picker、弹框输入及未选选项圆环；焦点色用于全局、business-picker、business-dialog、page-state。隔离组件保留同值 fallback。
+- 卡片、列表分隔线、弹框外框和选项行装饰边框不统一加深；没有改变边框粗细、控件尺寸、字号、布局、输入 padding/height/line-height 或业务逻辑。
+- 新增 `tests/control-contrast.test.cjs`，3 项检查通过：两 token 在白色、页面底、品牌浅紫及现有浅色控件底上均至少 3:1；交互/装饰 token 分离；原生输入及日期格关键几何不变。
+- 官方 WXML/WXSS 检查通过：25 页 × initial/loading/error/empty，4 组件，共 111 次渲染。该检查不能证明实际焦点轮廓显示、设备色彩效果或触控可用性。
+- 实测待办：320/375/430 下查看输入与选择器边界是否清晰而不过重；实际聚焦验证轮廓；回归日历、时间、selector、密码弹框、页面重试；确认输入光标未受影响。主要按钮 44px 目标及字体下限仍等待 baseline，不在此次修改范围。
+
+### Modern Web Guidance
+
+- `color`：本次把交互边界与装饰线分开，以避免全站卡片被加深；采用其“Maintain a minimum contrast ratio of 3:1”原则进行静态计算。
+- `accessibility`：本次保留已有原生几何与焦点机制，仅改善轮廓颜色，对照“Don't disable browser native focus indicators without providing a replacement custom focus indicator”原则；原生微信是否显示对应焦点状态仍待实测，不套用 DOM API。
