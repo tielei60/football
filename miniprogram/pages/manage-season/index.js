@@ -1,6 +1,6 @@
 const ui=require('../../utils/ui');
 const a = require("../manage-team/admin");
-Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);},
+Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){a.hide.call(this);},
   createKind: "season",
   confirmNotCreated: a.confirmNotCreated,
   data: {
@@ -15,6 +15,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     revision: null,
     form: { name: "", startDate: "", endDate: "" },
   },
+  onShow() { return a.show.call(this); },
   onLoad(q) {
     this.id = q.id;
     this.refresh();
@@ -38,8 +39,9 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
               startDate: season.startDate,
               endDate: season.endDate,
             }
-          : this.data.form,
+          : { name: "", startDate: "", endDate: "" },
         conflict: false,
+        uncertain: false,
         actionError: "",
       };
     });

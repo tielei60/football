@@ -1,9 +1,9 @@
 const ui=require('../../utils/ui');
 const a = require("../manage-team/admin");
-Page({onHide(){ui.abort(this);},
+Page({onHide(){a.hide.call(this);},
   data: { loading: true, error: "", authorized: false, seasons: [] },
   onShow() {
-    this.refresh();
+    return a.show.call(this, true);
   },
   onUnload(){ui.abort(this);return a.unload.apply(this,arguments);},
   refresh() {

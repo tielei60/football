@@ -1,6 +1,6 @@
 const ui=require('../../utils/ui');
 const a = require("./admin");
-Page({onHide(){ui.abort(this);},
+Page({onHide(){a.hide.call(this);},
   data: {
     loading: true,
     error: "",
@@ -13,6 +13,7 @@ Page({onHide(){ui.abort(this);},
     form: { name: "" },
     crest: "",
   },
+  onShow() { return a.show.call(this); },
   onLoad() {
     this.refresh();
   },

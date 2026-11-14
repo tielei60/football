@@ -45,6 +45,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     username: "",
     password: "",
   },
+  onShow() { return a.show.call(this); },
   onLoad(q) {
     this.id = q.id;
     this.refresh();
@@ -53,7 +54,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     this.setData({ password: "" });
     a.unload.call(this);
   },
-  onHide() {ui.abort(this);
+  onHide() {a.hide.call(this);
     this.setData({ password: "" });
   },
   refresh() {

@@ -522,3 +522,70 @@ for(const status of [200,400]) test("unloaded definite "+status+" clears pending
  await next.refresh();
  assert.equal(next.data.uncertain,false);
 });
+
+for (const stage of ['load','write']) test('management ignores old account '+stage+' 401', async()=>{
+ let owner='A', reject;
+ const h=setup('manage-team',{getSession:()=>({...session,token:owner}),request:async()=>({name:'Team',revision:1})});
+ if(stage==='write') await h.page.refresh();
+ h.api.request=()=>new Promise((_,r)=>reject=r);
+ const pending=stage==='load'?h.page.refresh():h.page.save();
+ await new Promise(r=>setImmediate(r)); owner='B';
+ reject(Object.assign(new Error('old401'),{status:401})); await pending;
+ assert.equal(h.events.some(e=>e[0]==='redirectTo'),false);
+ assert.notEqual(h.page.data.actionError,'old401');
+});
+test('management hidden preflight never dispatches write',async()=>{
+ const h=setup('manage-team',{getSession:()=>({...session,token:'A'}),request:async()=>({name:'Team',revision:1})});
+ await h.page.refresh(); let release,calls=0;
+ h.api.ensureSession=()=>new Promise(r=>release=r);h.api.request=async()=>{calls++;};
+ const saving=h.page.save();h.page.onHide();release(session);await saving;
+ assert.equal(calls,0);assert.equal(h.page.data.busy,false);
+});
+test('native photo hide is permitted but account replacement discards late read',async()=>{
+ let owner='A',choose,read;
+ const h=setup('manage-team',{getSession:()=>({...session,token:owner}),request:async()=>({name:'Team',revision:1})},{chooseMedia(o){choose=o;},getFileSystemManager(){return {readFile(o){read=o;}};}});
+ await h.page.refresh();h.page.choose();h.page.onHide();await h.page.onShow();
+ choose.success({tempFiles:[{size:10,tempFilePath:'wxfile://ok'}]});read.success({data:'/9j/AAAA'});
+ assert.equal(h.page.data.crest,'wxfile://ok');
+ h.page.choose();choose.success({tempFiles:[{size:10,tempFilePath:'wxfile://stale'}]});owner='B';read.success({data:'/9j/BBBB'});
+ assert.equal(h.page.data.crest,'wxfile://ok');
+});
+test('hidden successful create settles ledger and applies receipt only on return',async()=>{
+ let resolve;
+ const h=setup('manage-season',{getSession:()=>({...session,token:'A'}),request:()=>new Promise(r=>resolve=r)});
+ await h.page.refresh();h.page.setData({form:{name:'Demo',startDate:'2026-01-01',endDate:'2026-12-31'}});
+ const saving=h.page.save();await new Promise(r=>setImmediate(r));h.page.onHide();resolve({id:7,revision:1});await saving;
+ assert.equal(h.page.id,undefined);await h.page.onShow();assert.equal(h.page.id,7);
+ const next=h.newPage();await next.refresh();assert.equal(next.data.uncertain,false);
+});
+for(const hidden of [false,true]) test('management own expired load redirects only visible '+hidden,async()=>{
+ let current={...session,token:'A'},reject;
+ const h=setup('manage-team',{getSession:()=>current,request:()=>new Promise((_,r)=>reject=r)});
+ const loading=h.page.refresh();await new Promise(r=>setImmediate(r));if(hidden)h.page.onHide();current=null;
+ reject(Object.assign(new Error('expired'),{status:401}));await loading;
+ assert.equal(h.events.some(e=>e[0]==='redirectTo'),!hidden);
+});
+test('hidden uncertain create preserves ledger on return',async()=>{
+ let reject;
+ const h=setup('manage-season',{getSession:()=>({...session,token:'A'}),request:()=>new Promise((_,r)=>reject=r)});
+ await h.page.refresh();h.page.setData({form:{name:'Demo',startDate:'2026-01-01',endDate:'2026-12-31'}});
+ const saving=h.page.save();await new Promise(r=>setImmediate(r));h.page.onHide();reject(new Error('offline'));await saving;
+ await h.page.onShow();assert.equal(h.page.data.uncertain,true);assert.equal(h.page.data.form.name,'Demo');
+});
+for(const kind of ['season','player']) test(kind+' unknown draft clears when original page changes account',async()=>{
+ let owner='A';const h=setup('manage-'+kind,{getSession:()=>({...session,token:owner}),request:async()=>{throw new Error('offline');}});
+ await h.page.refresh();h.page.setData({'form.name':'A secret',...(kind==='season'?{'form.startDate':'2026-01-01','form.endDate':'2026-12-31'}:{})});
+ await h.page.save();assert.equal(h.page.data.uncertain,true);
+ h.page.onHide();owner='B';await h.page.onShow();
+ assert.equal(h.page.data.authorized,true);assert.equal(h.page.data.form.name,'');assert.equal(h.page.data.uncertain,false);
+});
+for(const kind of ['season','player']) test(kind+' reentered pending page consumes known success id revision not retry permission',async()=>{
+ let resolve;const h=setup('manage-'+kind,{getSession:()=>({...session,token:'A'}),request:()=>new Promise(r=>resolve=r)});
+ await h.page.refresh();h.page.setData({'form.name':'Submitted',...(kind==='season'?{'form.startDate':'2026-01-01','form.endDate':'2026-12-31'}:{})});
+ const saving=h.page.save();await new Promise(r=>setImmediate(r));h.page.onUnload();
+ const next=h.newPage();await next.refresh();assert.equal(next.data.uncertain,true);
+ resolve({id:kind==='season'?7:'p7',revision:3});await saving;await next.refresh();
+ assert.equal(next.id,kind==='season'?7:'p7');assert.equal(next.data.revision,3);
+ assert.equal(next.data.uncertain,false);assert.equal(next.data.form.name,'Submitted');
+ assert.match(next.data.actionError,/创建已成功/);
+});
