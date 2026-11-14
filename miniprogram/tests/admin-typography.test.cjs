@@ -1,0 +1,11 @@
+// 静态约束不代表真实字号、键盘或可访问性验收。
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const root=path.resolve(__dirname,'../pages');
+const expected={"manage-team": "55da24e8be390ba6fa129babd4d8f8d4427f48adb190b9d7a93a204a9c9fc694", "manage-players": "67fe3f64e2cb4b78bd72e7d3722bf91bea52dae5ce813c4f09e59f01b2d21aac", "manage-player": "f642d85299dc1fe01747e6c5be37d32ebb4854fd8f5d8d8ee51c4a54918b8f9b", "manage-seasons": "4bb0e3ee14692b7116dfbd079c90435ad3d0b606cc76589021b33eea42574c5b", "manage-season": "c6b43e23b3fb3b3de831456b0fcf1f5ad6e40dd8b5430614e7b62cd276d41400", "manage-venues": "d9b2a35423076e0bb1722acb5c7e64c12d836356d71aa2a0e79a0b2c3a1f22f5", "manage-venue": "3ca6abb5674fd10aecfa568df92f0a7d0723bcee657a13384e5a9d68bcccd6c8", "season-roster": "c8ed8b7fcccc40a3cc17a13504c81f567a96de9a7890dd6905e5937d88fe7164"};
+const read=(n,ext)=>fs.readFileSync(path.join(root,n,'index.'+ext),'utf8');
+test('eight management pages retain structure and bindings apart from visual classes',()=>{for(const [n,hash]of Object.entries(expected)){const source=read(n,'wxml').replace(/\sclass="[^"]*"/g,'');assert.equal(crypto.createHash('sha256').update(source).digest('hex'),hash,n);}});
+test('management typography additions do not override native input or layout geometry',()=>{for(const n of Object.keys(expected)){const extra=read(n,'wxss').split('/* 管理文字层级：')[1];assert.ok(extra,n);assert.doesNotMatch(extra,/(?:input|textarea|canvas|[;{](?:height|width|position|display|grid-template[^:]*|padding):)/,n);assert.match(extra,/var\(--ink\)/);assert.doesNotMatch(extra,/max\(/);}
+assert.match(read('manage-player','wxss'),/\.card textarea\{min-height:160rpx;line-height:1.65\}/);
+assert.match(read('season-roster','wxss'),/\.number input\{padding:0 8rpx;font-variant-numeric:tabular-nums\}/);
+});
+test('account spacing and readonly roster keep existing state and all information',()=>{assert.match(read('manage-player','wxss'),/\.account-heading\{margin-bottom:16rpx\}/);assert.match(read('manage-player','wxml'),/between account-heading/);assert.match(read('season-roster','wxml'),/admin\?'':'roster-readonly'/);assert.match(read('season-roster','wxml'),/赛季留存资料/);assert.match(read('season-roster','wxss'),/\.roster-readonly \.member\{padding-top:22rpx;padding-bottom:22rpx\}/);});

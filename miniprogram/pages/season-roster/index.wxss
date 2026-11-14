@@ -3,3 +3,14 @@
 .heading{margin-bottom:22rpx}.member{padding:24rpx 22rpx}.member-name{font-size:28rpx;line-height:1.4;overflow-wrap:anywhere}.member-meta{font-size:23rpx;line-height:1.55}.member .row{gap:14rpx}.member button.small{padding:14rpx 16rpx;font-size:24rpx}.number{width:120rpx;flex-shrink:0}.number input{padding:0 8rpx;font-variant-numeric:tabular-nums}.picker-row{gap:14rpx}.footer .hint{line-height:1.65}
 
 .member .row{flex-wrap:wrap}.member .row .grow{min-width:180rpx}.member button.ui-button[size="mini"]{white-space:nowrap}
+
+/* 管理文字层级：仅文字与组间留白，不改原生输入及业务布局。 */
+.heading .title{font-size:34rpx;font-weight:650;color:var(--ink)}
+.member-name{font-size:29rpx;font-weight:600;line-height:1.4;color:var(--ink)}
+.member-meta{font-size:24rpx;font-weight:400;line-height:1.6;margin-top:6rpx;color:var(--muted)}
+.member .grow>.hint{font-size:24rpx;font-weight:400;line-height:1.6;margin-top:6rpx}
+.read-number{font-size:32rpx;font-weight:600;color:var(--brand-ink)}
+.roster-readonly .member{padding-top:22rpx;padding-bottom:22rpx}
+.heading>.hint,.footer .hint{font-size:25rpx;line-height:1.65;color:var(--muted)}
+@media(max-width:375px){.member-meta,.member .grow>.hint{font-size:12px}}
+@media(max-width:360px){.heading>.hint,.footer .hint{font-size:12px}}
