@@ -15,6 +15,7 @@ const session = (digit = "a") => ({
   team: { id: 1, name: "模拟球队" },
 });
 function fixture(options = {}) {
+  let photoClears=0;
   const requests = [],
     storage = new Map();
   if (options.stored) storage.set(key, options.stored);
@@ -37,7 +38,7 @@ function fixture(options = {}) {
   };
   const context = {
     module: { exports: {} },
-    require: (id) => id === "./media" ? { clearImageCache() {} } : config,
+    require: (id) => id === "./media" ? { clearImageCache() {} } : id === "./player-photo-cache" ? {clearAll(){photoClears++;}} : config,
     wx,
     Date,
     Number,
@@ -47,7 +48,7 @@ function fixture(options = {}) {
   vm.runInNewContext(source, context, { filename: "api.js" });
   const complete = (index, statusCode = 200, data = {}) =>
     requests[index].success({ statusCode, data });
-  return { api: context.module.exports, requests, config, storage, complete };
+  return { api: context.module.exports, requests, config, storage, complete, photoClears:()=>photoClears };
 }
 
 test("configuration accepts HTTPS and opt-in loopback only; never transmits to invalid address", async () => {
@@ -252,3 +253,5 @@ test('old uncancelled handle cannot cancel a newer in-flight login',async()=>{
  const b=f.api.beginLogin('b','test-only');a.cancel();f.complete(1,200,session('b'));await b.promise;
  f.complete(0,200,session('a'));await rejected;assert.equal(f.api.getSession().token,token('b'));f.complete(2,204);
 });
+
+test("session clearing invokes dedicated photo cache cleanup",()=>{const h=fixture({stored:session()});h.api.clearSession();assert.equal(h.photoClears(),1);assert.equal(h.api.getSession(),null);});

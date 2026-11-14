@@ -1,6 +1,6 @@
 const ui = require("../../utils/ui");
 const s = require("../shared");
-const { imageSource } = require("../../utils/media");
+const photoCache = require("../../utils/player-photo-cache");
 const pendingByPlayer = new Map();
 let pendingOwner;
 function owned(id) {
@@ -63,6 +63,28 @@ Page({
     uncertain: false,
     recoveryBlocked: false,
   },
+  releasePictures() {
+    if (this._photoScope) photoCache.dispose(this._photoScope);
+    this._photoScope = null;
+    this._cachedPaths = new Map();
+    this._cacheOwner = null;
+  },
+  cachePicture(key, data) {
+    const token = s.api.getSession()?.token;
+    if (this._disposed || !token || token !== this._owner) return "";
+    if (this._cacheOwner !== token) {
+      this.releasePictures();
+      this._cacheOwner = token;
+      this._photoScope = photoCache.createScope();
+    }
+    const path = photoCache.put(this._photoScope, key, data);
+    if (path) this._cachedPaths.set(key, path);
+    return path;
+  },
+  releasePicture(key) {
+    if (this._photoScope) photoCache.remove(this._photoScope, key);
+    this._cachedPaths?.delete(key);
+  },
   onLoad(q) {
     this.id = q.id;
   },
@@ -90,6 +112,7 @@ Page({
         return;
       owned(this.id);
       if (this._owner !== s.api.getSession()?.token) {
+        this.releasePictures();
         this._image = null;
         this.setData({
           photos: [],
@@ -138,6 +161,7 @@ Page({
     } else wx.disableAlertBeforeUnload?.();
   },
   onUnload() {
+    this.releasePictures();
     ui.abort(this);
     this._imageEpoch = (this._imageEpoch || 0) + 1;
     s.unload.call(this);
@@ -171,8 +195,33 @@ Page({
       if (!list.player || String(list.player.id) !== String(this.id))
         throw new Error("无法确认目标球员，请重新载入");
       const p = owned(this.id);
+      if (local && this.data.uncertain && !p) {
+        local.preview = "";
+        local.caption = "";
+        this._image = null;
+      }
       this._guardKey = guardKey(this.id);
       const persisted = receipt(this._guardKey);
+      if (this._cacheOwner !== token) this.releasePictures();
+      this._owner = token;
+      const live = new Set(list.photos.map((x) => "photo:" + x.id));
+      if (p) live.add("pending:" + p.requestId);
+      let clearedPendingPreview = false;
+      for (const key of this._cachedPaths?.keys() || []) {
+        if (!live.has(key)) {
+          if (
+            !p &&
+            local &&
+            key.startsWith("pending:") &&
+            local.preview === this._cachedPaths.get(key)
+          ) {
+            local.preview = "";
+            this._image = null;
+            clearedPendingPreview = true;
+          }
+          this.releasePicture(key);
+        }
+      }
       s.safeSetData(this, {
         admin: session.user.role === "admin",
         playerName: String(list.player?.name || "球员"),
@@ -188,14 +237,18 @@ Page({
               x.caption ??
               "")
             : x.caption || "",
-          src: "",
-          loading: true,
+          src: this._cachedPaths?.get("photo:" + x.id) || "",
+          loading: !this._cachedPaths?.has("photo:" + x.id),
           imageError: "",
         })),
         coverPhotoId: list.coverPhotoId,
         conflict: false,
-        actionError: "",
-        preview: p ? imageSource(p.dataUrl) : local?.preview || "",
+        actionError: clearedPendingPreview
+          ? "上次图片预览已清理，请重新选择照片；说明已保留。"
+          : "",
+        preview: p
+          ? this.cachePicture("pending:" + p.requestId, p.dataUrl)
+          : local?.preview || "",
         caption: p?.caption ?? local?.caption ?? "",
         uncertain: !!p,
         recoveryBlocked: !!persisted && !p,
@@ -268,7 +321,7 @@ Page({
           "/players/" + this.id + "/photos/" + photo.id,
         );
         if (!this.pictureCurrent(epoch, token, turn)) return;
-        const src = imageSource(result.dataUrl);
+        const src = this.cachePicture("photo:" + photo.id, result.dataUrl);
         if (!src) throw new Error("照片暂时无法显示，请重试");
         update({ src, loading: false, imageError: "" });
       } catch (e) {
@@ -305,6 +358,7 @@ Page({
   },
   photoError(e) {
     if (!this.readable()) return;
+    this.releasePicture("photo:" + e.currentTarget.dataset.id);
     const i = this.data.photos.findIndex(
       (p) => p.id === e.currentTarget.dataset.id,
     );
@@ -554,6 +608,7 @@ Page({
         }
       },
       () => {
+        this.releasePicture("pending:" + p.requestId);
         this._image = null;
         this.setData({ preview: "", caption: "", uncertain: false });
         this.alertDraft();
@@ -570,10 +625,12 @@ Page({
       confirmText: "移除",
       success: (r) => {
         if (r.confirm && !this._disposed && epoch === this._epoch)
-          this.perform(() =>
-            s.api.request("/players/" + this.id + "/photos/" + id, "DELETE", {
-              revision: this.revision,
-            }),
+          this.perform(
+            () =>
+              s.api.request("/players/" + this.id + "/photos/" + id, "DELETE", {
+                revision: this.revision,
+              }),
+            () => this.releasePicture("photo:" + id),
           );
       },
     });

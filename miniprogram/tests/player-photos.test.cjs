@@ -11,6 +11,7 @@ const session = {
 };
 function setup(name, overrides = {}, wxOverrides = {}) {
   const events = [];
+  const disk = new Map();
   let definition;
   const api = {
     ensureSession: async () => session,
@@ -23,6 +24,25 @@ function setup(name, overrides = {}, wxOverrides = {}) {
   };
   const wx = new Proxy(
     {
+      env: { USER_DATA_PATH: "/wx-test" },
+      getFileSystemManager: () => ({
+        mkdirSync() {},
+        writeFileSync(p, v) {
+          disk.set(p, Buffer.from(v, "base64"));
+        },
+        statSync(p) {
+          if (!disk.has(p)) throw Error("ENOENT");
+          return { size: disk.get(p).length };
+        },
+        unlinkSync(p) {
+          if (!disk.delete(p)) throw Error("ENOENT");
+        },
+        readdirSync(dir) {
+          return [...disk.keys()]
+            .filter((p) => p.startsWith(dir + "/"))
+            .map((p) => p.slice(dir.length + 1));
+        },
+      }),
       stopPullDownRefresh() {},
       showModal(options) {
         options.success({ confirm: true });
@@ -104,6 +124,7 @@ function setup(name, overrides = {}, wxOverrides = {}) {
     page,
     api,
     events,
+    disk,
     shared: load(path.join(root, "pages/shared.js")),
   };
 }
@@ -131,7 +152,7 @@ function fixture(overrides = {}, wxOverrides = {}) {
         }
         return path.endsWith("/photos")
           ? listing
-          : { dataUrl: "data:image/png;base64,abc" };
+          : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
       },
       ...overrides,
     },
@@ -147,7 +168,7 @@ function fixture(overrides = {}, wxOverrides = {}) {
 }
 const event = (id, delta) => ({ currentTarget: { dataset: { id, delta } } });
 function image(p) {
-  p._image = "data:image/png;base64,abc";
+  p._image = "data:image/png;base64,iVBORw0KGgoBAgME";
   p.setData({ preview: "wxfile://picked", caption: "New" });
 }
 test("metadata projects safe fields; read-only member cannot mutate", async () => {
@@ -198,7 +219,7 @@ test("unknown upload reuses same id across instances and stores receipt without 
     }
     return path.endsWith("/photos")
       ? listing
-      : { dataUrl: "data:image/png;base64,abc" };
+      : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
   };
   await h.page.upload();
   assert.equal(h.page.data.uncertain, true);
@@ -322,7 +343,7 @@ test("nine photos load serially as short paths, preserve server order and stop a
       await Promise.resolve();
       inFlight--;
       count++;
-      return { dataUrl: "data:image/png;base64,abc" };
+      return { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
     },
   });
   await h.page.refresh();
@@ -355,4 +376,135 @@ test("navigation entries are explicit and album never substitutes avatar", () =>
   );
   assert.match(html, /playerName/);
   assert.match(html, /busy\|\|conflict\|\|uncertain\|\|recoveryBlocked/);
+});
+
+test("dedicated cache survives system preview hide, reuses on refresh and clears on unload", async () => {
+  const h = fixture();
+  await h.page.refresh();
+  await h.page.loadPictures();
+  const paths = h.page.data.photos.map((p) => p.src);
+  assert.ok(paths.every((p) => p.includes("/football-player-photo-images/")));
+  assert.equal(h.disk.size, 2);
+  h.page.onHide();
+  assert.equal(h.disk.size, 2);
+  await h.page.onShow();
+  await h.page.refresh();
+  assert.deepEqual(
+    h.page.data.photos.map((p) => p.src),
+    paths,
+  );
+  h.page.onUnload();
+  assert.equal(h.disk.size, 0);
+  assert.equal(
+    h.page.cachePicture("late", "data:image/png;base64,iVBORw0KGgoBAgME"),
+    "",
+  );
+});
+test("successful removal and server-pruned IDs release only album cached files", async () => {
+  const h = fixture();
+  await h.page.refresh();
+  await h.page.loadPictures();
+  const removed = h.page.data.photos[0].src;
+  h.api.request = async (p, m) =>
+    p.endsWith("/photos")
+      ? { ...listing, photos: [listing.photos[1]] }
+      : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
+  await h.page.refresh();
+  assert.equal(h.disk.has(removed), false);
+  assert.equal(h.disk.size, 1);
+});
+test("pending candidate request IDs get isolated paths, completed candidate cannot become duplicate draft", async () => {
+  const h = fixture();
+  await h.page.refresh();
+  image(h.page);
+  h.api.request = async (p, m) => {
+    if (m) throw Error("unknown");
+    return p.endsWith("/photos")
+      ? listing
+      : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
+  };
+  await h.page.upload();
+  const second = h.newPage();
+  second.id = "p1";
+  await second.refresh();
+  const pendingPath = second.data.preview;
+  assert.ok(pendingPath.includes("/football-player-photo-images/"));
+  h.api.request = async (p, m) =>
+    m
+      ? listing
+      : p.endsWith("/photos")
+        ? listing
+        : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
+  await h.page.upload();
+  await second.refresh();
+  assert.equal(second.data.preview, "");
+  assert.equal(second._image, null);
+  assert.equal(h.disk.has(pendingPath), false);
+});
+test("image error invalidates corrupt local entry so retry fetch can create a new path", async () => {
+  const h = fixture();
+  await h.page.refresh();
+  await h.page.loadPictures();
+  const old = h.page.data.photos[0].src;
+  h.page.photoError(event(1));
+  assert.equal(h.disk.has(old), false);
+  await h.page.retryPhoto(event(1));
+  assert.notEqual(h.page.data.photos[0].src, old);
+  assert.ok(h.page.data.photos[0].src);
+});
+
+for (const status of [400, 409])
+  test(
+    "pending " +
+      status +
+      " refresh clears only released cache preview and retains caption",
+    async () => {
+      const h = fixture();
+      await h.page.refresh();
+      image(h.page);
+      const read = async (p) =>
+        p.endsWith("/photos")
+          ? listing
+          : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
+      h.api.request = async (p, m) => {
+        if (m) throw Error("unknown");
+        return read(p);
+      };
+      await h.page.upload();
+      const second = h.newPage();
+      second.id = "p1";
+      await second.refresh();
+      const preview = second.data.preview;
+      assert.ok(h.disk.has(preview));
+      h.api.request = async (p, m) => {
+        if (m) throw Object.assign(Error("rejected"), { status });
+        return read(p);
+      };
+      await second.upload();
+      assert.equal(second.data.uncertain, false);
+      await second.refresh();
+      assert.equal(second.data.preview, "");
+      assert.equal(second._image, null);
+      assert.equal(second.data.caption, "New");
+      assert.equal(h.disk.has(preview), false);
+      assert.match(second.data.actionError, /重新选择照片.*说明已保留/);
+    },
+  );
+test("ordinary system selected preview survives a rejected upload and preserving refresh", async () => {
+  const h = fixture();
+  await h.page.refresh();
+  image(h.page);
+  const imageData = h.page._image;
+  h.api.request = async (p, m) => {
+    if (m) throw Object.assign(Error("rejected"), { status: 400 });
+    return p.endsWith("/photos")
+      ? listing
+      : { dataUrl: "data:image/png;base64,iVBORw0KGgoBAgME" };
+  };
+  await h.page.upload();
+  await h.page.refresh();
+  assert.equal(h.page.data.preview, "wxfile://picked");
+  assert.equal(h.page._image, imageData);
+  assert.equal(h.page.data.caption, "New");
+  assert.equal(h.page.data.actionError, "");
 });

@@ -53,6 +53,7 @@ function persistSession() {
 }
 function clearSession() {
   require("./media").clearImageCache();
+  require("./player-photo-cache").clearAll();
   epoch += 1;
   session = null;
   checking = null;
