@@ -44,3 +44,27 @@ button.ui-block+view.card{margin-top:20rpx}
 .match-venue-map{display:block;box-sizing:border-box;width:100%;height:460rpx;margin-top:22rpx;border-radius:18rpx;border:1rpx solid var(--line);overflow:hidden}
 .page button.venue-location-open[size="mini"]{margin-top:24rpx;min-height:84rpx}.venue-location-note{margin-top:12rpx;color:var(--muted);font-size:23rpx;line-height:1.5}.venue-location-empty{margin-top:18rpx;padding:18rpx;background:var(--canvas);border-radius:14rpx;color:var(--muted);font-size:25rpx;line-height:1.6}
 @media(min-width:600px){.match-venue-map{height:360px}}
+
+/* 比赛文字层级：仅内容文字；保留输入、按钮、地图与固定栏几何。 */
+.teams>view{font-weight:600}
+.teams>.score{font-weight:650}
+.match-facts .detail-line>text:first-child{font-size:25rpx;font-weight:400;color:var(--muted)}
+.match-facts .detail-line>text:last-child{font-size:28rpx;font-weight:500;color:var(--ink)}
+.section-title{font-size:28rpx;font-weight:600}
+.roster-name{font-size:29rpx;font-weight:600;line-height:1.4;color:var(--ink)}
+.roster-stats{font-size:28rpx;font-weight:500;line-height:1.6;color:var(--ink)}
+.roster-meta{font-size:25rpx;line-height:1.6;color:var(--muted)}
+.prewrap{font-size:28rpx;line-height:1.7}
+.venue-location-title{font-size:29rpx;font-weight:600;line-height:1.4}
+.venue-location-address{font-size:26rpx}
+.venue-location-note{font-size:25rpx;line-height:1.6}
+.metric .number{font-weight:650}
+.metric .label{font-size:25rpx;color:var(--brand-ink)}
+.fixed-actions .bold{font-size:27rpx;font-weight:600}
+.fixed-actions .muted{font-size:25rpx}
+.hint{font-size:25rpx;line-height:1.65}
+.error{font-size:26rpx;font-weight:500}
+@media(max-width:360px){.match-facts .detail-line>text:first-child,.roster-meta,.venue-location-note,.metric .label,.fixed-actions .muted,.hint{font-size:12px}}
+@media(max-width:346px){.venue-location-address,.error{font-size:12px}}
+@media(max-width:333px){.fixed-actions .bold{font-size:12px}}
+@media(max-width:321px){.match-facts .detail-line>text:last-child,.section-title,.roster-stats,.prewrap{font-size:12px}}

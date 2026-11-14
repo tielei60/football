@@ -18,7 +18,7 @@
       ><view class="muted"
         >{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</view
       ></view
-    ><view class="card"
+    ><view class="card match-facts"
       ><view class="detail-line"
         ><text class="muted">比赛日期</text
         ><text>{{match.dateLabel}}</text></view
@@ -54,11 +54,11 @@
       ><view class="section-title">比赛名单与实际表现</view
       ><view wx:for="{{roster}}" wx:key="playerId" class="card"
         ><view class="between"
-          ><view class="bold">{{item.number}} · {{item.name}}</view
+          ><view class="bold roster-name">{{item.number}} · {{item.name}}</view
           ><text class="tag">{{item.selectionLabel}}</text></view
-        ><view class="muted"
+        ><view class="muted roster-meta"
           >{{item.position || '位置未记录'}} · {{item.appearedLabel}}</view
-        ><view style="margin-top: 16rpx"
+        ><view class="roster-stats" style="margin-top: 16rpx"
           >进球 {{item.goalsLabel}} · 助攻 {{item.assistsLabel}}</view
         ><text wx:if="{{item.snapshotSource==='migration'}}" class="muted"
           >身份资料为迁移时留存</text

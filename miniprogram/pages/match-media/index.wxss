@@ -2,3 +2,17 @@
 
 /* Page-specific density, hierarchy and long-content safeguards. */
 .photo{border-radius:18rpx;margin-bottom:16rpx}.card .between{gap:14rpx;align-items:flex-start}.card .between>text:first-child{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.55}.card .between .tag{flex-shrink:0}.card .actions{gap:12rpx;margin-top:18rpx}.card .actions button{font-size:25rpx;padding:16rpx 12rpx}.notice{min-height:220rpx;line-height:1.7}.card>.input{margin:16rpx 0}.prewrap{line-height:1.75}
+
+/* 比赛文字层级：只读须知与照片说明；不覆盖管理员 textarea。 */
+.section-title{font-size:28rpx;font-weight:600}
+.prewrap{font-size:28rpx;line-height:1.7}
+.photo-caption{font-size:27rpx;font-weight:500;color:var(--ink)}
+.card .tag{font-size:24rpx;font-weight:500}
+.hint{font-size:25rpx;line-height:1.6;color:var(--muted)}
+.upload-uncertain{font-weight:500;color:var(--ink)}
+.error{font-size:26rpx;font-weight:500}
+@media(max-width:375px){.card .tag{font-size:12px}}
+@media(max-width:360px){.hint{font-size:12px}}
+@media(max-width:346px){.error{font-size:12px}}
+@media(max-width:333px){.photo-caption{font-size:12px}}
+@media(max-width:321px){.section-title,.prewrap{font-size:12px}}

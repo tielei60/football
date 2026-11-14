@@ -4,3 +4,14 @@
 
 /* Page-specific density, hierarchy and long-content safeguards. */
 .title{font-size:34rpx}.roster-grid{gap:16rpx}.roster-grid>view{min-width:0}.field-label{font-size:23rpx;line-height:1.5}.card .between{gap:16rpx;align-items:flex-start}.card .bold{min-width:0;overflow-wrap:anywhere}.card .between button{width:auto;flex-shrink:0;margin:0}.card.row{gap:14rpx}.card.row button{width:auto;flex-shrink:0;margin:0}.picker{font-size:25rpx;line-height:1.5;white-space:normal}.hint{font-size:23rpx;line-height:1.65}
+
+/* 比赛文字层级：保留名单两列、所有选择器与数值输入几何。 */
+.title{font-size:34rpx;font-weight:650}
+.subtitle{font-size:26rpx;font-weight:500;color:var(--ink)}
+.card .bold{font-size:29rpx;font-weight:600;line-height:1.4;color:var(--ink)}
+.field-label{font-size:26rpx;font-weight:500;color:var(--ink)}
+.hint{font-size:25rpx;line-height:1.65;color:var(--muted)}
+.roster-warning{font-weight:500;color:var(--ink)}
+.error{font-size:26rpx;font-weight:500}
+@media(max-width:360px){.hint{font-size:12px}}
+@media(max-width:346px){.subtitle,.field-label,.error{font-size:12px}}

@@ -1,0 +1,18 @@
+{
+  "match-detail": {
+    "markupSha256": "54afb1f18a873bc4a33255ad8614e31007582c31f2b2f6e009262d48a39d3181",
+    "cssPrefixSha256": "986ab07fcba1922498ad31cfedacd64b837b4d8fdec5e87e95ebb87e1a868142"
+  },
+  "match-edit": {
+    "markupSha256": "90d9828f451941f41f2d741de4ad10ba6f7ed7f6913d0a12fa28d3a51ce16e9d",
+    "cssPrefixSha256": "d5119428a2bfc42292d93ff1e8b1269540190746c40bacfdea42bf9748e3a682"
+  },
+  "match-roster": {
+    "markupSha256": "f4b2313b413d6b4736adcd210ca33f62170520cf9a5ea6b5ca35230184316d04",
+    "cssPrefixSha256": "1a63cc6c103807cd7b458052a842ed04d70756847e3d4b7d2d36f7f5077e4664"
+  },
+  "match-media": {
+    "markupSha256": "e0ad197481deb18444f7eafc186debdb3695540a64b74da26af3112e38fe5499",
+    "cssPrefixSha256": "7c57a5852409562267ab73fdc3f0933918173e269bc14d6ceb1caf249e1d734d"
+  }
+}

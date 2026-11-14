@@ -2,7 +2,7 @@
   <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh" />
   <block wx:if="{{!loading && !error}}">
     <view class="title">比赛名单与数据</view><view class="subtitle">对阵 {{opponent}}</view>
-    <view class="hint">保存会替换本场完整名单。报名、首发和实际出场互不等同；进球助攻留空表示未知，0 表示确认没有。</view>
+    <view class="hint roster-warning">保存会替换本场完整名单。报名、首发和实际出场互不等同；进球助攻留空表示未知，0 表示确认没有。</view>
     <view class="card section row" wx:if="{{candidates.length}}">
       <business-picker title="添加比赛球员" bind:pickeropen="openBusinessPicker" class="grow" range="{{candidates}}" range-key="label" value="{{candidateIndex}}" bindchange="choosePlayer" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{candidates[candidateIndex].label}}</text></view></business-picker>
       <button class="small primary ui-button ui-compact" bindtap="add" disabled="{{loading || (busy || conflict)}}" size="mini">加入名单</button>
