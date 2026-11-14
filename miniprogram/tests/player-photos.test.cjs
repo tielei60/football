@@ -508,3 +508,20 @@ test("ordinary system selected preview survives a rejected upload and preserving
   assert.equal(h.page.data.caption, "New");
   assert.equal(h.page.data.actionError, "");
 });
+test('从AI返回通过真实onShow刷新封面列表并保留同账号说明和选图草稿',async()=>{
+ const h=fixture();await h.page.onShow();h.page.data.photos[0].draft='未保存说明';image(h.page);const raw=h.page._image;
+ h.page.openAi();assert.equal(h.page._needsRefresh,true);h.page.onHide();
+ let reads=0;h.api.request=async p=>{if(p.endsWith('/photos')){reads++;return {...listing,revision:8,coverPhotoId:3,photos:[...listing.photos,{id:3,caption:'模拟封面',generated:true,simulation:true}]};}return {dataUrl:'data:image/png;base64,iVBORw0KGgoBAgME'};};
+ await h.page.onShow();assert.equal(reads,1);assert.equal(h.page.revision,8);assert.equal(h.page.data.photos.length,3);assert.equal(h.page.data.coverPhotoId,3);assert.equal(h.page.data.photos[0].draft,'未保存说明');assert.equal(h.page.data.caption,'New');assert.equal(h.page.data.preview,'wxfile://picked');assert.equal(h.page._image,raw);assert.equal(h.page._needsRefresh,false);
+});
+test('AI未写入即返回仍安全重读且不丢草稿（不模拟系统导航失败回调）',async()=>{
+ const h=fixture({}, {navigateTo(){}});await h.page.onShow();h.page.data.photos[0].draft='原草稿';h.page.openAi();h.page.onHide();await h.page.onShow();assert.equal(h.page.data.coverPhotoId,1);assert.equal(h.page.data.photos[0].draft,'原草稿');assert.equal(h.page._needsRefresh,false);
+});
+test('AI返回前换账号不读取旧球员相册或保留旧草稿',async()=>{
+ const h=fixture();await h.page.onShow();image(h.page);h.page.openAi();h.page.onHide();let reads=0;h.api.getSession=()=>({...session,token:'B'});h.api.request=async()=>{reads++;return listing;};await h.page.onShow();assert.equal(reads,0);assert.equal(h.page.data.photos.length,0);assert.equal(h.page.data.preview,'');assert.match(h.page.data.error,/登录已变化/);
+});
+test('AI返回的旧元数据请求迟到不能覆盖较新相册与封面',async()=>{
+ const h=fixture();await h.page.onShow();h.page.openAi();h.page.onHide();let resolve,reads=0;
+ h.api.request=async p=>{if(p.endsWith('/photos')){if(++reads===1)return new Promise(r=>resolve=r);return {...listing,revision:12,coverPhotoId:2};}return {dataUrl:'data:image/png;base64,iVBORw0KGgoBAgME'};};
+ const returning=h.page.onShow();for(let i=0;i<8;i++)await Promise.resolve();assert.equal(typeof resolve,'function');await h.page.refresh();resolve({...listing,revision:9,coverPhotoId:1});await returning;assert.equal(h.page.revision,12);assert.equal(h.page.data.coverPhotoId,2);
+});

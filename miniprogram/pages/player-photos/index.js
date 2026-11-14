@@ -49,6 +49,8 @@ function clear(k, id) {
 Page({
   openAi() {
     if (!this.data.admin || this._hidden || this._disposed || this.data.busy || this.data.loading) return;
+    // AI 页可改变相册与封面；返回后重读元数据，并沿用同账号草稿保留逻辑。
+    this._needsRefresh = true;
     wx.navigateTo({url: "/pages/player-ai/index?id=" + encodeURIComponent(this.id)});
   },
   data: {
