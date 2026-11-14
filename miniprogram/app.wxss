@@ -355,3 +355,7 @@ input.input{height:88rpx;min-height:88rpx;padding:0 24rpx;line-height:42rpx}
 /* Interactive field boundary only; decorative surfaces keep --line. */
 input.input{border-color:var(--control-border,#8d7b96)}
 textarea{border-color:var(--control-border,#8d7b96)}
+
+/* 仅主要动作设置小屏触控高度下限；普通紧凑工具不放大，宽屏沿用原 rpx。 */
+@media(max-width:392.857px){button.ui-button:not(.ui-compact)[size="mini"]{min-height:44px}}
+@media(max-width:458.333px){button.ui-button.primary.ui-compact[size="mini"]{min-height:44px}}

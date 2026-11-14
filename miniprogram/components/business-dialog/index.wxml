@@ -12,7 +12,7 @@
      <button size="mini" class="nav-step" data-delta="1" bindtap="pickerNavigate" aria-label="下一组日期">›</button>
     </view>
     <scroll-view wx:if="{{pickerYearMode}}" scroll-y class="year-scroll" scroll-into-view="picker-year-{{modal.pickerState.viewYear}}">
-     <view class="year-grid"><button size="mini" wx:for="{{modal.pickerState.yearOptions}}" wx:key="value" id="picker-year-{{item.value}}" class="option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerYear" aria-label="{{item.label}}">{{item.label}}</button></view>
+     <view class="year-grid"><button size="mini" wx:for="{{modal.pickerState.yearOptions}}" wx:key="value" id="picker-year-{{item.value}}" class="option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerYear" aria-label="{{item.label}}{{item.selected ? '，当前选中' : ''}}" aria-checked="{{item.selected}}">{{item.label}}</button></view>
     </scroll-view>
     <block wx:elif="{{modal.pickerState.mode==='time'}}">
      <view class="time-labels"><text>小时</text><text>分钟</text></view><view class="time-columns">
@@ -22,7 +22,7 @@
     </block>
     <block wx:elif="{{modal.pickerState.mode==='date'&&modal.pickerState.fields==='day'}}">
      <view class="calendar-grid weekdays"><text wx:for="{{modal.pickerState.weekdays}}" wx:key="*this">{{item}}</text></view>
-     <view class="calendar-grid"><button size="mini" wx:for="{{modal.pickerState.days}}" wx:key="value" class="day {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.value}}" aria-checked="{{item.selected}}">{{item.label}}</button></view>
+     <view class="calendar-grid"><button size="mini" wx:for="{{modal.pickerState.days}}" wx:key="value" class="day {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-hidden="{{!item.label}}" aria-label="{{item.label ? item.value : ''}}" aria-checked="{{item.selected}}">{{item.label}}</button></view>
     </block>
     <view wx:else class="option-list {{modal.pickerState.mode==='date'?'year-grid':''}}">
      <button size="mini" wx:for="{{modal.pickerState.rows}}" wx:key="value" id="picker-option-{{item.value}}" class="option {{item.selected?'selected':''}}" data-value="{{item.value}}" disabled="{{item.disabled}}" bindtap="pickerOption" aria-label="{{item.label}}" aria-checked="{{item.selected}}"><text class="option-label">{{item.label}}</text><text wx:if="{{modal.pickerState.mode==='selector'}}" class="selection-mark {{item.selected?'checked':''}}" aria-hidden="true">{{item.selected?'✓':''}}</text><text wx:elif="{{item.selected}}" aria-hidden="true">✓</text></button>

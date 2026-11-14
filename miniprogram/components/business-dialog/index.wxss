@@ -55,3 +55,7 @@
 .selector-dialog .buttons{margin-top:22rpx;padding-top:20rpx;border-top:1rpx solid var(--line,#eae5ef)}
 
 .dialog-input:focus-visible{outline:3rpx solid var(--focus,#8845a0);outline-offset:3rpx}
+
+/* 仅确认、取消和普通选择行提高小屏触控下限，不改变日历与时间单元。 */
+@media(max-width:375px){.dialog .buttons>button[size="mini"]{min-height:44px}}
+@media(max-width:392.857px){.dialog.selector-dialog .picker-panel .option-list button.option[size="mini"]{min-height:44px}}
