@@ -466,3 +466,218 @@ test("photo body limits and additive migration preserve older matches", async (t
   assert.equal(read.body.opponent, f.match.opponent);
   assert.equal(read.body.revision, f.match.revision);
 });
+
+async function threePhotos(t) {
+  const f = await matchFixture(t);
+  let revision = f.match.revision;
+  const ids = [];
+  for (let i = 0; i < 3; i++) {
+    const r = await f.call(f.path, {
+      token: f.token,
+      method: "POST",
+      body: { revision, requestId: "order-test-photo-" + i, dataUrl: png },
+    });
+    assert.equal(r.status, 201);
+    revision = r.body.revision;
+    ids.push(r.body.photo.id);
+  }
+  return { ...f, revision, ids };
+}
+test("排序完整集合CAS、封面不变、新图追加及删除封面按排序回退", async (t) => {
+  const f = await threePhotos(t),
+    ordered = [f.ids[2], f.ids[0], f.ids[1]];
+  const r = await f.call(f.path + "/order", {
+    token: f.token,
+    method: "PUT",
+    body: { revision: f.revision, photoIds: ordered },
+  });
+  assert.equal(r.status, 200);
+  assert.deepEqual(
+    r.body.photos.map((p) => p.id),
+    ordered,
+  );
+  assert.equal(r.body.coverPhotoId, f.ids[0]);
+  assert.equal(r.body.revision, f.revision + 1);
+  assert.equal(
+    (
+      await f.call(f.path + "/order", {
+        token: f.token,
+        method: "PUT",
+        body: { revision: f.revision, photoIds: f.ids },
+      })
+    ).status,
+    409,
+  );
+  const added = await f.call(f.path, {
+    token: f.token,
+    method: "POST",
+    body: {
+      revision: r.body.revision,
+      requestId: "order-append-photo-4",
+      dataUrl: png,
+    },
+  });
+  assert.equal(added.status, 201);
+  let list = (await f.call(f.path, { token: f.token })).body;
+  assert.deepEqual(
+    list.photos.map((p) => p.id),
+    [...ordered, added.body.photo.id],
+  );
+  const removed = await f.call(f.path + "/" + f.ids[0], {
+    token: f.token,
+    method: "DELETE",
+    body: { revision: list.revision },
+  });
+  assert.equal(removed.status, 200);
+  assert.equal(removed.body.coverPhotoId, f.ids[2]);
+  assert.deepEqual(
+    removed.body.photos.map((p) => p.id),
+    [f.ids[2], f.ids[1], added.body.photo.id],
+  );
+});
+test("排序拒绝缺失重复非法及其它比赛照片，不改变revision", async (t) => {
+  const f = await threePhotos(t);
+  for (const photoIds of [
+    [f.ids[0]],
+    [f.ids[0], f.ids[0], f.ids[1]],
+    [...f.ids, 999],
+    [f.ids[0], f.ids[1], 999],
+    f.ids.map(String),
+    null,
+  ]) {
+    assert.equal(
+      (
+        await f.call(f.path + "/order", {
+          token: f.token,
+          method: "PUT",
+          body: { revision: f.revision, photoIds },
+        })
+      ).status,
+      400,
+    );
+  }
+  assert.equal(
+    (
+      await f.call(f.path + "/order", {
+        token: f.token,
+        method: "PUT",
+        body: { photoIds: f.ids },
+      })
+    ).status,
+    428,
+  );
+  const list = (await f.call(f.path, { token: f.token })).body;
+  assert.equal(list.revision, f.revision);
+  assert.deepEqual(
+    list.photos.map((p) => p.id),
+    f.ids,
+  );
+});
+test("排序管理员同队权限与事务失败回滚", async (t) => {
+  const f = await threePhotos(t),
+    db = new DatabaseSync(f.databasePath);
+  t.after(() => db.close());
+  const admin = db.prepare("SELECT * FROM club_users WHERE role='admin'").get();
+  db.exec("INSERT INTO club_teams(id,name) VALUES(2,'匿名另队')");
+  db.prepare(
+    "INSERT INTO club_users(team_id,username,password_hash,role) VALUES(2,'other-team-owner',?,'admin')",
+  ).run(admin.password_hash);
+  const other = (
+    await f.login({
+      username: "other-team-owner",
+      password: credentials.password,
+    })
+  ).body.token;
+  assert.equal(
+    (
+      await f.call(f.path + "/order", {
+        token: other,
+        method: "PUT",
+        body: { revision: f.revision, photoIds: f.ids },
+      })
+    ).status,
+    404,
+  );
+  const p = (
+    await f.call("/api/players", {
+      token: f.token,
+      method: "POST",
+      body: { name: "匿名球员" },
+    })
+  ).body;
+  assert.equal(
+    (
+      await f.call("/api/players/" + p.id + "/account", {
+        token: f.token,
+        method: "POST",
+        body: {
+          username: "order-member",
+          password: "fictional-member-password",
+        },
+      })
+    ).status,
+    201,
+  );
+  const member = (
+    await f.login({
+      username: "order-member",
+      password: "fictional-member-password",
+    })
+  ).body.token;
+  assert.equal(
+    (
+      await f.call(f.path + "/order", {
+        token: member,
+        method: "PUT",
+        body: { revision: f.revision, photoIds: f.ids },
+      })
+    ).status,
+    403,
+  );
+  db.exec(
+    `CREATE TRIGGER order_fail BEFORE UPDATE OF sort_order ON club_match_photos WHEN NEW.id=${f.ids[0]} BEGIN SELECT RAISE(ABORT,'synthetic'); END`,
+  );
+  assert.equal(
+    (
+      await f.call(f.path + "/order", {
+        token: f.token,
+        method: "PUT",
+        body: { revision: f.revision, photoIds: [...f.ids].reverse() },
+      })
+    ).status,
+    500,
+  );
+  const list = (await f.call(f.path, { token: f.token })).body;
+  assert.equal(list.revision, f.revision);
+  assert.deepEqual(
+    list.photos.map((p) => p.id),
+    f.ids,
+  );
+});
+test("旧相册顺序迁移保持id顺序且重复初始化不覆盖排序", async (t) => {
+  const f = await threePhotos(t),
+    db = new DatabaseSync(f.databasePath);
+  t.after(() => db.close());
+  db.exec("ALTER TABLE club_match_photos DROP COLUMN sort_order");
+  const { createMatchMediaStore } = await import("./match-media-store.mjs");
+  createMatchMediaStore(db, () => ({}));
+  assert.deepEqual(
+    db
+      .prepare("SELECT id FROM club_match_photos ORDER BY sort_order,id")
+      .all()
+      .map((p) => p.id),
+    f.ids,
+  );
+  db.prepare("UPDATE club_match_photos SET sort_order=-1 WHERE id=?").run(
+    f.ids[2],
+  );
+  createMatchMediaStore(db, () => ({}));
+  assert.equal(
+    db
+      .prepare(
+        "SELECT id FROM club_match_photos ORDER BY sort_order,id LIMIT 1",
+      )
+      .get().id,
+    f.ids[2],
+  );
+});

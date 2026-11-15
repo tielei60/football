@@ -19,7 +19,7 @@
           ><view class="muted player-meta"
             >{{player.numberLabel}} 号 · {{player.positionLabel}}</view
           ><text class="tag"
-            >{{player.status==='active'?'在队':'已归档'}}</text
+            >{{player.membershipLabel}}</text
           ></view
         ></view
       ><button bindtap="openPhotos" class="ui-button ui-block" size="mini">查看出场照片</button><view class="divider"></view

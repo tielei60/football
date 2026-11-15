@@ -8,6 +8,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     visible: [],
     search: "",
     status: "active",
+    statusInitialized: false,
     positionIndex: 0,
     selectedPosition: "",
     positions: ["全部位置"],
@@ -23,8 +24,14 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   imageError: s.imageError,
   openPlayer: s.openPlayer,
   refresh() {
+    const owner = s.api.getSession()?.token;
+    if (this._filterOwner !== owner) {
+      this._filterOwner = owner;
+      this.setData({status:"active",statusInitialized:false});
+    }
     return s.load(this, async () => {
       const players = (await s.api.request("/players")).map(s.playerView);
+      const status = this.data.statusInitialized ? this.data.status : !players.some(p=>p.status==="active"&&p.membershipConfirmed!==false)&&players.some(p=>p.membershipConfirmed===false) ? "unconfirmed" : "active";
       const positions = [
         "全部位置",
         ...new Set(players.flatMap((p) => p.positions || [])),
@@ -33,6 +40,8 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         ? this.data.selectedPosition
         : "";
       return {
+        status,
+        statusInitialized: true,
         selectedPosition,
         positionIndex: selectedPosition
           ? positions.indexOf(selectedPosition)
@@ -42,7 +51,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         visible: this.filter(
           players,
           this.data.search,
-          this.data.status,
+          status,
           selectedPosition,
         ),
       };
@@ -53,7 +62,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     return rows
       .filter(
         (p) =>
-          p.status === status &&
+          (status === "unconfirmed" ? p.membershipConfirmed === false : p.membershipConfirmed !== false && p.status === status) &&
           (!selectedPosition ||
             (p.positions || []).includes(selectedPosition)) &&
           (!needle ||
@@ -91,8 +100,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   },
   changeTab(e) {
     const status = e.currentTarget.dataset.status;
+    if(this._filterOwner!==s.api.getSession()?.token||!["active","inactive","unconfirmed"].includes(status))return;
     this.setData({
       status,
+      statusInitialized: true,
       visible: this.filter(this.data.players, this.data.search, status),
     });
   },

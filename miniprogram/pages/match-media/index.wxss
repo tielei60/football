@@ -3,6 +3,10 @@
 /* Page-specific density, hierarchy and long-content safeguards. */
 .photo{border-radius:18rpx;margin-bottom:16rpx}.card .between{gap:14rpx;align-items:flex-start}.card .between>text:first-child{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.55}.card .between .tag{flex-shrink:0}.card .actions{gap:12rpx;margin-top:18rpx}.card .actions button{font-size:25rpx;padding:16rpx 12rpx}.notice{min-height:220rpx;line-height:1.7}.card>.input{margin:16rpx 0}.prewrap{line-height:1.75}
 
+/* 相册排序独立双列，避免与封面、移除操作挤在同一行。 */
+.photo-order-actions{display:flex;gap:12rpx;margin-top:12rpx;min-width:0}
+.photo-order-actions button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;min-height:44px;margin:0;box-sizing:border-box;padding:16rpx 12rpx;line-height:1.5;white-space:nowrap}
+
 /* 比赛文字层级：只读须知与照片说明；不覆盖管理员 textarea。 */
 .section-title{font-size:28rpx;font-weight:600}
 .prewrap{font-size:28rpx;line-height:1.7}

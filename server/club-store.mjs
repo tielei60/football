@@ -242,6 +242,10 @@ export function createClubStore(
   );
   migrateWechatIdentity(database);
   tx(() => {
+    if (!q("PRAGMA table_info(club_players)").all().some(c => c.name === "membership_confirmed"))
+      database.exec("ALTER TABLE club_players ADD COLUMN membership_confirmed INTEGER NOT NULL DEFAULT 1 CHECK(membership_confirmed IN (0,1))");
+  });
+  tx(() => {
     if (
       !q("PRAGMA table_info(club_players)")
         .all()
@@ -415,6 +419,7 @@ export function createClubStore(
       positions: JSON.parse(r.positions),
       preferredFoot: r.preferred_foot,
       status: r.status,
+      membershipConfirmed: Boolean(r.membership_confirmed),
       note: r.note,
       avatar: r.avatar,
       avatarOriginKind: r.avatar_origin_kind ?? null,
@@ -441,6 +446,7 @@ export function createClubStore(
           positions: ["待定"],
           preferredFoot: "",
           status: "active",
+          membershipConfirmed: true,
           note: "",
           avatar: null,
         };
@@ -450,6 +456,8 @@ export function createClubStore(
     p.positions = positions(p.positions);
     p.preferredFoot = text(p.preferredFoot, 40);
     p.status = oneOf(p.status, ["active", "inactive"]);
+    if (typeof p.membershipConfirmed !== "boolean")
+      fail(400, "成员归属确认必须为布尔值。");
     p.note = text(p.note, 20000);
     if (
       p.avatar !== null &&
@@ -473,6 +481,9 @@ export function createClubStore(
         p.status,
         p.note,
         p.avatar,
+      );
+      q("UPDATE club_players SET membership_confirmed=? WHERE team_id=? AND id=?").run(
+        p.membershipConfirmed ? 1 : 0, teamId, id,
       );
       if (p.avatar !== old.avatar)
         q(

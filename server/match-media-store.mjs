@@ -105,6 +105,17 @@ export function createMatchMediaStore(db, getMatch) {
    data_url TEXT,created_at INTEGER NOT NULL,is_deleted INTEGER NOT NULL DEFAULT 0,
    UNIQUE(team_id,match_id,request_id),FOREIGN KEY(team_id,match_id) REFERENCES club_matches(team_id,id)
   ) STRICT; CREATE INDEX IF NOT EXISTS club_match_photos_match ON club_match_photos(team_id,match_id,is_deleted,id);`);
+    if (
+      !db
+        .prepare("PRAGMA table_info(club_match_photos)")
+        .all()
+        .some((c) => c.name === "sort_order")
+    ) {
+      db.exec(
+        "ALTER TABLE club_match_photos ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+      );
+      db.exec("UPDATE club_match_photos SET sort_order=id");
+    }
     db.exec("COMMIT");
   } catch (e) {
     db.exec("ROLLBACK");
@@ -121,7 +132,7 @@ export function createMatchMediaStore(db, getMatch) {
       coverPhotoId: m.coverPhotoId,
       photos: db
         .prepare(
-          "SELECT id,caption,mime_type,byte_size,created_at FROM club_match_photos WHERE team_id=? AND match_id=? AND is_deleted=0 ORDER BY id",
+          "SELECT id,caption,mime_type,byte_size,created_at FROM club_match_photos WHERE team_id=? AND match_id=? AND is_deleted=0 ORDER BY sort_order,id",
         )
         .all(u.team_id, id)
         .map(metadata),
@@ -202,7 +213,7 @@ export function createMatchMediaStore(db, getMatch) {
         const photoId = Number(
           db
             .prepare(
-              "INSERT INTO club_match_photos(team_id,match_id,request_id,caption,mime_type,byte_size,content_hash,data_url,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+              "INSERT INTO club_match_photos(team_id,match_id,request_id,caption,mime_type,byte_size,content_hash,data_url,created_at,sort_order) VALUES(?,?,?,?,?,?,?,?,?,?)",
             )
             .run(
               u.team_id,
@@ -214,6 +225,11 @@ export function createMatchMediaStore(db, getMatch) {
               info.hash,
               body.dataUrl,
               Date.now(),
+              db
+                .prepare(
+                  "SELECT coalesce(max(sort_order),-1)+1 n FROM club_match_photos WHERE team_id=? AND match_id=?",
+                )
+                .get(u.team_id, id).n,
             ).lastInsertRowid,
         );
         db.prepare(
@@ -241,13 +257,45 @@ export function createMatchMediaStore(db, getMatch) {
           m.coverPhotoId === photoId
             ? (db
                 .prepare(
-                  "SELECT id FROM club_match_photos WHERE team_id=? AND match_id=? AND is_deleted=0 ORDER BY id LIMIT 1",
+                  "SELECT id FROM club_match_photos WHERE team_id=? AND match_id=? AND is_deleted=0 ORDER BY sort_order,id LIMIT 1",
                 )
                 .get(u.team_id, id)?.id ?? null)
             : m.coverPhotoId;
         db.prepare(
           "UPDATE club_matches SET revision=revision+1,cover_photo_id=? WHERE team_id=? AND id=?",
         ).run(next, u.team_id, id);
+        return list(u, id);
+      });
+    },
+    orderMatchPhotos(u, id, body) {
+      allowed(u, id, true);
+      object(body);
+      if (
+        Object.keys(body).some((k) => !["revision", "photoIds"].includes(k)) ||
+        !Array.isArray(body.photoIds) ||
+        body.photoIds.length > 9 ||
+        body.photoIds.some((n) => !Number.isSafeInteger(n) || n < 1) ||
+        new Set(body.photoIds).size !== body.photoIds.length
+      )
+        fail(400, "请提交完整且不重复的照片顺序。");
+      return tx(() => {
+        const m = allowed(u, id, true);
+        revision(body, m);
+        const current = list(u, id).photos.map((p) => p.id);
+        if (
+          current.length !== body.photoIds.length ||
+          body.photoIds.some((n) => !current.includes(n))
+        )
+          fail(400, "照片列表已变化或编号不属于本场比赛，请重新载入。");
+        const update = db.prepare(
+          "UPDATE club_match_photos SET sort_order=? WHERE team_id=? AND match_id=? AND id=? AND is_deleted=0",
+        );
+        body.photoIds.forEach((photoId, index) =>
+          update.run(index, u.team_id, id, photoId),
+        );
+        db.prepare(
+          "UPDATE club_matches SET revision=revision+1 WHERE team_id=? AND id=?",
+        ).run(u.team_id, id);
         return list(u, id);
       });
     },

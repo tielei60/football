@@ -140,6 +140,8 @@ function playerView(p) {
     positions: p.positions,
     preferredFoot: p.preferredFoot,
     status: p.status,
+    membershipConfirmed: p.membershipConfirmed !== false,
+    membershipLabel: p.membershipConfirmed === false ? "状态未确认" : p.status === "active" ? "在队" : "已归档",
     avatar: assetUrl(p.avatar),
     avatarGenerated: p.avatarGenerated === true,
     avatarOriginLabel: p.avatarSimulation === true || p.avatarOriginKind === "local-simulation" ? "模拟图" : p.avatarAiGenerated === true ? "AI 生成" : "生成图",

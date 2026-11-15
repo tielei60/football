@@ -250,3 +250,29 @@ test('refresh validation resolving after hide cannot dispatch member reads',asyn
 test('manual refresh under new identity cannot retain another account draft',async()=>{
  const h=fixture();await h.page.refresh();h.page.setData({notice:'Private old draft',preview:'wxfile://old',caption:'Private caption'});h.page._image='old-private-image';h.api.getSession=()=>({...session,token:'B'});await h.page.refresh();assert.equal(h.page.data.notice,'Saved notice');assert.equal(h.page.data.preview,'');assert.equal(h.page.data.caption,'');assert.equal(h.page._image,null);
 });
+
+function sortable(h){h.page._loaded=true;h.page._owner='A';h.page._epoch=1;h.page.revision=8;h.page.setData({loading:false,admin:true,photos:[{id:1,caption:'甲'},{id:2,caption:'乙'},{id:3,caption:'丙'}],coverPhotoId:1,notice:'未保存说明'});h.page.refresh=async()=>{};}
+const moveEvent=(id,delta)=>({currentTarget:{dataset:{id,delta}}});
+test('比赛相册排序提交完整置换与旧版本，不乐观改变封面或草稿',async()=>{
+ const h=fixture();sortable(h);await h.page.move(moveEvent(2,-1));
+ assert.equal(h.posts.length,1);assert.equal(h.posts[0].path,'/matches/1/photos/order');assert.equal(h.posts[0].method,'PUT');
+ assert.equal(JSON.stringify(h.posts[0].data),JSON.stringify({revision:8,photoIds:[2,1,3]}));
+ assert.equal(h.page.data.coverPhotoId,1);assert.equal(h.page.data.notice,'未保存说明');assert.equal(h.page.data.photos[0].id,1);
+});
+test('排序首尾、非法方向、普通球员、隐藏和未知上传均不写',async()=>{
+ const h=fixture();sortable(h);
+ for(const e of [moveEvent(1,-1),moveEvent(3,1),moveEvent(2,0),moveEvent(99,1)])await h.page.move(e);
+ h.page.data.admin=false;await h.page.move(moveEvent(2,-1));h.page.data.admin=true;h.page._hidden=true;await h.page.move(moveEvent(2,-1));h.page._hidden=false;h.page.data.uncertain=true;await h.page.move(moveEvent(2,-1));assert.equal(h.posts.length,0);
+});
+test('排序双击只发送一次，预检隐藏不得发出写请求',async()=>{
+ let resolve;const h=fixture({ensureSession:()=>new Promise(r=>resolve=r)});sortable(h);
+ const first=h.page.move(moveEvent(2,-1));await h.page.move(moveEvent(2,-1));h.page.onHide();resolve(session);await first;assert.equal(h.posts.length,0);
+});
+for(const status of [409,0,500])test('排序失败 '+status+' 保留原序并锁定至显式重新载入',async()=>{
+ const h=fixture({request:async()=>{throw Object.assign(Error('失败'),{status});}});sortable(h);await h.page.move(moveEvent(2,-1));
+ assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.busy,false);assert.equal(h.page.data.photos[0].id,1);assert.equal(h.page.data.notice,'未保存说明');
+ assert.match(h.page.data.actionError,status===409?/重新载入/:/排序结果尚未确认/);
+});
+test('排序旧账号迟到失败不写新账号错误',async()=>{
+ let reject,token='A';const h=fixture({getSession:()=>({...session,token}),request:()=>new Promise((r,j)=>reject=j)});sortable(h);const task=h.page.move(moveEvent(2,-1));await new Promise(r=>setImmediate(r));token='B';reject(Object.assign(Error('旧失败'),{status:409}));await task;assert.equal(h.page.data.actionError,'');
+});

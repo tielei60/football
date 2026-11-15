@@ -19,7 +19,7 @@
       data-status="inactive"
       bindtap="changeTab"
       >历史队员</view
-    ></view
+    ><view aria-role="button" class="tab {{status==='unconfirmed'?'active':''}}" data-status="unconfirmed" bindtap="changeTab">待确认</view></view
   ><business-picker title="球员位置" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
     range="{{positions}}"
     value="{{positionIndex}}"

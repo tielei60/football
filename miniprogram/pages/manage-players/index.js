@@ -9,25 +9,32 @@ Page({onHide(){a.hide.call(this);},
     visible: [],
     search: "",
     status: "active",
+    statusInitialized: false,
   },
   onShow() {
     return a.show.call(this, true);
   },
   onUnload(){ui.abort(this);return a.unload.apply(this,arguments);},
   refresh() {
+    const owner = a.s.api.getSession()?.token;
+    if (this._filterOwner !== owner) {
+      this._filterOwner = owner;
+      this.setData({status:"active",statusInitialized:false});
+    }
     return a.load(this, async () => {
       const players = (await a.s.api.request("/players")).map((p) => ({
         ...a.s.playerView(p),
         hasAccount: p.hasAccount,
       }));
-      return { players, visible: this.filter(players) };
+      const status = this.data.statusInitialized ? this.data.status : !players.some(p=>p.status==="active"&&p.membershipConfirmed!==false)&&players.some(p=>p.membershipConfirmed===false) ? "unconfirmed" : "active";
+      return { players, status, statusInitialized:true, visible: this.filter(players,status) };
     });
   },
-  filter(rows) {
+  filter(rows, status=this.data.status) {
     const query = this.data.search.trim();
     return rows.filter(
       (p) =>
-        p.status === this.data.status &&
+        (status === "unconfirmed" ? p.membershipConfirmed === false : p.membershipConfirmed !== false && p.status === status) &&
         (!query ||
           p.name.includes(query) ||
           String(p.number ?? "").includes(query)),
@@ -38,7 +45,9 @@ Page({onHide(){a.hide.call(this);},
     this.setData({ visible: this.filter(this.data.players) });
   },
   status(e) {
-    this.setData({ status: e.currentTarget.dataset.status });
+    const status=e.currentTarget.dataset.status;
+    if(this._filterOwner!==a.s.api.getSession()?.token||!["active","inactive","unconfirmed"].includes(status))return;
+    this.setData({ status, statusInitialized:true });
     this.setData({ visible: this.filter(this.data.players) });
   },
   create() {

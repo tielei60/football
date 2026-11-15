@@ -171,7 +171,7 @@
             <UiSelect v-model="addPlayerId">
               <option value="">选择球员</option>
               <option v-for="p in availablePlayers" :key="p.id" :value="p.id">
-                {{ p.name }}{{ p.status === "inactive" ? "（已归档）" : "" }}
+                {{ p.name }}{{ p.membershipConfirmed === false ? "（状态未确认）" : p.status === "inactive" ? "（已归档）" : "" }}
               </option>
             </UiSelect>
           </label>

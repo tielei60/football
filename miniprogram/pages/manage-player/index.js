@@ -82,6 +82,9 @@ Page({
     id: "",
     revision: null,
     status: "active",
+    membershipConfirmed: true,
+    membershipOptions: ["状态未确认", "在队", "已归档"],
+    membershipIndex: 1,
     hasAccount: false,
     passwordEnabled: true,
     avatar: "",
@@ -107,7 +110,7 @@ Page({
     const token = a.s.api.getSession()?.token,
       epoch = this._epoch,
       view = this._adminView || 0;
-    if (!this.data.authorized || this._hidden || this._disposed) return;
+    if (this._ownerToken !== a.s.api.getSession()?.token || !this.data.authorized || this._hidden || this._disposed) return;
     try {
       const c = await a.s.api.capabilities();
       if (
@@ -160,6 +163,8 @@ Page({
         wechatEnabled,
         revision: p?.revision || null,
         status: p?.status || "active",
+        membershipConfirmed: p?.membershipConfirmed !== false,
+        membershipIndex: p?.membershipConfirmed === false ? 0 : p?.status === "inactive" ? 2 : 1,
         hasAccount: !!p?.hasAccount,
         passwordEnabled: p?.passwordEnabled !== false,
         accountOpen: false,
@@ -244,6 +249,7 @@ Page({
       name: f.name.trim(),
       number: f.number === "" ? null : Number(f.number),
       status: this.data.status,
+      membershipConfirmed: this.data.membershipConfirmed,
     };
     if (this.id) payload.revision = this.data.revision;
     if (this._imageData !== undefined) payload.avatar = this._imageData;
@@ -271,8 +277,14 @@ Page({
       !this.id,
     );
   },
+  membership(e) {
+    if (this._ownerToken !== a.s.api.getSession()?.token || !this.data.authorized || this._hidden || this._disposed || this.data.loading || this.data.busy || this.data.conflict || this.data.uncertain) return;
+    const index = Number(e.detail.value);
+    if (![0,1,2].includes(index)) return;
+    this.setData({membershipIndex:index,membershipConfirmed:index!==0,...(index?{status:index===1?"active":"inactive"}:{})});
+  },
   archive() {
-    if (this.data.busy || !this.id) return;
+    if (this.data.busy || !this.id || this.data.membershipConfirmed === false) return;
     const status = this.data.status === "active" ? "inactive" : "active";
     ui.showModal(this, {
       title: status === "inactive" ? "归档球员" : "恢复球员",

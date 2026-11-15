@@ -18,10 +18,10 @@
           ><view class="subtitle">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view
           ><view class="title break">{{team.name}}</view></view
         ></view
-      ><view class="hero-metrics"
+      ><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view><view class="hero-metrics"
         ><view
           ><text class="hero-number">{{playerCount}}</text
-          ><text>位队员</text></view
+          ><text>位在队队员</text></view
         ><view
           ><text class="hero-number">{{stats.team.matches}}</text
           ><text>本年完赛</text></view

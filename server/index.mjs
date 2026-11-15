@@ -754,7 +754,7 @@ export function createFootballServer({
         }
       }
       const matchPhotoRoute =
-        /^\/api\/matches\/([1-9]\d*)\/photos(?:\/(cover|[1-9]\d*))?$/.exec(
+        /^\/api\/matches\/([1-9]\d*)\/photos(?:\/(cover|order|[1-9]\d*))?$/.exec(
           pathname,
         );
       if (matchPhotoRoute) {
@@ -762,7 +762,7 @@ export function createFootballServer({
           part = matchPhotoRoute[2];
         if (!part && method === "GET")
           return send(response, 200, club.listMatchPhotos(user, id));
-        if (part && part !== "cover" && method === "GET")
+        if (part && !["cover", "order"].includes(part) && method === "GET")
           return send(
             response,
             200,
@@ -771,9 +771,11 @@ export function createFootballServer({
         admin();
         if (!part && method === "POST")
           return send(response, 201, club.addMatchPhoto(user, id, body()));
+        if (part === "order" && method === "PUT")
+          return send(response, 200, club.orderMatchPhotos(user, id, body()));
         if (part === "cover" && method === "PUT")
           return send(response, 200, club.setMatchCover(user, id, body()));
-        if (part && part !== "cover" && method === "DELETE")
+        if (part && !["cover", "order"].includes(part) && method === "DELETE")
           return send(
             response,
             200,

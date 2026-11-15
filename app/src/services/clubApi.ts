@@ -18,6 +18,7 @@ export interface ClubPlayer {
   positions: string[];
   preferredFoot: string;
   status: "active" | "inactive";
+  membershipConfirmed?: boolean;
   note: string;
   avatar: string | null;
   hasAccount: boolean;

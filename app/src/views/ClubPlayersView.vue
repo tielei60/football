@@ -4,7 +4,7 @@
       <span class="club-eyebrow">THE SQUAD / 球队阵容</span>
       <h1>球队球员</h1>
       <p class="club-muted">
-        {{ players.filter((p) => p.status === "active").length }} 位在队球员 · 名单与战术板共享球员身份
+        {{ players.filter((p) => p.status === "active" && p.membershipConfirmed !== false).length }} 位在队球员 · {{ players.filter((p) => p.membershipConfirmed === false).length }} 位状态未确认 · 名单与战术板共享球员身份
       </p>
     </div>
     <button v-if="auth.isAdmin" class="primary" :disabled="busy" @click="edit()">添加球员</button>
@@ -42,7 +42,8 @@
         </label>
         <label>
           状态
-          <UiSelect v-model="form.status">
+          <UiSelect v-model="membershipState">
+            <option value="unconfirmed">状态未确认</option>
             <option value="active">在队</option>
             <option value="inactive">已归档</option>
           </UiSelect>
@@ -160,7 +161,7 @@
             <td>{{ p.positions.join(" / ") || "未知" }}</td>
             <td>{{ p.preferredFoot || "未知" }}</td>
             <td>
-              <span class="club-tag" :data-status="p.status">{{ p.status === "active" ? "在队" : "已归档" }}</span>
+              <span class="club-tag" :data-status="p.status">{{ p.membershipConfirmed === false ? "状态未确认" : p.status === "active" ? "在队" : "已归档" }}</span>
             </td>
             <td v-if="auth.isAdmin">
               <div class="club-actions">
@@ -195,6 +196,14 @@ import { clubApi, ClubApiError, unknown, type ClubPlayer } from "@/services/club
 const auth = useAuthStore();
 const players = ref<ClubPlayer[]>([]);
 const form = ref<ClubPlayer | null>(null);
+const membershipState = computed({
+  get: () => form.value?.membershipConfirmed === false ? "unconfirmed" : form.value?.status || "active",
+  set: (value: string) => {
+    if (!form.value || !["unconfirmed", "active", "inactive"].includes(value)) return;
+    form.value.membershipConfirmed = value !== "unconfirmed";
+    if (value === "active" || value === "inactive") form.value.status = value;
+  },
+});
 const positionOptions = [
   "门将",
   "后卫",
@@ -359,6 +368,7 @@ async function save() {
         .filter(Boolean),
       preferredFoot: p.preferredFoot,
       status: p.status,
+      membershipConfirmed: p.membershipConfirmed !== false,
       note: p.note,
       avatar: p.avatar,
     });
