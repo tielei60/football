@@ -230,7 +230,7 @@
     }
   },
   "login": {
-    "markupSha256": "d6b56a86c5d01ff5b5c31951f6c644d23c5e057fdd86cbcdd470ba2b377bb062",
+    "markupSha256": "b8970c572e27b36f6914afb67ce1438b615ea8807973742ffc058b523c3b6424",
     "geometry": {
       ".login": {
         "padding-top": "100rpx"
@@ -259,6 +259,14 @@
       },
       ".login .hint": {
         "margin-top": "24rpx"
+      },
+      ".brand-image": {
+        "width": "88rpx",
+        "height": "88rpx",
+        "display": "block"
+      },
+      ".brand-fallback": {
+        "text-align": "center"
       }
     }
   },

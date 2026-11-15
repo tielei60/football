@@ -71,7 +71,11 @@ Page({
     if (attempt) attempt.cancel();
     this.setData({ password: "", busy: false });
   },
+  badgeError() {
+    if (!this._disposed) this.setData({ badgeFailed: true });
+  },
   data: {
+    badgeFailed: false,
     username: "",
     password: "",
     busy: false,

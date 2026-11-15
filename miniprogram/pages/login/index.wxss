@@ -17,6 +17,17 @@
   box-shadow: 0 8rpx 24rpx rgba(99,50,119,.1);
   line-height: 88rpx;
 }
+/* 打包队徽保留原图背景，适应原标识占位，不挪动登录表单。 */
+.brand-image {
+  width: 88rpx;
+  height: 88rpx;
+  display: block;
+}
+.brand-fallback {
+  font-size: 20rpx;
+  line-height: 1.3;
+  text-align: center;
+}
 .login-card {
   margin-top: 42rpx;
   padding: 30rpx;

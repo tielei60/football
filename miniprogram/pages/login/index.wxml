@@ -1,5 +1,8 @@
 <view class="page login"
-  ><view class="brand-mark">FC</view><view class="title">欢迎归队</view
+  ><view class="brand-mark">
+    <image wx:if="{{!badgeFailed}}" class="brand-image" src="/assets/team-badge.png" mode="aspectFit" binderror="badgeError" aria-label="柏林花园 FC 队徽" />
+    <text wx:else class="brand-fallback">队徽暂不可用</text>
+  </view><view class="title">欢迎归队</view
   ><view class="subtitle">管理员与球员共用此入口，登录后显示对应功能</view
   ><view class="card login-card"
     ><view class="field"
