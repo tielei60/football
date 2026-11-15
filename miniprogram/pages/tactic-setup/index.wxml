@@ -7,7 +7,7 @@
 <view class="hint">同一球员只能占一个位置。新匿名球员可在“阶段与属性”中改名；主队也可直接选择球队球员。</view>
 <button id="formation-apply" class="primary" bindtap="applyFormation" disabled="{{loading || (busy||conflict||!slots.length)}}">{{busy?'保存中…':'应用所选方阵型与阵容'}}</button>
 <view wx:if="{{actionError}}" class="error">{{actionError}}</view><button disabled="{{loading}}" wx:if="{{conflict}}" id="setup-reload" bindtap="reload">核对后重新载入</button>
-</block><view class="preview"><canvas hidden="{{businessUiBlocking}}" id="setup-preview" type="2d" style="width:{{previewWidth}}px;height:{{previewHeight}}px"/></view><view wx:if="{{renderError}}" class="error">{{renderError}}</view><view class="hint">预览为初始画布。保存不会修改历史比赛的战术快照。</view>
+</block><view class="preview"><view id="setup-preview-frame" class="preview-frame" style="width:{{previewWidth}}px;height:{{previewHeight}}px"><image wx:for="{{previewImages}}" wx:key="id" hidden="{{businessUiBlocking}}" class="preview-image" src="{{item.src}}" data-id="{{item.id}}" bindload="previewLoaded" binderror="previewFailed" mode="scaleToFill" style="width:{{previewWidth}}px;height:{{previewHeight}}px"/></view></view><view wx:if="{{previewBusy}}" class="hint">正在准备预览，若长时间未显示可重新生成。</view><view wx:if="{{renderError}}" class="error">{{renderError}}</view><button wx:if="{{previewBusy||renderError}}" class="small ui-button ui-block" size="mini" bindtap="retryPreview" disabled="{{previewBlocked||loading}}">重新生成预览</button><view class="hint">预览为初始画布。保存不会修改历史比赛的战术快照。</view>
 </block></view>
 
 <business-dialog id="business-dialog"/>
