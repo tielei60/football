@@ -272,3 +272,18 @@ test('服务端改密code更新当前会话，但迟到旧响应不能污染新�
  const f=fixture({stored:session()});const current=f.api.request('/players');f.complete(0,403,{message:'必须改密',code:'PASSWORD_CHANGE_REQUIRED'});await assert.rejects(current,e=>e.code==='PASSWORD_CHANGE_REQUIRED');assert.equal(f.api.getSession().user.mustChangePassword,true);
  const g=fixture({stored:session()});const old=g.api.request('/players');const login=g.api.beginLogin('anonymous','anonymous-password');g.complete(1,200,session('b'));await login.promise;g.complete(0,403,{message:'旧限制',code:'PASSWORD_CHANGE_REQUIRED'});await assert.rejects(old);assert.notEqual(g.api.getSession().user.mustChangePassword,true);assert.equal(g.api.getSession().token,token('b'));
 });
+
+test('本地迟到标记覆盖 A→B→退出旧401，当前失效不被误标',async()=>{
+ const f=fixture({stored:session()});const old=f.api.ensureSession();const login=f.api.login('anonymous','anonymous-password');f.complete(1,200,session('b'));await login;f.api.clearSession();f.complete(0,401,{message:'旧失效'});await assert.rejects(old,e=>e.status===401&&e.staleSession===true);assert.equal(f.api.getSession(),null);
+ for(const status of [401,403]){const h=fixture({stored:session()});const work=h.api.ensureSession();h.complete(0,status,{message:'当前失效',staleSession:true});await assert.rejects(work,e=>e.status===status&&e.staleSession!==true);assert.equal(h.api.getSession(),null);}
+});
+test('当前强制改密错误与正常成功不携带迟到标记',async()=>{
+ const f=fixture({stored:session()});const work=f.api.ensureSession();f.complete(0,403,{message:'须改密',code:'PASSWORD_CHANGE_REQUIRED',staleSession:true});await assert.rejects(work,e=>e.code==='PASSWORD_CHANGE_REQUIRED'&&!e.staleSession);assert.equal(f.api.getSession().user.mustChangePassword,true);
+ const g=fixture({stored:session()});const current=g.api.ensureSession();g.complete(0,200,{user:session().user,team:session().team});const result=await current;assert.equal(result.user.id,1);assert.equal(result.staleSession,undefined);
+});
+
+test('真实API迟到标记经shared.fail不导航，当前401403仍可见',async()=>{
+ function receiver(api){let redirects=0;const module={exports:{}};vm.runInNewContext('(function(require,module,exports){'+fs.readFileSync(path.join(__dirname,'../pages/shared.js'),'utf8')+'\n})',{wx:{redirectTo(){redirects++;}}})(p=>p.includes('api')?api:{},module,module.exports);const page={data:{},setData(d){Object.assign(this.data,d)}};return {fail:e=>module.exports.fail(page,e),page,redirects:()=>redirects};}
+ const f=fixture({stored:session()}),view=receiver(f.api);const old=f.api.ensureSession();const fresh=f.api.login('anonymous','anonymous-password');f.complete(1,200,session('b'));await fresh;f.api.clearSession();f.complete(0,401,{message:'旧会话'});await old.catch(view.fail);assert.equal(view.redirects(),0);assert.equal(view.page.data.error,undefined);
+ for(const status of [401,403]){const g=fixture({stored:session()}),v=receiver(g.api);const current=g.api.ensureSession();g.complete(0,status,{message:'当前失效'});await current.catch(v.fail);assert.equal(v.page.data.error,'当前失效');assert.equal(v.redirects(),status===401?1:0);}
+});

@@ -175,6 +175,8 @@ async function request(path, method = "GET", data) {
       throw failure("登录状态已变化，请重新打开页面。", 401);
     return result;
   } catch (error) {
+    // 只由本地请求代次判断；必须在当前 401 清理会话之前记录。
+    if (captured !== epoch) error.staleSession = true;
     if (error.code === "PASSWORD_CHANGE_REQUIRED" && captured === epoch && getSession()?.token === current.token) {
       session.user = {...session.user,mustChangePassword:true};
       try {persistSession();} catch (_) {}
@@ -375,7 +377,7 @@ function ensureSessionRaw() {
   const captured = epoch;
   const pending = request("/auth/me")
     .then((result) => {
-      if (captured !== epoch) throw failure("登录状态已变化。", 401);
+      if (captured !== epoch) throw Object.assign(failure("登录状态已变化。", 401), { staleSession: true });
       if (!identityValid(result)) throw failure("账号响应无效，请重新登录。");
       session = Object.assign({}, session, {
         user: result.user,

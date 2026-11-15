@@ -41,7 +41,7 @@ function matchView(m, playerId, detail = false) {
   };
 }
 function fail(page, error) {
-  if (page._disposed) return;
+  if (page._disposed || error.staleSession === true) return;
   page.setData({ error: error.message || "暂时无法加载，请重试" });
   if ((error.status || error.statusCode) === 401)
     wx.redirectTo({ url: "/pages/login/index" });

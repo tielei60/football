@@ -16,24 +16,26 @@ function name(){return 'native-import-'+Date.now().toString(36)+'-'+Array.from({
 Page({
  data:{loading:true,error:'',admin:false,busy:false,actionError:'',message:'',fileName:'',tacticCount:0,versionCount:0,pending:false,exportReady:false,recoveryBlocked:false},
  onLoad(){},
- onHide(){ui.abort(this);this._hidden=true;this.setData({loading:true});},
- onShow(){this._hidden=false;this.refresh();},
+ onHide(){ui.abort(this);this._showTurn=(this._showTurn||0)+1;this._hidden=true;this.setData({loading:true});},
+ onShow(){this._hidden=false;return this.refresh();},
  onUnload(){ui.abort(this);this._turn=(this._turn||0)+1;this.cleanup();this._collection=null;s.unload.call(this);},
  cleanup(){if(this._exportPath){try{wx.getFileSystemManager().unlinkSync(this._exportPath);}catch(_){}this._exportPath=null;}},
  async refresh(){
-  const turn=this._turn=(this._turn||0)+1;this._disposed=false;this.setData({loading:true,error:''});
+  const turn=this._turn=(this._turn||0)+1,showTurn=this._showTurn,requestToken=s.api.getSession()?.token;this._disposed=false;
+  const active=()=>!this._disposed&&!this._hidden&&turn===this._turn&&showTurn===this._showTurn;
+  const owned=()=>active()&&requestToken===s.api.getSession()?.token;this.setData({loading:true,error:''});
   try{
    const session=await s.api.ensureSession(),token=s.api.getSession()?.token;
-   if(this._disposed||turn!==this._turn)return;
+   if(!owned())return;
    if(session.user.role!=='admin')throw new Error('仅管理员可以导入或导出战术。');
-   if(this._owner&&this._owner!==token){this.cleanup();this._collection=null;this.setData({fileName:'',exportReady:false,pending:false});}
+   if(this._owner&&this._owner!==token){this.cleanup();this._collection=null;this._selection=(this._selection||0)+1;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',busy:false,exportReady:false,pending:false});}
    this._owner=token;this._guardKey=guardKey(s.api.getSession());const guard=readGuard(this._guardKey),task=pendingFor(token);
    this.setData({recoveryBlocked:!!guard&&!task});
    if(task){this._collection=task.collection;this.setData({fileName:task.fileName,tacticCount:task.collection.tactics.length,versionCount:task.collection.versions.length,pending:true});}
    if(!task&&this.data.pending){this._collection=null;this.setData({fileName:"",pending:false,message:"上次导入已结束，请到战术列表核对结果。"});}
    this.setData({admin:true});
-  }catch(e){if(!this._disposed&&turn===this._turn){this._collection=null;this.cleanup();this.setData({admin:false,fileName:'',exportReady:false});s.fail(this,e);}}
-  finally{if(!this._disposed&&turn===this._turn&&!this._hidden)this.setData({loading:false});}
+  }catch(e){const current=s.api.getSession();if(!e.staleSession&&active()&&(current?.token===requestToken||([401,403].includes(e.status||e.statusCode)&&!current))){this._collection=null;this.cleanup();this.setData({admin:false,fileName:'',tacticCount:0,versionCount:0,message:'',exportReady:false});s.fail(this,e);}}
+  finally{if(owned()||(active()&&!s.api.getSession()))this.setData({loading:false});}
  },
  valid(token=this._owner){return !this._disposed&&this._owner===token&&s.api.getSession()?.token===token;},
  ready(){return this.valid()&&this.data.admin&&!this.data.busy&&!this.data.loading&&!this.data.error&&!this._hidden;},
@@ -42,18 +44,20 @@ Page({
   try{if(readGuard(this._guardKey)){this.setData({recoveryBlocked:true});return;}}catch(e){this.setData({actionError:e.message});return;}
   if(typeof wx.chooseMessageFile!=='function'){this.setData({actionError:'此客户端不支持选择文件，请使用网页端。'});return;}
   const owner=this._owner,selection=this._selection=(this._selection||0)+1;
+  const current=()=>this.valid(owner)&&selection===this._selection;
   wx.chooseMessageFile({count:1,type:'file',extension:['json'],success:r=>{
-   if(!this.valid(owner)||selection!==this._selection)return;
+   if(!current())return;
    const file=r.tempFiles?.[0];if(!file)return;
+   this._collection=null;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',pending:false,busy:false});
    if(!/\.json$/i.test(file.name||'')||!Number.isFinite(file.size)||file.size<=0||file.size>transfer.MAX_BYTES){this.setData({actionError:'请选择不超过 8 MiB 的 JSON 备份。'});return;}
    this.setData({busy:true,actionError:''});
    wx.getFileSystemManager().readFile({filePath:file.path,encoding:'utf8',success:r=>{
-    if(!this.valid(owner)||selection!==this._selection)return;
+    if(!current())return;
     try{this._collection=transfer.parse(r.data);this.setData({fileName:file.name,tacticCount:this._collection.tactics.length,versionCount:this._collection.versions.length,pending:false,message:'已在本地校验，尚未导入。'});}
-    catch(e){this._collection=null;this.setData({fileName:'',actionError:e.message});}
-   },fail:()=>{if(this.valid(owner))this.setData({actionError:'无法读取文件，请重新选择。'});},
-   complete:()=>{if(this.valid(owner))this.setData({busy:false});}});
-  },fail:e=>{if(this.valid(owner)&&!/cancel/.test(e.errMsg||''))this.setData({actionError:'无法打开文件选择器。'});}});
+    catch(e){this._collection=null;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:e.message});}
+   },fail:()=>{if(current())this.setData({actionError:'无法读取文件，请重新选择。'});},
+   complete:()=>{if(current())this.setData({busy:false});}});
+  },fail:e=>{if(current()&&!/cancel/.test(e.errMsg||''))this.setData({actionError:'无法打开文件选择器。'});}});
  },
  importFile(){
   if(!this.ready()||this.data.recoveryBlocked||!this._collection)return;

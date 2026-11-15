@@ -210,3 +210,38 @@ test("401 after uncertain attempt cannot erase receipt of possibly committed imp
  h.api.request=async()=>{throw Object.assign(new Error("expired"),{status:401});};
  await h.page.executeImport();assert.equal(store.size,1);
 });
+
+for(const phase of ['read','parse','invalid'])test('重新选定文件'+phase+'失败清除旧集合与成功摘要',async()=>{
+ let chooser,reader;const h=fixture({}, {chooseMessageFile:o=>chooser=o,getFileSystemManager:()=>({readFile:o=>reader=o})});await h.page.refresh();selected(h.page);h.page.setData({message:'旧文件已校验'});h.page.choose();chooser.success({tempFiles:[{name:phase==='invalid'?'bad.txt':'new.json',size:100,path:'new'}]});
+ if(phase==='read'){reader.fail();reader.complete();}if(phase==='parse'){reader.success({data:'!'});reader.complete();}
+ assert.equal(h.page._collection,null);assert.equal(h.page.data.fileName,'');assert.equal(h.page.data.tacticCount,0);assert.equal(h.page.data.versionCount,0);assert.equal(h.page.data.message,'');h.page.importFile();assert.equal(h.writes.length,0);
+});
+test('文件选择取消保留旧有效集合，不发导入请求',async()=>{
+ let chooser;const h=fixture({}, {chooseMessageFile:o=>chooser=o});await h.page.refresh();selected(h.page);const old=h.page._collection;h.page.choose();chooser.fail({errMsg:'chooseMessageFile:fail cancel'});assert.equal(h.page._collection,old);assert.equal(h.page.data.fileName,'test.json');assert.equal(h.writes.length,0);
+});
+test('正常原生文件选择hide/show仍可完成本地解析',async()=>{
+ let chooser,reader;const h=fixture({}, {chooseMessageFile:o=>chooser=o,getFileSystemManager:()=>({readFile:o=>reader=o})});await h.page.refresh();h.page.choose();h.page.onHide();await h.page.onShow();chooser.success({tempFiles:[{name:'new.json',size:100,path:'new'}]});reader.success({data:JSON.stringify(backup)});reader.complete();assert.equal(h.page.data.fileName,'new.json');assert.equal(h.page.data.tacticCount,1);assert.equal(h.page.data.busy,false);assert.equal(h.writes.length,0);
+});
+test('两次文件选择旧success/fail/complete不能覆盖新集合或解除新读取忙态',async()=>{
+ const choosers=[],readers=[];const h=fixture({}, {chooseMessageFile:o=>choosers.push(o),getFileSystemManager:()=>({readFile:o=>readers.push(o)})});await h.page.refresh();h.page.choose();h.page.choose();choosers[0].success({tempFiles:[{name:'old.json',size:100,path:'old'}]});assert.equal(readers.length,0);choosers[1].success({tempFiles:[{name:'new.json',size:100,path:'new'}]});readers[0].success({data:JSON.stringify(backup)});readers[0].complete();
+ h.page.choose();choosers[2].success({tempFiles:[{name:'last.json',size:100,path:'last'}]});readers[0].fail();readers[0].complete();assert.equal(h.page.data.busy,true);assert.equal(h.page.data.actionError,'');readers[1].success({data:JSON.stringify(backup)});readers[1].complete();assert.equal(h.page.data.fileName,'last.json');
+});
+for(const stage of ['chooser','reader'])test('换账号后旧'+stage+'回调不污染新页面',async()=>{
+ let chooser,reader;const h=fixture({}, {chooseMessageFile:o=>chooser=o,getFileSystemManager:()=>({readFile:o=>reader=o})});await h.page.refresh();h.page.choose();if(stage==='reader')chooser.success({tempFiles:[{name:'old.json',size:100,path:'old'}]});h.api.getSession=()=>({...session,token:'B'});await h.page.refresh();h.page.setData({message:'新账号'});
+ if(stage==='chooser')chooser.success({tempFiles:[{name:'old.json',size:100,path:'old'}]});else{reader.success({data:JSON.stringify(backup)});reader.fail();reader.complete();}
+ assert.equal(h.page.data.fileName,'');assert.equal(h.page.data.message,'新账号');assert.equal(h.page.data.busy,false);
+});
+for(const transition of ['account','hide','resume'])test('刷新旧401在'+transition+'后不导航或污染',async()=>{
+ const h=fixture();await h.page.refresh();let reject;h.api.ensureSession=()=>new Promise((_,r)=>reject=r);const old=h.page.refresh();
+ if(transition==='account')h.api.getSession=()=>({...session,token:'B'});else{h.page.onHide();if(transition==='resume'){h.api.ensureSession=async()=>session;await h.page.onShow();}}
+ const before=h.page.data.error;reject(Object.assign(Error('旧401'),{status:401}));await old;assert.equal(h.page.data.error,before);assert.equal(h.events.filter(x=>x[0]==='redirectTo').length,0);
+});
+test('导入页卸载后选图success与读取结果不恢复私有集合',async()=>{
+ let chooser,reader;const h=fixture({}, {chooseMessageFile:o=>chooser=o,getFileSystemManager:()=>({readFile:o=>reader=o})});await h.page.refresh();h.page.choose();chooser.success({tempFiles:[{name:'old.json',size:100,path:'old'}]});h.page.onUnload();reader.success({data:JSON.stringify(backup)});reader.complete();assert.equal(h.page._collection,null);
+});
+for(const status of [401,403])test('当前账号真正'+status+'清理会话后仍显示失效信息',async()=>{
+ const h=fixture();await h.page.refresh();h.api.ensureSession=async()=>{h.api.getSession=()=>null;throw Object.assign(Error('当前账号失效'),{status});};await h.page.refresh();assert.equal(h.page.data.error,'当前账号失效');assert.equal(h.page.data.loading,false);assert.equal(h.page.data.admin,false);assert.equal(h.events.filter(x=>x[0]==='redirectTo').length,status===401?1:0);
+});
+test('API确认旧会话失效：换账号再退出后旧401仍不导航',async()=>{
+ const h=fixture();await h.page.refresh();let reject;h.api.ensureSession=()=>new Promise((_,r)=>reject=r);const task=h.page.refresh();h.api.getSession=()=>null;reject(Object.assign(Error('旧401'),{status:401,staleSession:true}));await task;assert.equal(h.page.data.error,'');assert.equal(h.events.filter(x=>x[0]==='redirectTo').length,0);
+});

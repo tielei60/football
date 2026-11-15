@@ -11,17 +11,17 @@
   },
   "tactic-compose": {
     "wxml": "c90aaccaa0fc74c8a583a3af1a5f4b45882bf8f77fec89ebfb1d9bc95c293b87",
-    "js": "ccedec8827a7c8216a03f60e3e6666dbac2fbce0e8ee3e4d22464a2b008ce8f5",
+    "js": "f2c9ddb01d76efe4f26cbd97e9310e1c118be17f503c42ed4ee6650c72a1a5ff",
     "css": "d45b485fcc48c3668fa0cebcbd0d209e1b0e38f8ada4baaab56b8bca24f3bd41"
   },
   "tactic-transfer": {
     "wxml": "b1e1b5d28bfb0a00e9371fabb4de699d5b139795b27daedde31bf5f591ca53e6",
-    "js": "97e567b3d21d0c3f270fd82987f7830a4f7babcf770e92d4c66208e9a0851bc7",
+    "js": "ce66d09a5609c052395006004422f7e7b2e3459fc8d1ec753cd5f714e494ce5c",
     "css": "ea17080aba6e40ce9011779025e1dbe8aa09ef88e082dc7d826c5daa72956e47"
   },
   "tactic-setup": {
     "wxml": "51f86db4863024244a565e2b4c1a7bdca3afaa57299f565fadd700bcb231a35b",
-    "js": "20e203699c9fea8703a4c9aa601bfd6e1df5bfb2e21c1d4896807774329a9e9c",
+    "js": "28466c6db1a437a5235aa2254e1ac481b62b12497dd48603fe17bbe8dd05cd4f",
     "css": "beb17773b6d3a8e8e396983b914ff07f1522d2a6aee2f75e1e76d526abe9888c"
   },
   "tactic-export": {
