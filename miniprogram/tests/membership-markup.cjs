@@ -1,4 +1,5 @@
 module.exports=function(s){return s
+.replace("{{membershipConfirmed===false?'状态未确认':status==='active'?'在队':'已归档'}}", "{{status==='active'?'在队':'已归档'}}")
 .replace('<view aria-role="button" class="tab {{status===\'unconfirmed\'?\'active\':\'\'}}" data-status="unconfirmed" bindtap="changeTab">待确认</view>','')
 .replace('<view aria-role="button" class="tab {{status===\'unconfirmed\'?\'active\':\'\'}}" data-status="unconfirmed" bindtap="status">待确认</view>','')
 .replace('<view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view>','')

@@ -9,3 +9,20 @@ for(const name of ['players','manage-players']){
  test(name+' 首次20位待确认可见，主动选择空在队后刷新不跳回',async()=>{const rows=Array.from({length:20},(_,i)=>({id:String(i),name:'匿名'+i,positions:[],status:'inactive',membershipConfirmed:false}));const h=listingPage(name,rows);await h.p.refresh();assert.equal(h.p.data.status,'unconfirmed');assert.equal(h.p.data.visible.length,20);h.p[name==='players'?'changeTab':'status']({currentTarget:{dataset:{status:'active'}}});await h.p.refresh();assert.equal(h.p.data.status,'active');assert.equal(h.p.data.visible.length,0);h.setToken('B');await h.p.refresh();assert.equal(h.p.data.status,'unconfirmed');assert.equal(h.p.data.visible.length,20);});
  test(name+' 既有确认在队的默认值保持active',async()=>{const h=listingPage(name,rows);await h.p.refresh();assert.equal(h.p.data.status,'active');assert.equal(h.p.data.visible[0].id,'c');});
 }
+
+test('管理球员顶部标签优先待确认且兼容旧字段，不改变技术状态',()=>{
+ const markup=fs.readFileSync(path.join(__dirname,'../pages/manage-player/index.wxml'),'utf8');
+ const expression=markup.match(/<text class="tag">\{\{(.*?)\}\}<\/text>/)[1];
+ for(const status of ['active','inactive'])for(const membershipConfirmed of [false,true,undefined]){
+  const data={status,membershipConfirmed};
+  assert.equal(vm.runInNewContext(expression,data),membershipConfirmed===false?'状态未确认':status==='active'?'在队':'已归档');
+  assert.equal(data.status,status);assert.equal(data.membershipConfirmed,membershipConfirmed);
+ }
+});
+
+test('管理球员三态选择后顶部标签与选择器一致',()=>{
+ const {p}=page('manage-player');Object.assign(p.data,{authorized:true,loading:false,status:'inactive',membershipConfirmed:false});p._ownerToken='A';
+ const markup=fs.readFileSync(path.join(__dirname,'../pages/manage-player/index.wxml'),'utf8');
+ const expression=markup.match(/<text class="tag">\{\{(.*?)\}\}<\/text>/)[1];
+ for(const original of ['active','inactive']){p.data.status=original;for(const value of [0,1,2,0]){const before=p.data.status;p.membership({detail:{value}});assert.equal(vm.runInNewContext(expression,{...p.data}),p.data.membershipOptions[p.data.membershipIndex]);if(value===0)assert.equal(p.data.status,before);}}
+});
