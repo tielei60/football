@@ -42,6 +42,8 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
   onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
   imageError: s.imageError,
   async refresh() {
+    this._replyOwner = null;
+    let loadedOwner = null;
     const expected=(this._epoch||0)+1;
     const pending=pendingReplies.get(replyKey(s.api.getSession()?.token,this.id));
     this.setData({replyPending:!!pending,reconciling:!!pending});
@@ -61,7 +63,7 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
       if(!active())throw new Error('页面或登录已变化，请重新打开比赛。');
       if(pending&&pending.settled&&pendingReplies.get(pending.key)===pending)pendingReplies.delete(pending.key);
       const byId = new Map(players.map((p) => [p.id, p]));
-      return {
+      const result = {
         match,
         replyPending:false,
         reconciling:false,
@@ -105,7 +107,12 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
           source: t.captureSource === "migration" ? "迁移时留存" : "关联时留存",
         })),
       };
+      if (!active()) throw new Error('页面或登录已变化，请重新打开比赛。');
+      loadedOwner = owner;
+      return result;
     });
+    if (expected === this._epoch && !this._disposed && !this._hidden && !this.data.error &&
+        loadedOwner && loadedOwner === s.api.getSession()?.token) this._replyOwner = loadedOwner;
     if(expected===this._epoch&&!this._disposed&&!this._hidden)this.setData({reconciling:false});
   },
   media(){wx.navigateTo({url:"/pages/match-media/index?id="+encodeURIComponent(this.id)});},
@@ -128,7 +135,7 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
     if(this._hidden||this._disposed||this.data.busy||!this.data.canReply)return;
     const response=e.currentTarget.dataset.response;
     if(!['yes','no','maybe'].includes(response)||response===this.data.match.response)return;
-    const session=s.api.getSession();if(!session)return;
+    const session=s.api.getSession();if(!session||session.token!==this._replyOwner)return;
     const key=replyKey(session.token,this.id);
     if(pendingReplies.has(key)){await this.refresh();return;}
     const entry={key,owner:session.token,settled:false};entry.done=new Promise(resolve=>{entry.resolve=resolve;});

@@ -2207,3 +2207,45 @@ test("legacy non-null shirt-number migration preserves historical desk and accep
   assert.deepEqual(checked.prepare("PRAGMA foreign_key_check").all(), []);
   checked.close();
 });
+
+
+test("closed match RSVP matrix rejects all responses without changing replies or statistics", async (t) => {
+  const f = await fixture(t), cookie = await f.login();
+  const admin = (route, method = "GET", body) => f.request(route, { method, body, cookie });
+  const created = await admin("/api/players", "POST", { name: "匿名关闭报名测试球员" });
+  assert.equal(created.status, 201);
+  const player = created.body;
+  const account = { username: "closed-rsvp-fixture", password: "closed-rsvp-fixture-password" };
+  assert.equal((await admin(`/api/players/${player.id}/account`, "POST", account)).status, 201);
+  const playerCookie = await f.login(account);
+  for (const status of ["cancelled", "completed"]) {
+    const result = await admin("/api/matches", "POST", {
+      opponent: "匿名关闭报名测试对手", date: "2026-01-01", status: "published",
+    });
+    assert.equal(result.status, 201);
+    const id = result.body.id;
+    assert.equal((await f.request(`/api/matches/${id}/rsvp`, {
+      method: "PUT", cookie: playerCookie, body: { response: "yes" },
+    })).status, 200);
+    assert.equal((await admin(`/api/matches/${id}`, "PUT", {
+      status, ...(status === "completed" ? { homeScore: 0, awayScore: 0 } : {}),
+    })).status, 200);
+    const beforeMatch = (await admin(`/api/matches/${id}`)).body;
+    assert.equal(beforeMatch.rsvps.length, 1);
+    assert.equal(beforeMatch.rsvps[0].response, "yes");
+    const beforeStats = (await admin("/api/statistics?year=2026")).body;
+    const db = new DatabaseSync(f.path, { readOnly: true });
+    try {
+      const beforeRows = db.prepare("SELECT * FROM club_rsvps ORDER BY rowid").all();
+      for (const response of ["yes", "no", "maybe"]) {
+        const denied = await f.request(`/api/matches/${id}/rsvp`, {
+          method: "PUT", cookie: playerCookie, body: { response },
+        });
+        assert.equal(denied.status, 409, `${status}/${response}`);
+        assert.deepEqual((await admin(`/api/matches/${id}`)).body, beforeMatch);
+        assert.deepEqual(db.prepare("SELECT * FROM club_rsvps ORDER BY rowid").all(), beforeRows);
+        assert.deepEqual((await admin("/api/statistics?year=2026")).body, beforeStats);
+      }
+    } finally { db.close(); }
+  }
+});
