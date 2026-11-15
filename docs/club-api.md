@@ -1,9 +1,9 @@
 # 俱乐部 REST API
 
-所有响应均为 JSON，错误格式为 `{message}`。同源 fetch 会自动携带会话 Cookie。浏览器写请求必须具有同源 `Origin`（由浏览器提供），或符合配置的 `FOOTBALL_PUBLIC_ORIGIN`。原生 Bearer 请求使用下文独立的鉴权传输方式，不携带 Cookie 或 Origin。不提供公开注册。命令行 `FOOTBALL_ADMIN_USERNAME=owner FOOTBALL_ADMIN_PASSWORD='at least 10 chars' node server/bootstrap-admin.mjs` 仅用于初始化首个管理员。
+除 204 等无内容响应外，接口使用 JSON。错误通常为 `{message}`，特定业务错误还包含 `code`，例如 `PASSWORD_CHANGE_REQUIRED`、`ANIMATION_IDENTITY_CONFIRMATION_REQUIRED`；客户端不得仅凭文案判断权限或冲突。同源 fetch 会自动携带会话 Cookie。浏览器写请求必须具有同源 `Origin`（由浏览器提供），或符合配置的 `FOOTBALL_PUBLIC_ORIGIN`。原生 Bearer 请求使用下文独立的鉴权传输方式，不携带 Cookie 或 Origin。不提供公开注册。旧 `bootstrap-admin` 仅初始化首个普通管理员，安全输入示例见[本地开发](../README.md#本地开发)。系统管理员另需已核验的本地库与交互初始化，见下文；不要将密码写入命令历史。
 
 - POST `/api/auth/login` `{username,password}` -> 下述会话对象
-- GET `/api/auth/me` -> `{user:{id,username,role:'admin'|'player',playerId:string|null,teamId:number,passwordEnabled:boolean},team:{id,name,crest,revision}}`；未登录返回 401
+- GET `/api/auth/me` -> `{user:{id,username,role:'admin'|'player',playerId:string|null,teamId:number,passwordEnabled:boolean,systemAdmin:boolean,mustChangePassword:boolean,accountEnabled:boolean,accountRevision:number},team:{id,name,crest,revision}}`；未登录返回 401
 - POST `/api/auth/logout` `{}` -> 204
 - PUT `/api/auth/password` `{currentPassword,newPassword}` -> 204，撤销会话，需重新登录
 - GET `/api/team` -> `{id:number,name:string,crest:string|null,revision:number}`（已认证的本队成员）
@@ -13,8 +13,10 @@
 - POST `/api/players` 提交 Player 字段 -> Player（管理员）
 - PUT `/api/players/:id` 提交部分 Player 字段及 `revision` -> Player（管理员）
 - POST `/api/players/:id/account` `{username,password}` -> `{id,username,role,playerId,teamId}`（管理员，为球员创建登录账号）
-- PUT `/api/players/:id/password` `{newPassword}` -> 204（管理员，重置密码并撤销会话）
-  Player = `{id:string,revision:number,name,number:number|null,positions:string[],preferredFoot:string,status:'active'|'inactive',note:string,avatar:string|null,avatarOriginKind:'ai-generated'|'local-simulation'|null,avatarGenerated:boolean,avatarAiGenerated:boolean,avatarSimulation:boolean,hasAccount:boolean,passwordEnabled:boolean}`。保留已有旧版字符串 ID，新记录生成新 ID。不提供破坏性的球员删除操作，以 inactive 状态归档。战术工作台和俱乐部名单按稳定 ID 同步。修改俱乐部球员资料会递增战术工作台 edition，过期工作台保存返回 409，不会覆盖新资料。归档会撤销该球员的会话。
+- PUT `/api/players/:id/password` `{newPassword}` -> 204（管理员，重置密码并撤销会话；关联系统管理员的目标明确拒绝）
+  Player = `{id:string,revision:number,name,number:number|null,positions:string[],preferredFoot:string,status:'active'|'inactive',membershipConfirmed:boolean,note:string,avatar:string|null,avatarOriginKind:'ai-generated'|'local-simulation'|null,avatarGenerated:boolean,avatarAiGenerated:boolean,avatarSimulation:boolean,hasAccount:boolean,passwordEnabled:boolean}`。保留已有旧版字符串 ID，新记录生成新 ID。不提供破坏性的球员删除操作，以 inactive 状态归档。战术工作台和俱乐部名单按稳定 ID 同步。修改俱乐部球员资料会递增战术工作台 edition，过期工作台保存返回 409，不会覆盖新资料。归档会撤销该球员的会话。
+
+`membershipConfirmed=false` 表示成员归属尚未确认，不应依据技术字段 `status` 宣称真实在队或离队。旧资料默认 true，编辑省略时保留原值；此字段不放宽既有权限和归档撤权规则。详见[球员归属状态](player-membership-confirmation.md)。
 
 `hasAccount/passwordEnabled` 是服务端按目标球员及同队账号派生的只读能力字段，覆盖球员列表、详情和保存响应。无账号时两者均为false；已有微信专用账号可为hasAccount=true、passwordEnabled=false。它不同于 `/auth/me` 当前登录者的同名字段，管理目标账号时不得拿当前管理员的能力代替。客户端提交这些布尔值不会开通密码；修改/重置密码仍须走原服务端权限与账号规则。
 
@@ -36,6 +38,14 @@
 - GET `/api/statistics?year=2026` 或 `?seasonId=1` -> `{filter:{startDate,endDate,label},matches:number,matchesWithoutRoster:number,team:{matches:number,scoredMatches:number,wins:number,draws:number,losses:number,goalsFor:number|null,goalsAgainst:number|null,goalsForKnownMatches:number,goalsAgainstKnownMatches:number},players:[{playerId,name,appearances:number,unknownAppearances:number,unrecordedMatches:number,goals:number|null,assists:number|null,goalsKnownMatches:number,assistsKnownMatches:number}]}`。不传筛选条件时默认当前自然年，只允许一种筛选条件。合计仅累加已知记录；没有已知记录时为 null，覆盖数字段表示完整程度。出场计数要求 appeared=true。unknownAppearances 统计名单中明确 appeared=null 的行。matchesWithoutRoster 统计完全没有名单行的已完赛比赛。每名球员的 unrecordedMatches 统计其没有任何名单行的已完赛比赛，包括仅记录了部分名单的比赛。缺行表示未记录，不代表确认未出场；明确 appeared=false 的行才表示确认未出场。所有覆盖计数使用相同比赛范围：赛季按显式 seasonId，自然年按含起止日期的比赛日期范围。赛季日期范围不会隐式分配比赛。统计保留所有球员，包括 inactive 球员。
 
 旧有 `/api/tactics`、`/api/coaching-desk`、`/api/tactic-collections` 及战术版本接口保持原请求/响应约定；读取需认证，写入仅管理员。旧战术板资源属于原始球队，其他球队身份不能访问。所有俱乐部业务表均按球队隔离。
+
+### 系统账号与首次改密
+
+- GET `/api/system/accounts`：本队账号列表，仅系统管理员。
+- POST `/api/system/accounts` `{username,password}`：创建必须首次改密的普通管理员。
+- PUT `/api/system/accounts/:id` `{revision,role?,enabled?}`：本队普通账号授权、撤权或启停；系统管理员行只读。
+
+`systemAdmin` 是独立能力标记，`role` 仍为 `admin|player`。系统账号管理、最后启用系统管理员保护、权限变更撤销会话及本地初始化前提见[系统管理员说明](system-admin.md)。`mustChangePassword=true` 的会话只可查询自身身份、修改密码与退出；业务 API 返回 403 和 `code:"PASSWORD_CHANGE_REQUIRED"`。修改密码成功后撤销全部会话并要求重新登录，不提供通过客户端标记解除限制的接口。
 
 ### 战术名单同步
 
@@ -132,7 +142,7 @@ Match 增加 `notice:string`（默认空字符串，最多 10000 字符）和 `c
 
 `positions` 为非空数组，最多 1000 个不重复的已有元素 ID。只允许移动 kind 为 `player` 的元素，包括旧数据中缺失 kind 的球员。坐标必须是规范战术板范围内的有限数值：`0 <= x <= 1250`、`0 <= y <= 826`。未知或重复 ID、足球及其他非球员元素、非数值坐标和越界值返回 400。仅修改提交的球员 x/y。服务端保留其他全部战术/战术板数据，设为 `formationCustomized:true`，清除过期缩略图，并通过已有战术/版本存储保存审计备注。
 
-原生竖向球场仅是显示和输入变换；API 与存储仍使用规范的 1250 × 826 坐标空间。不要直接提交旋转后的屏幕像素。原生客户端中的球员账号和比赛关联历史快照均只读。当前模板位置编辑不会修改不可变的比赛战术快照，也不代表实现完整网页编辑器，包括绘图工具、完整序列编辑等。竖向渲染与拖动回归状态应以最终客户端验收报告为准，而不是本 API 约定。
+原生竖向球场仅是显示和输入变换；API 与存储仍使用规范的 1250 × 826 坐标空间。不要直接提交旋转后的屏幕像素。原生客户端中的球员账号和比赛关联历史快照均只读。当前模板位置编辑不会修改不可变的比赛战术快照，该 `/positions` 接口仅编辑球员位置；绘图、球员属性及动画编排使用下文独立的原子命令，不能从此接口范围推断整个原生客户端能力。竖向渲染与拖动回归状态应以最终客户端验收报告为准，而不是本 API 约定。
 
 ### 原生原子战术命令接口
 
@@ -163,7 +173,7 @@ Match 增加 `notice:string`（默认空字符串，最多 10000 字符）和 `c
 
 `version` 为服务端返回的当前完整战术序列化内容的 64 位小写 SHA-256 摘要，与 `/positions` 共用。缺失或格式错误返回 428。服务端先校验版本，再校验目标，因此过期批次引用了之后被删除的对象时返回 409，而不是误导性的目标缺失错误。存储层在保存事务内再次校验相同期望版本，即比较并交换（CAS），避免覆盖并发的网页/原生保存。冲突不会部分应用批次；客户端必须显式重新载入并核对，不得获取新版本后自动重发旧编辑。
 
-兼容性：命令保留未修改的已知及未知战术、战术板、元素和标记字段，包括演示和训练计划。补丁只校验变更字段，不剥离旧扩展字段。移动任意球员会设置 `formationCustomized:true`；只修改足球或标记则保留原值。成功保存清除过期缩略图，并使用已有审计/历史机制。现有 `/positions` 仍仅支持球员，约定不变。比赛关联的不可变快照保持不变。此窄范围命令 API 不替代完整网页编辑器或动画序列编辑。
+兼容性：命令保留未修改的已知及未知战术、战术板、元素和标记字段，包括演示和训练计划。补丁只校验变更字段，不剥离旧扩展字段。移动任意球员会设置 `formationCustomized:true`；只修改足球或标记则保留原值。成功保存清除过期缩略图，并使用已有审计/历史机制。现有 `/positions` 仍仅支持球员，约定不变。比赛关联的不可变快照保持不变。命令 API 不等于网页所有工具完全等价；动画序列及阵容的支持命令见下文，不应以最初的标注命令范围概括整个接口。
 
 此接口**没有持久化请求 ID 幂等约定**，不接受 `requestId`。超时或丢失响应不能证明保存失败。原生客户端在结果不确定时必须阻止继续保存，并显式重新读取服务端战术/版本后再核对编辑。不要盲目重放批次或给它分配新版本：已提交的请求可能已经创建历史记录。认证/权限失败仍遵循共用会话规则。
 
@@ -203,7 +213,7 @@ GET `/api/tactics/:id/commands` 额外返回 `formations`，为 `{playerCount,id
 
 ## 微信邀请与身份认证（默认关闭）
 
-后端新增同队管理员邀请、认领核验编号、审批、绑定和原生微信认证接口。完整字段、16 KiB限制、旧密码兼容、归档撤销与未完成客户端边界见[微信邀请认证后端接线说明](wechat-integration-contract.md)。未配置启用时公开能力接口仅返回 `wechat:false`，不接受测试身份或自动注册。
+后端新增同队管理员邀请、认领核验编号、审批、绑定和原生微信认证接口。完整字段、16 KiB 限制、旧密码兼容与归档撤销见[微信邀请认证后端接线说明](wechat-integration-contract.md)；该文的首批客户端未接入说明属于历史阶段，现有前端实现及验收边界见[微信邀请前端复核](wechat-frontend-review.md)。未配置启用时公开能力接口仅返回 `wechat:false`，不接受测试身份或自动注册。
 
 ## 默认关闭的私有生成图片流程
 
