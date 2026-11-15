@@ -4,6 +4,12 @@ function point(value) {
     typeof value.latitude === 'number' && Number.isFinite(value.latitude) && Math.abs(value.latitude) <= 90 &&
     typeof value.longitude === 'number' && Number.isFinite(value.longitude) && Math.abs(value.longitude) <= 180;
 }
+// 显式逻辑像素尺寸为工程选择，不是平台默认值；无有效坐标不创建标记。
+function markers(value, title) {
+  if (!point(value)) return [];
+  return [{id:1, latitude:value.latitude, longitude:value.longitude,
+    title:title === undefined ? value.name : title, width:24, height:32}];
+}
 function choose() {
   return new Promise((resolve, reject) => {
     const pick = () => wx.chooseLocation({
@@ -40,7 +46,7 @@ function matchVenue(match) {
   const title = text(snapshot?.name) || '比赛球场';
   const address = text(snapshot?.address) || text(match?.location);
   return {valid, title, address, latitude:valid?snapshot.latitude:null, longitude:valid?snapshot.longitude:null,
-    markers:valid?[{id:1,latitude:snapshot.latitude,longitude:snapshot.longitude,title}]:[],
+    markers:markers(snapshot, title),
     message:valid?'比赛留存位置；如集合地点有变，请与管理员确认。':snapshot?'本场比赛未留存有效地图坐标，请联系管理员确认位置。':'本场比赛尚未关联地图位置，请联系管理员补充。'};
 }
-module.exports = {point, choose, open, matchVenue};
+module.exports = {point, markers, choose, open, matchVenue};

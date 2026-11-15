@@ -12,3 +12,10 @@ test('native map forwards valid picker result and openLocation receives only sel
  let opened;const l=setup({chooseLocation(o){o.success({name:'测试球场',address:'虚构地址',latitude:30,longitude:120});},openLocation(o){opened=o;o.success();}});
  const selected=await l.choose();assert.equal(selected.coordinateSystem,'gcj02');await l.open(selected);assert.equal(opened.latitude,30);assert.equal(opened.name,'测试球场');await assert.rejects(l.open({}),/尚未设置/);
 });
+
+test('marker dimensions preserve zero coordinates and never infer invalid points',()=>{
+ const l=setup({}),value={latitude:0,longitude:0,coordinateSystem:'gcj02',name:'匿名'};
+ const before=JSON.stringify(value),m=l.markers(value)[0];
+ assert.equal(m.width,24);assert.equal(m.height,32);assert.equal(m.latitude,0);assert.equal(m.longitude,0);assert.equal(m.title,'匿名');assert.equal(JSON.stringify(value),before);
+ for(const v of [null,{}, {...value,latitude:null},{...value,coordinateSystem:'wgs84'}])assert.equal(l.markers(v).length,0);
+});

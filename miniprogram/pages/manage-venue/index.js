@@ -52,16 +52,7 @@ Page({onHide(){ui.abort(this);},
           coordinateSystem: "gcj02",
           status: v.status,
         },
-        markers: location.point(v)
-          ? [
-              {
-                id: 1,
-                latitude: v.latitude,
-                longitude: v.longitude,
-                title: v.name,
-              },
-            ]
-          : [],
+        markers: location.markers(v),
       };
     });
   },
@@ -84,14 +75,7 @@ Page({onHide(){ui.abort(this);},
         this.setData({
           form: { ...this.data.form, ...v, name:v.name||this.data.form.name },
           actionError:v.name?'':'微信未返回地点名称，请核对地址并填写球场名称。',
-          markers: [
-            {
-              id: 1,
-              latitude: v.latitude,
-              longitude: v.longitude,
-              title: v.name,
-            },
-          ],
+          markers: location.markers(v),
         });
     } catch (e) {
       if (!this._disposed) this.setData({ actionError: e.message });
