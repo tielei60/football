@@ -36,6 +36,10 @@
           <Goal :size="18" aria-hidden="true" />
           <span>战术板 ↗</span>
         </RouterLink>
+        <RouterLink v-if="auth.isSystemAdmin" to="/club/system-accounts">
+          <UsersRound :size="18" aria-hidden="true" />
+          <span>账号权限</span>
+        </RouterLink>
         <RouterLink to="/club/account">
           <UserRound :size="18" aria-hidden="true" />
           <span>账号</span>
@@ -49,7 +53,7 @@
           </span>
           <div>
             <strong>{{ auth.session?.user.username }}</strong>
-            <small>{{ auth.isAdmin ? "俱乐部管理员" : "球队球员" }}</small>
+            <small>{{ auth.isSystemAdmin ? "系统管理员" : auth.isAdmin ? "俱乐部管理员" : "球队球员" }}</small>
           </div>
         </div>
       </div>

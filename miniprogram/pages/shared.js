@@ -89,6 +89,8 @@ function sessionView(session) {
     user: {
       username: session.user.username,
       role: session.user.role,
+      systemAdmin: session.user.systemAdmin === true,
+      mustChangePassword: session.user.mustChangePassword === true,
       playerId: session.user.playerId,
       passwordEnabled: session.user.passwordEnabled !== false,
     },

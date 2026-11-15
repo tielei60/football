@@ -6,9 +6,10 @@ let epoch = 0;
 let checking = null;
 let storageLoaded = false;
 
-function failure(message, status = 0) {
+function failure(message, status = 0, code) {
   const error = new Error(message);
   error.status = status;
+  if (code) error.code = code;
   return error;
 }
 function baseUrl() {
@@ -133,6 +134,7 @@ function transport(path, method, data, token, extraHeaders, origin) {
                 ? response.data.message
                 : "请求未完成，请重试。",
               response.statusCode,
+              typeof response.data?.code === "string" ? response.data.code : undefined,
             ),
           );
       },
@@ -142,9 +144,23 @@ function transport(path, method, data, token, extraHeaders, origin) {
     });
   });
 }
+let passwordRedirecting = false;
+function requirePasswordChange() {
+  if (!getSession()?.user.mustChangePassword || passwordRedirecting) return;
+  passwordRedirecting = true;
+  wx.reLaunch({url:"/pages/force-password/index",complete:()=>{passwordRedirecting=false;}});
+}
+function enterAuthenticated() {
+  if (getSession()?.user.mustChangePassword) requirePasswordChange();
+  else wx.switchTab({url:"/pages/home/index"});
+}
 async function request(path, method = "GET", data) {
   const current = getSession();
   if (!current) throw failure("请先登录俱乐部账号。", 401);
+  if (current.user.mustChangePassword && !["/auth/me","/auth/password","/auth/logout"].includes(path)) {
+    requirePasswordChange();
+    throw failure("请先修改初始密码。",403,"PASSWORD_CHANGE_REQUIRED");
+  }
   const captured = epoch;
   try {
     const result = await transport(
@@ -159,6 +175,11 @@ async function request(path, method = "GET", data) {
       throw failure("登录状态已变化，请重新打开页面。", 401);
     return result;
   } catch (error) {
+    if (error.code === "PASSWORD_CHANGE_REQUIRED" && captured === epoch && getSession()?.token === current.token) {
+      session.user = {...session.user,mustChangePassword:true};
+      try {persistSession();} catch (_) {}
+      requirePasswordChange();
+    }
     if (error.status === 401 && captured === epoch) clearSession();
     throw error;
   }
@@ -347,7 +368,7 @@ async function logout() {
       current.serverOrigin,
     );
 }
-function ensureSession() {
+function ensureSessionRaw() {
   if (!getSession())
     return Promise.reject(failure("请先登录俱乐部账号。", 401));
   if (checking) return checking;
@@ -368,7 +389,7 @@ function ensureSession() {
       return { user: session.user, team: session.team };
     })
     .catch((error) => {
-      if (captured === epoch && error.status === 403) clearSession();
+      if (captured === epoch && error.status === 403 && error.code !== "PASSWORD_CHANGE_REQUIRED") clearSession();
       throw error;
     })
     .finally(() => {
@@ -377,7 +398,26 @@ function ensureSession() {
   checking = pending;
   return pending;
 }
+let gatedSessionSource = null;
+let gatedSessionPromise = null;
+function ensureSession(options = {}) {
+  const pending = ensureSessionRaw();
+  if (options.allowPasswordChange) return pending;
+  if (gatedSessionSource === pending) return gatedSessionPromise;
+  gatedSessionSource = pending;
+  gatedSessionPromise = pending.then(result=>{
+    if (result.user.mustChangePassword) {
+      requirePasswordChange();
+      throw failure("请先修改初始密码。",403,"PASSWORD_CHANGE_REQUIRED");
+    }
+    return result;
+  });
+  return gatedSessionPromise;
+}
+
 module.exports = {
+  enterAuthenticated,
+  requirePasswordChange,
   request,
   login,
   beginLogin,

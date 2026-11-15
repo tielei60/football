@@ -3,7 +3,9 @@
     <div>
       <span class="club-eyebrow">PROFILE / 个人与球队</span>
       <h1>我的账号</h1>
-      <p class="club-muted">{{ auth.session?.user.username }} · {{ auth.isAdmin ? "管理员" : "球员" }}</p>
+      <p class="club-muted">
+        {{ auth.session?.user.username }} · {{ auth.isSystemAdmin ? "系统管理员" : auth.isAdmin ? "管理员" : "球员" }}
+      </p>
     </div>
     <button :disabled="busy" @click="logout">退出登录</button>
   </div>
@@ -25,6 +27,7 @@
           autocomplete="new-password"
           :disabled="busy"
           minlength="10"
+          maxlength="200"
           required
         />
       </label>
@@ -33,26 +36,38 @@
   </form>
 </template>
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onBeforeUnmount } from "vue";
 import ClubTeamCard from "@/components/ClubTeamCard.vue";
 import { useAuthStore } from "@/stores/authStore";
-import { clubApi } from "@/services/clubApi";
+import { clubApi, currentAuthEpoch } from "@/services/clubApi";
 
 const auth = useAuthStore();
 const currentPassword = ref("");
 const newPassword = ref("");
 const busy = ref(false);
 const error = ref("");
+let active = true;
+onBeforeUnmount(() => {
+  active = false;
+  currentPassword.value = "";
+  newPassword.value = "";
+});
 async function changePassword() {
   if (busy.value) return;
   busy.value = true;
   error.value = "";
+  const epoch = currentAuthEpoch();
   try {
     await clubApi("/auth/password", "PUT", { currentPassword: currentPassword.value, newPassword: newPassword.value });
-    window.location.assign("/login");
+    if (epoch === currentAuthEpoch()) {
+      auth.clearSession();
+      if (active) window.location.assign("/login");
+    }
   } catch (e) {
-    error.value = (e as Error).message;
+    if (active && epoch === currentAuthEpoch()) error.value = (e as Error).message;
   } finally {
+    currentPassword.value = "";
+    newPassword.value = "";
     busy.value = false;
   }
 }
@@ -65,6 +80,8 @@ async function logout() {
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
+    currentPassword.value = "";
+    newPassword.value = "";
     busy.value = false;
   }
 }

@@ -124,3 +124,13 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 ## 新建战术页增量
 
 | 38 | miniprogram/pages/tactic-create/index.wxml | 战术名称，沿用原生单行输入样式 | 新增自动检查，实际键盘/caret待验 |
+
+## 系统账号增量（仅模板与逻辑验证，真实光标待验）
+
+| 序号 | 模板 | 输入 | 验证边界 |
+| --- | --- | --- | --- |
+| 39 | pages/force-password/index.wxml | 当前密码 | 未实际聚焦验证 |
+| 40 | pages/force-password/index.wxml | 新密码 | 未实际聚焦验证 |
+| 41 | pages/force-password/index.wxml | 确认新密码 | 未实际聚焦验证 |
+| 42 | pages/system-accounts/index.wxml | 用户名 | 未实际聚焦验证 |
+| 43 | pages/system-accounts/index.wxml | 初始密码 | 未实际聚焦验证 |

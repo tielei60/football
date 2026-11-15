@@ -424,6 +424,33 @@ export function createFootballServer({
         if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
         return send(response, 204);
       }
+      if (user.must_change_password === 1) {
+        const error = new FootballError(
+          403,
+          "请先修改初始密码，再使用其他功能。",
+        );
+        error.code = "PASSWORD_CHANGE_REQUIRED";
+        throw error;
+      }
+      if (pathname === "/api/system/accounts") {
+        if (method === "GET")
+          return send(response, 200, club.listSystemAccounts(user));
+        if (method === "POST")
+          return send(response, 201, club.createSystemAccount(user, body()));
+      }
+      const systemAccountRoute = /^\/api\/system\/accounts\/([1-9]\d*)$/.exec(
+        pathname,
+      );
+      if (systemAccountRoute && method === "PUT")
+        return send(
+          response,
+          200,
+          club.updateSystemAccount(
+            user,
+            routeId(systemAccountRoute[1]),
+            body(),
+          ),
+        );
       if (pathname === "/api/team") {
         if (method === "GET")
           return send(response, 200, club.getTeam(user.team_id));
@@ -804,15 +831,25 @@ export function createFootballServer({
       if (method !== "GET") admin();
       if (pathname === "/api/tactic-formations") {
         admin();
-        if (method !== "GET") throw new FootballError(405, "阵型目录仅支持读取。");
+        if (method !== "GET")
+          throw new FootballError(405, "阵型目录仅支持读取。");
         return send(response, 200, readTacticFormations());
       }
       if (pathname === "/api/tactic-create-receipts") {
         admin();
-        if (method !== "GET") throw new FootballError(405, "新建回执仅支持读取。");
+        if (method !== "GET")
+          throw new FootballError(405, "新建回执仅支持读取。");
         const query = new URL(request.url, "http://localhost").searchParams;
-        if ([...query.keys()].some((key) => key !== "requestId") || query.getAll("requestId").length !== 1) throw new FootballError(400, "请提供唯一的新建请求编号。");
-        return send(response, 200, store.getTacticCreateReceipt(user, query.get("requestId")));
+        if (
+          [...query.keys()].some((key) => key !== "requestId") ||
+          query.getAll("requestId").length !== 1
+        )
+          throw new FootballError(400, "请提供唯一的新建请求编号。");
+        return send(
+          response,
+          200,
+          store.getTacticCreateReceipt(user, query.get("requestId")),
+        );
       }
       const nativeCommands = /^\/api\/tactics\/([1-9]\d*)\/commands$/.exec(
         pathname,
@@ -897,7 +934,10 @@ export function createFootballServer({
       if (!response.headersSent)
         send(response, error instanceof FootballError ? error.status : 500, {
           ...(error instanceof FootballError &&
-          error.code === "ANIMATION_IDENTITY_CONFIRMATION_REQUIRED"
+          [
+            "ANIMATION_IDENTITY_CONFIRMATION_REQUIRED",
+            "PASSWORD_CHANGE_REQUIRED",
+          ].includes(error.code)
             ? { code: error.code }
             : {}),
           message:

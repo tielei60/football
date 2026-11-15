@@ -74,4 +74,5 @@
   ></view
 >
 
+<view wx:if="{{session.user.systemAdmin&&!loading&&!error}}" class="page"><button size="mini" class="ui-button ui-block" bindtap="systemAccounts">系统账号管理</button></view>
 <business-dialog id="business-dialog"/>

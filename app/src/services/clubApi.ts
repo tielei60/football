@@ -7,7 +7,17 @@ export interface Team {
   revision: number;
 }
 export interface Session {
-  user: { id: number; username: string; role: "admin" | "player"; playerId: string | null; teamId: number };
+  user: {
+    id: number;
+    username: string;
+    role: "admin" | "player";
+    playerId: string | null;
+    teamId: number;
+    systemAdmin?: boolean;
+    mustChangePassword?: boolean;
+    accountEnabled?: boolean;
+    accountRevision?: number;
+  };
   team: Team;
 }
 export interface ClubPlayer {
@@ -109,12 +119,29 @@ export interface Statistics {
 export class ClubApiError extends Error {
   constructor(
     message: string,
-    public status: number
+    public status: number,
+    public code?: string
   ) {
     super(message);
   }
 }
+// 每次身份切换失效旧请求的认证副作用，不持久保存任何凭据。
+let authEpoch = 0;
+export const advanceAuthEpoch = () => ++authEpoch;
+export const currentAuthEpoch = () => authEpoch;
+export interface SystemAccount {
+  id: number;
+  username: string;
+  role: "admin" | "player";
+  playerId: string | null;
+  systemAdmin: boolean;
+  enabled: boolean;
+  revision: number;
+  passwordEnabled: boolean;
+  mustChangePassword: boolean;
+}
 export async function clubApi<T>(path: string, method = "GET", body: unknown = undefined): Promise<T> {
+  const epoch = authEpoch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
@@ -127,8 +154,12 @@ export async function clubApi<T>(path: string, method = "GET", body: unknown = u
     });
     const data = response.status === 204 ? undefined : await response.json();
     if (!response.ok) {
-      if (response.status === 401 && path !== "/auth/login" && path !== "/auth/me") window.location.assign("/login");
-      throw new ClubApiError(data?.message || "请求失败，请稍后重试", response.status);
+      if (epoch === authEpoch) {
+        if (data?.code === "PASSWORD_CHANGE_REQUIRED") window.location.assign("/change-password");
+        else if (response.status === 401 && path !== "/auth/login" && path !== "/auth/me")
+          window.location.assign("/login");
+      }
+      throw new ClubApiError(data?.message || "请求失败，请稍后重试", response.status, data?.code);
     }
     return data as T;
   } catch (error) {

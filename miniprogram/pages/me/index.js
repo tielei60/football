@@ -59,6 +59,10 @@ Page({
     const page = pages[e.currentTarget.dataset.page];
     if (page) wx.navigateTo({ url: "/pages/" + page + "/index" });
   },
+  systemAccounts() {
+    if(this._hidden||this._disposed||this.data.loading||this.data.busy||!this.data.session?.user.systemAdmin)return;
+    wx.navigateTo({url:"/pages/system-accounts/index"});
+  },
   tactics() {
     wx.navigateTo({ url: "/pages/tactics/index" });
   },

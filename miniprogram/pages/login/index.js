@@ -43,7 +43,7 @@ Page({
       await attempt.promise;
       if (active()) {
         this.setData({ password: "" });
-        wx.switchTab({ url: "/pages/home/index" });
+        s.api.enterAuthenticated();
       }
     } catch (e) {
       if (active())
@@ -107,7 +107,7 @@ Page({
       if (active()) {
         this._authenticated = true;
         this.setData({ password: "" });
-        wx.switchTab({ url: "/pages/home/index" });
+        s.api.enterAuthenticated();
       }
     } catch (e) {
       if (active()) this.setData({ error: e.message || "登录失败，请重试" });

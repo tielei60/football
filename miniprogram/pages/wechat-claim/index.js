@@ -144,7 +144,7 @@ Page({
       const result = await attempt.promise;
       if (!active()) return;
       if (action === "login") {
-        wx.switchTab({ url: "/pages/home/index" });
+        s.api.enterAuthenticated();
         return;
       }
       if (!/^[a-f0-9]{32}$/.test(result.id || "") || !labels[result.status])

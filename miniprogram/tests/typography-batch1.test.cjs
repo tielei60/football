@@ -17,7 +17,7 @@ function rules(css) {
 }
 for (const [page, old] of Object.entries(baseline)) {
   test(`typography batch1 ${page}: static markup and control geometry preserved`, () => {
-    const markup = require('./membership-markup.cjs')(fs.readFileSync(path.join(root,'pages',page,'index.wxml'),'utf8')).replace(/<button[^>]*bindtap="openPhotos"[^>]*>(?:管理|查看)出场照片<\/button>/g,'').replace(/<view wx:if="{{wechatEnabled}}" class="page wechat-entry">[\s\S]*?<\/view>\n(?=<business-dialog)/,'').replace(' wx:if="{{session.user.passwordEnabled!==false}}"','').replace(/<text wx:if="{{(?:item|player)\.avatarGenerated}}" class="tag generated-origin">{{(?:item|player)\.avatarOriginLabel}}<\/text>/g,'').replace(/\sclass="[^"]*"/g,'');
+    const markup = require('./membership-markup.cjs')(fs.readFileSync(path.join(root,'pages',page,'index.wxml'),'utf8')).replace('<view wx:if="{{session.user.systemAdmin&&!loading&&!error}}" class="page"><button size="mini" class="ui-button ui-block" bindtap="systemAccounts">系统账号管理</button></view>\n','').replace(/<button[^>]*bindtap="openPhotos"[^>]*>(?:管理|查看)出场照片<\/button>/g,'').replace(/<view wx:if="{{wechatEnabled}}" class="page wechat-entry">[\s\S]*?<\/view>\n(?=<business-dialog)/,'').replace(' wx:if="{{session.user.passwordEnabled!==false}}"','').replace(/<text wx:if="{{(?:item|player)\.avatarGenerated}}" class="tag generated-origin">{{(?:item|player)\.avatarOriginLabel}}<\/text>/g,'').replace(/\sclass="[^"]*"/g,'');
     assert.equal(crypto.createHash('sha256').update(markup).digest('hex'),old.markupSha256);
     const css = fs.readFileSync(path.join(root,'pages',page,'index.wxss'),'utf8');
     const current = rules(css);

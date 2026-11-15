@@ -29,7 +29,9 @@
     "pages/wechat-claim/index",
     "pages/wechat-invites/index",
     "pages/player-ai/index",
-    "pages/tactic-create/index"
+    "pages/tactic-create/index",
+    "pages/force-password/index",
+    "pages/system-accounts/index"
   ],
   "window": {
     "navigationBarTitleText": "足球俱乐部",

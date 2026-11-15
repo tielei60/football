@@ -26,6 +26,8 @@ function fixture(options = {}) {
   };
   const wx = {
     request: (request) => requests.push(request),
+    reLaunch: options => { options.complete?.(); },
+    switchTab() {},
     getStorageSync: (k) => storage.get(k),
     getStorageInfoSync: () => ({keys:[...storage.keys()]}),
     setStorageSync: (k, v) => {
@@ -258,3 +260,15 @@ test('old uncancelled handle cannot cancel a newer in-flight login',async()=>{
 test("session clearing invokes dedicated photo cache cleanup",()=>{const h=fixture({stored:session()});h.api.clearSession();assert.equal(h.photoClears(),1);assert.equal(h.api.getSession(),null);});
 
 test("退出清理匿名战术草稿内容但保留核对编号，不动其他业务存储",()=>{const f=fixture();const k="football.tactic-create.v1:test:1:1";f.storage.set(k,{requestId:"request-123",payload:{tactic:{title:"演练"}},createdAt:Date.now()});f.storage.set("other",{keep:true});f.api.clearSession();assert.equal(JSON.stringify(f.storage.get(k)),JSON.stringify({requestId:"request-123"}));assert.equal(f.storage.get("other").keep,true);});
+
+test('强制改密只放行本人改密退出，业务请求在客户端拦截',async()=>{
+ const stored=session();stored.user.mustChangePassword=true;
+ const f=fixture({stored});
+ await assert.rejects(f.api.request('/players'),e=>e.code==='PASSWORD_CHANGE_REQUIRED');assert.equal(f.requests.length,0);
+ const me=f.api.ensureSession({allowPasswordChange:true});f.complete(0,200,{user:stored.user,team:stored.team});assert.equal((await me).user.mustChangePassword,true);
+ const change=f.api.request('/auth/password','PUT',{currentPassword:'anonymous-old',newPassword:'anonymous-new'});f.complete(1,204);await change;
+});
+test('服务端改密code更新当前会话，但迟到旧响应不能污染新登录',async()=>{
+ const f=fixture({stored:session()});const current=f.api.request('/players');f.complete(0,403,{message:'必须改密',code:'PASSWORD_CHANGE_REQUIRED'});await assert.rejects(current,e=>e.code==='PASSWORD_CHANGE_REQUIRED');assert.equal(f.api.getSession().user.mustChangePassword,true);
+ const g=fixture({stored:session()});const old=g.api.request('/players');const login=g.api.beginLogin('anonymous','anonymous-password');g.complete(1,200,session('b'));await login.promise;g.complete(0,403,{message:'旧限制',code:'PASSWORD_CHANGE_REQUIRED'});await assert.rejects(old);assert.notEqual(g.api.getSession().user.mustChangePassword,true);assert.equal(g.api.getSession().token,token('b'));
+});

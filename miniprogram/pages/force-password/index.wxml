@@ -1,0 +1,22 @@
+<view class="page">
+  <view class="title">设置新的登录密码</view>
+  <view class="subtitle">首次登录须修改初始密码，完成后重新登录。</view>
+  <page-state loading="{{loading}}" error="{{error}}" skeleton-type="form" bind:retry="refresh"/>
+  <view wx:if="{{!loading}}" class="card section">
+    <view class="field">
+      <text class="field-label">当前密码</text>
+      <input class="input" password maxlength="200" value="{{currentPassword}}" data-field="currentPassword" bindinput="input" disabled="{{busy}}"/>
+    </view>
+    <view class="field">
+      <text class="field-label">新密码 · 10–200 位</text>
+      <input class="input" password maxlength="200" value="{{newPassword}}" data-field="newPassword" bindinput="input" disabled="{{busy}}"/>
+    </view>
+    <view class="field">
+      <text class="field-label">再次输入新密码</text>
+      <input class="input" password maxlength="200" value="{{confirmation}}" data-field="confirmation" bindinput="input" disabled="{{busy}}"/>
+    </view>
+    <button size="mini" class="primary ui-button ui-block" bindtap="submit" disabled="{{busy}}" loading="{{busy}}">修改并重新登录</button>
+    <button size="mini" class="ui-button ui-block section" bindtap="logout" disabled="{{busy}}">退出账号</button>
+  </view>
+</view>
+<business-dialog id="business-dialog"/>

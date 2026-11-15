@@ -172,6 +172,10 @@ const userView = (r) => ({
   playerId: r.player_id,
   teamId: r.team_id,
   passwordEnabled: r.password_enabled !== 0,
+  systemAdmin: r.is_system_admin === 1,
+  mustChangePassword: r.must_change_password === 1,
+  accountEnabled: r.account_enabled !== 0,
+  accountRevision: r.account_revision,
 });
 
 export function createClubStore(
@@ -241,6 +245,50 @@ export function createClubStore(
   `),
   );
   migrateWechatIdentity(database);
+  tx(() => {
+    const columns = new Set(
+      q("PRAGMA table_info(club_users)")
+        .all()
+        .map((c) => c.name),
+    );
+    for (const [name, definition] of [
+      [
+        "is_system_admin",
+        "INTEGER NOT NULL DEFAULT 0 CHECK(is_system_admin IN (0,1))",
+      ],
+      [
+        "must_change_password",
+        "INTEGER NOT NULL DEFAULT 0 CHECK(must_change_password IN (0,1))",
+      ],
+      [
+        "account_enabled",
+        "INTEGER NOT NULL DEFAULT 1 CHECK(account_enabled IN (0,1))",
+      ],
+      [
+        "account_revision",
+        "INTEGER NOT NULL DEFAULT 1 CHECK(account_revision>0)",
+      ],
+    ])
+      if (!columns.has(name))
+        database.exec(
+          `ALTER TABLE club_users ADD COLUMN ${name} ${definition}`,
+        );
+    database.exec(`CREATE TRIGGER IF NOT EXISTS system_admin_role_guard_update
+      BEFORE UPDATE ON club_users WHEN NEW.is_system_admin=1 AND NEW.role!='admin'
+      BEGIN SELECT RAISE(ABORT,'system administrator must retain admin role'); END;
+      CREATE TRIGGER IF NOT EXISTS system_admin_role_guard_insert
+      BEFORE INSERT ON club_users WHEN NEW.is_system_admin=1 AND NEW.role!='admin'
+      BEGIN SELECT RAISE(ABORT,'system administrator must retain admin role'); END;
+      CREATE TRIGGER IF NOT EXISTS last_system_admin_guard_update
+      BEFORE UPDATE ON club_users WHEN OLD.is_system_admin=1 AND OLD.account_enabled=1
+      AND (NEW.is_system_admin=0 OR NEW.account_enabled=0 OR NEW.team_id!=OLD.team_id)
+      AND NOT EXISTS(SELECT 1 FROM club_users WHERE team_id=OLD.team_id AND id!=OLD.id AND is_system_admin=1 AND account_enabled=1)
+      BEGIN SELECT RAISE(ABORT,'last system administrator must remain enabled'); END;
+      CREATE TRIGGER IF NOT EXISTS last_system_admin_guard_delete
+      BEFORE DELETE ON club_users WHEN OLD.is_system_admin=1 AND OLD.account_enabled=1
+      AND NOT EXISTS(SELECT 1 FROM club_users WHERE team_id=OLD.team_id AND id!=OLD.id AND is_system_admin=1 AND account_enabled=1)
+      BEGIN SELECT RAISE(ABORT,'last system administrator cannot be deleted'); END;`);
+  });
   tx(() => {
     if (!q("PRAGMA table_info(club_players)").all().some(c => c.name === "membership_confirmed"))
       database.exec("ALTER TABLE club_players ADD COLUMN membership_confirmed INTEGER NOT NULL DEFAULT 1 CHECK(membership_confirmed IN (0,1))");
@@ -628,7 +676,7 @@ export function createClubStore(
       input.password,
       u?.password_enabled === 1 ? u.password_hash : dummyHash,
     );
-    if (!u || u.password_enabled !== 1 || !valid) {
+    if (!u || u.account_enabled !== 1 || u.password_enabled !== 1 || !valid) {
       accountAttempt.count++;
       loginAttempts.set(accountKey, accountAttempt);
       fail(401, "用户名或密码不正确。");
@@ -639,6 +687,8 @@ export function createClubStore(
     return issueSession(u, transport);
   }
   function issueSession(u, transport = "cookie", binding = null) {
+    u = q("SELECT * FROM club_users WHERE id=?").get(u.id);
+    if (!u || u.account_enabled !== 1) fail(403, "此账户已停用。");
     const now = Date.now();
     const token = `${transport === "native" ? "native_" : ""}${randomBytes(32).toString("hex")}`;
     const expiresAt = now + 7 * 86400000;
@@ -672,7 +722,7 @@ export function createClubStore(
       wechatAppId ?? "",
       wechatProvider?.enabled === true ? 1 : 0,
     );
-    if (!u) fail(401, "登录已过期，请重新登录。");
+    if (!u || u.account_enabled !== 1) fail(401, "登录已过期，请重新登录。");
     if (u.player_id && getPlayer(u.team_id, u.player_id).status !== "active")
       fail(403, "此球员账户已停用。");
     return u;
@@ -697,31 +747,145 @@ export function createClubStore(
   }
   function resetPassword(teamId, playerId, input) {
     object(input);
-    getPlayer(teamId, playerId);
-    const u = q("SELECT * FROM club_users WHERE team_id=? AND player_id=?").get(
-      teamId,
-      playerId,
-    );
-    if (!u) fail(404, "该球员尚未创建账户。");
-    if (u.password_enabled !== 1)
-      fail(409, "此账户仅使用微信登录，不能通过密码重置隐式启用密码。");
     const hash = hashPassword(input.newPassword);
     tx(() => {
-      q("UPDATE club_users SET password_hash=? WHERE id=?").run(hash, u.id);
+      getPlayer(teamId, playerId);
+      const u = q(
+        "SELECT * FROM club_users WHERE team_id=? AND player_id=?",
+      ).get(teamId, playerId);
+      if (!u) fail(404, "该球员尚未创建账户。");
+      if (u.is_system_admin === 1)
+        fail(403, "不能通过球员密码重置修改系统管理员。");
+      if (u.password_enabled !== 1)
+        fail(409, "此账户仅使用微信登录，不能通过密码重置隐式启用密码。");
+      q(
+        "UPDATE club_users SET password_hash=?,account_revision=account_revision+1 WHERE id=?",
+      ).run(hash, u.id);
       q("DELETE FROM club_sessions WHERE user_id=?").run(u.id);
     });
   }
   function changePassword(u, input) {
     object(input);
-    if (
-      u.password_enabled !== 1 ||
-      !verify(input.currentPassword, u.password_hash)
-    )
-      fail(403, "当前密码不正确。");
     const hash = hashPassword(input.newPassword);
     tx(() => {
-      q("UPDATE club_users SET password_hash=? WHERE id=?").run(hash, u.id);
+      const current = q("SELECT * FROM club_users WHERE id=?").get(u.id);
+      if (
+        !current ||
+        current.account_enabled !== 1 ||
+        current.account_revision !== u.account_revision
+      )
+        fail(409, "账户已变更，请重新登录。");
+      if (
+        current.password_enabled !== 1 ||
+        !verify(input.currentPassword, current.password_hash)
+      )
+        fail(403, "当前密码不正确。");
+      if (
+        current.must_change_password === 1 &&
+        input.newPassword === input.currentPassword
+      )
+        fail(400, "新密码不能与初始密码相同。");
+      q(
+        "UPDATE club_users SET password_hash=?,must_change_password=0,account_revision=account_revision+1 WHERE id=?",
+      ).run(hash, u.id);
       q("DELETE FROM club_sessions WHERE user_id=?").run(u.id);
+    });
+  }
+  const accountView = (r) => ({
+    id: r.id,
+    username: r.username,
+    role: r.role,
+    playerId: r.player_id,
+    systemAdmin: r.is_system_admin === 1,
+    enabled: r.account_enabled === 1,
+    revision: r.account_revision,
+    passwordEnabled: r.password_enabled === 1,
+    mustChangePassword: r.must_change_password === 1,
+  });
+  function systemActor(actor) {
+    const current = q("SELECT * FROM club_users WHERE id=?").get(actor.id);
+    if (
+      !current ||
+      current.team_id !== actor.team_id ||
+      current.role !== "admin" ||
+      current.is_system_admin !== 1 ||
+      current.account_enabled !== 1 ||
+      current.must_change_password === 1 ||
+      current.account_revision !== actor.account_revision
+    )
+      fail(403, "此操作需要有效的系统管理员权限。");
+    return current;
+  }
+  function listSystemAccounts(actor) {
+    return tx(() => {
+      const a = systemActor(actor);
+      return q("SELECT * FROM club_users WHERE team_id=? ORDER BY id")
+        .all(a.team_id)
+        .map(accountView);
+    });
+  }
+  function createSystemAccount(actor, input) {
+    object(input);
+    if (Object.keys(input).some((k) => !["username", "password"].includes(k)))
+      fail(400, "只能创建普通管理员账户。");
+    const username = text(input.username, 100, true),
+      hash = hashPassword(input.password);
+    return tx(() => {
+      const a = systemActor(actor);
+      if (
+        q("SELECT id FROM club_users WHERE username=? COLLATE NOCASE").get(
+          username,
+        )
+      )
+        fail(409, "用户名已存在，请核对账户列表。");
+      const result = q(
+        "INSERT INTO club_users(team_id,username,password_hash,role,must_change_password) VALUES(?,?,?,'admin',1)",
+      ).run(a.team_id, username, hash);
+      return accountView(
+        q("SELECT * FROM club_users WHERE id=?").get(result.lastInsertRowid),
+      );
+    });
+  }
+  function updateSystemAccount(actor, id, input) {
+    object(input);
+    if (
+      Object.keys(input).some(
+        (k) => !["revision", "role", "enabled"].includes(k),
+      )
+    )
+      fail(400, "不支持修改此账户字段。");
+    return tx(() => {
+      const a = systemActor(actor),
+        target = q("SELECT * FROM club_users WHERE id=? AND team_id=?").get(
+          id,
+          a.team_id,
+        );
+      if (!target) fail(404, "账户不存在。");
+      if (target.is_system_admin === 1)
+        fail(403, "系统管理员账户不可在此修改。");
+      if (
+        !Number.isSafeInteger(input.revision) ||
+        input.revision !== target.account_revision
+      )
+        fail(409, "账户已变更，请刷新后重试。");
+      const role =
+        input.role === undefined
+          ? target.role
+          : oneOf(input.role, ["admin", "player"]);
+      const enabled =
+        input.enabled === undefined
+          ? target.account_enabled === 1
+          : input.enabled;
+      if (typeof enabled !== "boolean") fail(400, "账户启用状态不正确。");
+      if (role === "player" && !target.player_id)
+        fail(400, "独立管理员没有关联球员，请使用停用账户。");
+      q(
+        "UPDATE club_users SET role=?,account_enabled=?,account_revision=account_revision+1 WHERE id=?",
+      ).run(role, enabled ? 1 : 0, id);
+      q("DELETE FROM club_sessions WHERE user_id=?").run(id);
+      // 使在途微信交换跨过授权/停用/重新启用的旧代次失效，避免ABA重新签发。
+      q("UPDATE club_wechat_epoch SET revision=revision+1 WHERE id=1").run();
+      return accountView(q("SELECT * FROM club_users WHERE id=?").get(id));
     });
   }
   const seasonView = (r) => ({
@@ -1397,6 +1561,9 @@ export function createClubStore(
     authenticate,
     sessionView,
     changePassword,
+    listSystemAccounts,
+    createSystemAccount,
+    updateSystemAccount,
     createAccount,
     resetPassword,
     listPlayers,

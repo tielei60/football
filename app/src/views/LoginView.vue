@@ -55,6 +55,7 @@ async function login() {
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
+    password.value = "";
     busy.value = false;
   }
 }

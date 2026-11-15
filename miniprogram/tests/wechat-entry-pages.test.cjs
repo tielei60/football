@@ -9,6 +9,7 @@ function page(name, overrides = {}) {
   const calls = [],
     api = {
       capabilities: async () => ({ wechat: true }),
+      enterAuthenticated: () => calls.push({url:"/pages/home/index"}),
       getSession: () => null,
       beginWechat: () => {
         throw Error("未设测试结果");

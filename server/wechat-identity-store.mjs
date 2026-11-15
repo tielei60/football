@@ -249,7 +249,10 @@ export function createWechatIdentityStore(
         );
         if (
           !user ||
-          user.role !== "player" ||
+          !user.player_id ||
+          !["player", "admin"].includes(user.role) ||
+          user.is_system_admin === 1 ||
+          user.account_enabled !== 1 ||
           getPlayer(user.team_id, user.player_id).status !== "active"
         )
           fail(403, "该球员账户不可用。");

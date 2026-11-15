@@ -57,20 +57,26 @@ test('匿名来源保真、副本成员待确认、本地操作账号、环境�
 test('每次运行生成新源和新副本，绝不复用既有资料库',async()=>{
  const restore=anonymize();let a,b;try{a=await startBerlinShowcase();b=await startBerlinShowcase();assert.notEqual(a.directory,b.directory);assert.notEqual(a.port,b.port);const ma=JSON.parse(fs.readFileSync(a.manifestPath)),mb=JSON.parse(fs.readFileSync(b.manifestPath));assert.notEqual(ma.admin.password,mb.admin.password);}finally{restore();for(const r of[a,b])if(r){await r.close();fs.rmSync(r.directory,{recursive:true,force:true});}}
 });
+function trackOwnDirectories(){
+ const original=fs.mkdtempSync,created=[];
+ fs.mkdtempSync=function(prefix,...args){const result=original.call(this,prefix,...args);if(String(prefix).includes('football-berlin-validation-'))created.push(result);return result;};
+ syncBuiltinESMExports();
+ return {assertClean(){assert.equal(created.length,1);for(const path of created)assert.equal(fs.existsSync(path),false,'本次创建的目录必须清理');},restore(){fs.mkdtempSync=original;syncBuiltinESMExports();}};
+}
 test('监听失败关闭资源，仅清理自己新生成的来源目录',async()=>{
- const restore=anonymize(),list=()=>fs.readdirSync(tmpdir()).filter(n=>n.startsWith('football-berlin-validation-')).sort(),before=list(),listen=Server.prototype.listen,failure=Error('synthetic-listen-failure');
+ const restore=anonymize(),tracked=trackOwnDirectories(),listen=Server.prototype.listen,failure=Error('synthetic-listen-failure');
  Server.prototype.listen=function(){queueMicrotask(()=>this.emit('error',failure));return this;};
- try{await assert.rejects(startBerlinShowcase(),e=>e===failure);assert.deepEqual(list(),before);}finally{Server.prototype.listen=listen;restore();}
+ try{await assert.rejects(startBerlinShowcase(),e=>e===failure);tracked.assertClean();}finally{Server.prototype.listen=listen;tracked.restore();restore();}
 });
 
 
 test('一致性backup目标无法打开时只清理本次目录',async()=>{
- const restore=anonymize(),list=()=>fs.readdirSync(tmpdir()).filter(n=>n.startsWith('football-berlin-validation-')).sort(),before=list(),originalWrite=fs.writeFileSync;
+ const restore=anonymize(),tracked=trackOwnDirectories(),originalWrite=fs.writeFileSync;
  let leaked;
  // 模拟目标文件在独占创建阶段发生文件系统类型异常，真正让SQLite backup拒绝目录。
  fs.writeFileSync=function(path,...args){if(String(path).endsWith('/showcase.sqlite')){fs.mkdirSync(path,{mode:0o700});return;}return originalWrite.call(this,path,...args);};syncBuiltinESMExports();
- try{await assert.rejects(async()=>{leaked=await startBerlinShowcase();},e=>e.code==='ERR_SQLITE_ERROR');assert.deepEqual(list(),before);}
- finally{fs.writeFileSync=originalWrite;syncBuiltinESMExports();if(leaked){await leaked.close();fs.rmSync(leaked.directory,{recursive:true,force:true});}restore();}
+ try{await assert.rejects(async()=>{leaked=await startBerlinShowcase();},e=>e.code==='ERR_SQLITE_ERROR');tracked.assertClean();}
+ finally{fs.writeFileSync=originalWrite;syncBuiltinESMExports();tracked.restore();if(leaked){await leaked.close();fs.rmSync(leaked.directory,{recursive:true,force:true});}restore();}
 });
 
 test('close回调错误仍等待drained，不让调用者提前清理数据库',async()=>{

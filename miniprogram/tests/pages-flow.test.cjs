@@ -36,6 +36,7 @@ function setup(name, overrides = {}, wxOverrides = {}) {
       },
     },
   );
+  api.enterAuthenticated ||= () => wx.switchTab({url:"/pages/home/index"});
   const context = vm.createContext({
     console,
     Map,
