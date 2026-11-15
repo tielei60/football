@@ -525,3 +525,35 @@ test('AI返回的旧元数据请求迟到不能覆盖较新相册与封面',asyn
  h.api.request=async p=>{if(p.endsWith('/photos')){if(++reads===1)return new Promise(r=>resolve=r);return {...listing,revision:12,coverPhotoId:2};}return {dataUrl:'data:image/png;base64,iVBORw0KGgoBAgME'};};
  const returning=h.page.onShow();for(let i=0;i<8;i++)await Promise.resolve();assert.equal(typeof resolve,'function');await h.page.refresh();resolve({...listing,revision:9,coverPhotoId:1});await returning;assert.equal(h.page.revision,12);assert.equal(h.page.data.coverPhotoId,2);
 });
+
+test('说明三方比较按照片ID，未编辑跟随最新、脏稿保留且要求确认',async()=>{
+ let rows=structuredClone(listing.photos),revision=3,confirm=false;const writes=[];
+ const h=fixture({request:async(path,method,data)=>{if(method){writes.push(data);rows=rows.map(x=>x.id===1?{...x,caption:data.caption}:x);revision++;return {...listing,photos:rows,revision};}return path.endsWith('/photos')?{...listing,photos:rows,revision}:{dataUrl:'data:image/png;base64,iVBORw0KGgoBAgME'};}},{showModal:()=>Promise.resolve({confirm})});
+ await h.page.refresh();rows[0].caption='远程一';revision++;await h.page.refresh();assert.equal(h.page.data.photos[0].draft,'远程一');
+ h.page.captionInput({currentTarget:{dataset:{id:1}},detail:{value:'本地草稿'}});rows=[rows[1],{...rows[0],caption:'远程二'}];revision++;await h.page.refresh();const p=h.page.data.photos.find(x=>x.id===1);assert.equal(p.draft,'本地草稿');assert.equal(p.captionConflict,true);
+ await h.page.saveCaption(event(1));assert.equal(writes.length,0);confirm=true;await h.page.saveCaption(event(1));assert.deepEqual(JSON.parse(JSON.stringify(writes[0])),{revision:5,caption:'本地草稿'});assert.equal(h.page.data.photos.find(x=>x.id===1).captionConflict,false);
+});
+for(const change of ['hide','account','refresh','remove'])test('照片说明确认期间'+change+'阻止旧保存',async()=>{
+ let resolve;const h=fixture({}, {showModal:()=>new Promise(r=>resolve=r)});await h.page.refresh();h.page.data.photos[0].draft='草稿';h.page.data.photos[0].captionConflict=true;const task=h.page.saveCaption(event(1));
+ if(change==='hide')h.page.onHide();else if(change==='account')h.api.getSession=()=>({...session,token:'B'});else if(change==='remove')h.page.setData({photos:[]});else await h.page.refresh();
+ resolve({confirm:true});await task;assert.equal(h.posts.length,0);
+});
+for(const status of [0,500,409,400])test('球员排序失败'+status+'按不确定性锁定',async()=>{
+ const h=fixture();await h.page.refresh();let calls=0;h.api.request=async(path,method)=>{if(method)calls++;throw Object.assign(Error('失败'),{status});};await h.page.move(event(1,1));assert.equal(h.page.data.conflict,status!==400);if(status!==400){await h.page.move(event(1,1));assert.equal(calls,1);}
+});
+for(const change of ['hide','account'])test('球员排序未知响应在'+change+'后不污染页面',async()=>{
+ const h=fixture();await h.page.refresh();let reject;h.api.request=()=>new Promise((_,r)=>reject=r);const task=h.page.move(event(1,1));await new Promise(r=>setImmediate(r));if(change==='hide')h.page.onHide();else h.api.getSession=()=>({...session,token:'B'});reject(Object.assign(Error('断网'),{status:0}));await task;assert.equal(h.page.data.conflict,false);if(change==='hide')assert.equal(h.page._needsRefresh,true);
+});
+
+test('说明确认后服务器再次变化仍以捕获版本提交并由409锁定',async()=>{
+ const h=fixture({}, {showModal:()=>Promise.resolve({confirm:true})});await h.page.refresh();h.page.data.photos[0].draft='保留草稿';h.page.data.photos[0].captionConflict=true;let sent;
+ h.api.request=async(path,method,data)=>{if(method){sent=data;throw Object.assign(Error('版本变化'),{status:409});}return {};};await h.page.saveCaption(event(1));assert.equal(sent.revision,3);assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.photos[0].draft,'保留草稿');
+});
+
+test('同账号隐藏后返回，原排序迟到未知仍锁定核对',async()=>{
+ const h=fixture();await h.page.refresh();let reject;
+ const original=h.api.request;h.api.request=(path,method,data)=>method?new Promise((_,r)=>reject=r):original(path,method,data);
+ const task=h.page.move(event(1,1));await new Promise(r=>setImmediate(r));h.page.onHide();await h.page.onShow();reject(Object.assign(Error('断网'),{status:0}));await task;
+ assert.equal(h.page.data.conflict,true);assert.match(h.page.data.actionError,/核对/);
+ h.api.request=original;await h.page.refresh();assert.equal(h.page.data.conflict,false);
+});

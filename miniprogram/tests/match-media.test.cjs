@@ -130,6 +130,8 @@ test("album operations preserve unsaved notice and selected image",async()=>{
 });
 test("save notice uses revision and same input survives reload",async()=>{
  const h=fixture();await h.page.refresh();
+ const original=h.api.request;let saved;
+ h.api.request=async(path,method,data)=>{if(method){saved=data.notice;return original(path,method,data);}return path.endsWith('/photos')?listing:{...matchInfo,notice:saved??matchInfo.notice};};
  h.page.input({currentTarget:{dataset:{field:"notice"}},detail:{value:"New"}});
  await h.page.saveNotice();
  assert.equal(h.posts[0].data.revision,3);assert.equal(h.posts[0].data.notice,"New");assert.equal(h.page.data.notice,"New");
@@ -275,4 +277,17 @@ for(const status of [409,0,500])test('排序失败 '+status+' 保留原序并锁
 });
 test('排序旧账号迟到失败不写新账号错误',async()=>{
  let reject,token='A';const h=fixture({getSession:()=>({...session,token}),request:()=>new Promise((r,j)=>reject=j)});sortable(h);const task=h.page.move(moveEvent(2,-1));await new Promise(r=>setImmediate(r));token='B';reject(Object.assign(Error('旧失败'),{status:409}));await task;assert.equal(h.page.data.actionError,'');
+});
+
+test('须知三方比较：未编辑跟随服务器，脏稿冲突取消零写、确认原版本',async()=>{
+ let server='Saved notice',revision=3;const writes=[];let confirm=false;
+ const h=fixture({request:async(path,method,data)=>{if(method){writes.push(data);server=data.notice;revision++;return {revision};}return path.endsWith('/photos')?{...listing,revision}:{...matchInfo,notice:server,revision};}}, {showModal:()=>Promise.resolve({confirm})});
+ await h.page.refresh();server='最新';revision++;await h.page.refresh();assert.equal(h.page.data.notice,'最新');
+ h.page.setData({notice:'本地'});server='又一版';revision++;await h.page.refresh();assert.equal(h.page.data.noticeConflict,true);assert.equal(h.page.data.notice,'本地');
+ await h.page.saveNotice();assert.equal(writes.length,0);confirm=true;await h.page.saveNotice();assert.equal(writes[0].revision,5);assert.equal(writes[0].notice,'本地');assert.equal(h.page.data.noticeConflict,false);
+});
+for(const change of ['hide','account','refresh'])test('须知确认期间'+change+'阻止旧保存',async()=>{
+ let resolve;const h=fixture({}, {showModal:()=>new Promise(r=>resolve=r)});await h.page.refresh();h.page.setData({notice:'草稿',noticeConflict:true});const task=h.page.saveNotice();
+ if(change==='hide')h.page.onHide();else if(change==='account')h.api.getSession=()=>({...session,token:'B'});else await h.page.refresh();
+ resolve({confirm:true});await task;assert.equal(h.posts.length,0);
 });

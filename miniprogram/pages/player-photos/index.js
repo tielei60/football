@@ -1,3 +1,4 @@
+const { mergeText, replacementMessage } = require("../../utils/text-draft");
 const ui = require("../../utils/ui");
 const s = require("../shared");
 const photoCache = require("../../utils/player-photo-cache");
@@ -48,10 +49,19 @@ function clear(k, id) {
 }
 Page({
   openAi() {
-    if (!this.data.admin || this._hidden || this._disposed || this.data.busy || this.data.loading) return;
+    if (
+      !this.data.admin ||
+      this._hidden ||
+      this._disposed ||
+      this.data.busy ||
+      this.data.loading
+    )
+      return;
     // AI 页可改变相册与封面；返回后重读元数据，并沿用同账号草稿保留逻辑。
     this._needsRefresh = true;
-    wx.navigateTo({url: "/pages/player-ai/index?id=" + encodeURIComponent(this.id)});
+    wx.navigateTo({
+      url: "/pages/player-ai/index?id=" + encodeURIComponent(this.id),
+    });
   },
   data: {
     loading: true,
@@ -239,12 +249,24 @@ Page({
           id: x.id,
           caption: x.caption || "",
           generated: x.generated === true,
-          originLabel: x.simulation === true || x.originKind === "local-simulation" ? "模拟图" : x.aiGenerated === true ? "AI 生成" : "生成图",
-          draft: local
-            ? (this.data.photos.find((p) => p.id === x.id)?.draft ??
-              x.caption ??
-              "")
-            : x.caption || "",
+          originLabel:
+            x.simulation === true || x.originKind === "local-simulation"
+              ? "模拟图"
+              : x.aiGenerated === true
+                ? "AI 生成"
+                : "生成图",
+          ...(() => {
+            const old = local && this.data.photos.find((p) => p.id === x.id);
+            const merged = old
+              ? mergeText(
+                  old.caption,
+                  old.draft,
+                  x.caption || "",
+                  old.captionConflict,
+                )
+              : { value: x.caption || "", conflict: false };
+            return { draft: merged.value, captionConflict: merged.conflict };
+          })(),
           src: this._cachedPaths?.get("photo:" + x.id) || "",
           loading: !this._cachedPaths?.has("photo:" + x.id),
           imageError: "",
@@ -266,6 +288,11 @@ Page({
       this._loaded = true;
       if (p) this._image = p.dataUrl;
       else if (!local) this._image = null;
+      if (this.data.photos.some((p) => p.captionConflict))
+        this.setData({
+          actionError:
+            "部分说明已被修改，草稿已保留；保存前须确认替换最新文字。",
+        });
       this.alertDraft();
     } catch (e) {
       if (active()) {
@@ -467,7 +494,7 @@ Page({
       this._owner === s.api.getSession()?.token
     );
   },
-  async perform(work, done) {
+  async perform(work, done, options = {}) {
     if (!this.editable()) return;
     const epoch = this._epoch,
       token = this._owner,
@@ -501,6 +528,24 @@ Page({
         else await this.refresh();
       }
     } catch (e) {
+      const unknownOrder =
+        options.order &&
+        (!(e.status || e.statusCode) || (e.status || e.statusCode) >= 500);
+      if (
+        unknownOrder &&
+        !this._disposed &&
+        epoch === this._epoch &&
+        token === this._owner &&
+        token === s.api.getSession()?.token &&
+        this._writeAttempt === attempt
+      ) {
+        if (this._hidden) this._needsRefresh = true;
+        else
+          this.setData({
+            conflict: true,
+            actionError: "排序结果尚未确认，请重新载入核对后再操作。",
+          });
+      }
       if (
         !this._disposed &&
         !this._hidden &&
@@ -511,11 +556,18 @@ Page({
         if ((e.status || e.statusCode) === 401 && !current) s.fail(this, e);
         else if (current?.token === token && this._owner === token)
           this.setData({
-            conflict: (e.status || e.statusCode) === 409,
+            conflict:
+              (e.status || e.statusCode) === 409 ||
+              (options.order &&
+                (!(e.status || e.statusCode) ||
+                  (e.status || e.statusCode) >= 500)),
             actionError:
-              (e.status || e.statusCode) === 409
-                ? "相册已被修改，内容已保留，请重新载入核对。"
-                : e.message,
+              options.order &&
+              (!(e.status || e.statusCode) || (e.status || e.statusCode) >= 500)
+                ? "排序结果尚未确认，请重新载入核对后再操作。"
+                : (e.status || e.statusCode) === 409
+                  ? "相册已被修改，内容已保留，请重新载入核对。"
+                  : e.message,
           });
       }
     } finally {
@@ -535,16 +587,41 @@ Page({
     if (i >= 0) this.setData({ ["photos[" + i + "].draft"]: e.detail.value });
     this.alertDraft();
   },
-  saveCaption(e) {
-    if (this.data.uncertain || owned(this.id)) return;
+  async saveCaption(e) {
+    if (!this.editable() || this.data.uncertain || owned(this.id)) return;
     const p = this.data.photos.find((x) => x.id === e.currentTarget.dataset.id);
-    if (p)
-      return this.perform(() =>
-        s.api.request("/players/" + this.id + "/photos/" + p.id, "PUT", {
-          revision: this.revision,
-          caption: p.draft,
-        }),
-      );
+    if (!p || p.draft === p.caption) return;
+    const { id, draft, caption } = p,
+      revision = this.revision,
+      epoch = this._epoch,
+      owner = this._owner,
+      showTurn = this._showTurn;
+    if (p.captionConflict) {
+      const result = await ui.showModal(this, {
+        title: "确认替换照片说明",
+        content: replacementMessage(caption, draft),
+        confirmText: "确认替换",
+      });
+      if (!result.confirm) return;
+    }
+    const current = this.data.photos.find((x) => x.id === id);
+    if (
+      !this.editable() ||
+      this.data.uncertain ||
+      owner !== s.api.getSession()?.token ||
+      epoch !== this._epoch ||
+      showTurn !== this._showTurn ||
+      revision !== this.revision ||
+      current?.draft !== draft ||
+      current?.caption !== caption
+    )
+      return;
+    return this.perform(() =>
+      s.api.request("/players/" + this.id + "/photos/" + id, "PUT", {
+        revision,
+        caption: draft,
+      }),
+    );
   },
   move(e) {
     if (this.data.uncertain || owned(this.id)) return;
@@ -553,11 +630,14 @@ Page({
       j = i + Number(e.currentTarget.dataset.delta);
     if (i < 0 || j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
-    return this.perform(() =>
-      s.api.request("/players/" + this.id + "/photos/order", "PUT", {
-        revision: this.revision,
-        photoIds: ids,
-      }),
+    return this.perform(
+      () =>
+        s.api.request("/players/" + this.id + "/photos/order", "PUT", {
+          revision: this.revision,
+          photoIds: ids,
+        }),
+      null,
+      { order: true },
     );
   },
   upload() {

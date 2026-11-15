@@ -1,3 +1,4 @@
+const {mergeText,replacementMessage}=require("../../utils/text-draft");
 const ui=require('../../utils/ui');
 const s=require('../shared');
 const {imageSource}=require('../../utils/media');
@@ -6,7 +7,7 @@ function owned(id){const token=s.api.getSession()?.token;if(pendingOwner!==token
 function drop(p){if(pendingByMatch.get(p.matchId)===p)pendingByMatch.delete(p.matchId);}
 function key(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const n=Math.floor(Math.random()*16);return (c==='x'?n:(n&3)|8).toString(16);});}
 Page({
- data:{loading:true,error:'',admin:false,busy:false,conflict:false,actionError:'',notice:'',photos:[],coverPhotoId:null,preview:'',caption:'',uncertain:false},
+ data:{loading:true,error:'',admin:false,busy:false,conflict:false,actionError:'',notice:'',noticeConflict:false,photos:[],coverPhotoId:null,preview:'',caption:'',uncertain:false},
  onLoad(q){this.id=q.id;},
  onHide(){ui.abort(this);this._showTurn=(this._showTurn||0)+1;this._picturesTurn=(this._picturesTurn||0)+1;this._hidden=true;this.setData({loading:true});},
  async onShow(){
@@ -39,9 +40,10 @@ Page({
    const [match,list]=await Promise.all([s.api.request('/matches/'+this.id),s.api.request('/matches/'+this.id+'/photos')]);
    if(!ownedResponse())return;
    const p=owned(this.id);
-   s.safeSetData(this,{admin:session.user.role==='admin',notice:local?local.notice:p?.notice??match.notice??'',
+   const mergedNotice=local?mergeText(this._savedNotice||'',local.notice,match.notice||'',this.data.noticeConflict):{value:p?.notice??match.notice??'',conflict:!!p&&p.notice!==(match.notice||'')};
+   s.safeSetData(this,{admin:session.user.role==='admin',notice:mergedNotice.value,noticeConflict:mergedNotice.conflict,
     photos:list.photos.map(x=>({id:x.id,caption:x.caption||'',src:'',loading:true,imageError:''})),coverPhotoId:list.coverPhotoId,
-    conflict:false,actionError:'',preview:p?imageSource(p.dataUrl):local?.preview||'',caption:p?.caption??local?.caption??'',uncertain:!!p});
+    conflict:false,actionError:mergedNotice.conflict?'服务器须知已变化，草稿已保留；保存前须确认替换最新文字。':'',preview:p?imageSource(p.dataUrl):local?.preview||'',caption:p?.caption??local?.caption??'',uncertain:!!p});
    this._owner=token;this.revision=Number.isInteger(match.revision)?Math.min(match.revision,list.revision):list.revision;
    this._savedNotice=match.notice||'';this._loaded=true;
    if(p)this._image=p.dataUrl;else if(!local)this._image=null;
@@ -79,7 +81,13 @@ Page({
  choose(){if(!this.editable()||this.data.uncertain)return;const epoch=this._epoch,turn=this._imageEpoch=(this._imageEpoch||0)+1;wx.chooseMedia({count:1,mediaType:['image'],sourceType:['album'],success:r=>{if(this._disposed||epoch!==this._epoch||turn!==this._imageEpoch||this._owner!==s.api.getSession()?.token)return;const f=r.tempFiles?.[0];if(!f)return;if(f.size>2097152){this.setData({actionError:'请选择 2 MB 内的 PNG 或 JPG'});return;}wx.getFileSystemManager().readFile({filePath:f.tempFilePath,encoding:'base64',success:result=>{if(this._disposed||epoch!==this._epoch||turn!==this._imageEpoch||this._owner!==s.api.getSession()?.token)return;const data=result.data;const mime=data.startsWith('iVBORw0KGgo')?'png':data.startsWith('/9j/')?'jpeg':null;if(!mime||data.length*3/4>2097154){this.setData({actionError:'请选择 2 MB 内的 PNG 或 JPG'});return;}this._image='data:image/'+mime+';base64,'+data;this.setData({preview:f.tempFilePath,actionError:''});this.alertDraft();},fail:()=>{if(!this._disposed&&turn===this._imageEpoch)this.setData({actionError:'图片读取失败，请重选'});}});},fail:e=>{if(!this._disposed&&epoch===this._epoch&&turn===this._imageEpoch&&!/cancel/.test(e.errMsg||''))this.setData({actionError:'无法选择图片，请检查相册授权'});}});},
  editable(){return this.data.admin&&!this.data.busy&&!this.data.conflict&&!this.data.loading&&!this.data.error&&!this._hidden&&!this._disposed&&this._owner===s.api.getSession()?.token;},
  async perform(work,done,options={}){if(!this.editable())return;const epoch=this._epoch,token=this._owner,showTurn=this._showTurn,attempt=this._writeAttempt={};this.setData({busy:true,actionError:''});this._imageEpoch=(this._imageEpoch||0)+1;try{const session=await s.api.ensureSession();if(session.user.role!=='admin'||this._owner!==s.api.getSession()?.token)throw new Error('登录已变化，请重新载入');if(this._disposed||this._hidden||epoch!==this._epoch||showTurn!==this._showTurn)return;const result=await work();if(!this._disposed&&epoch===this._epoch&&this._owner===s.api.getSession()?.token){if(done)done(result);this.setData({busy:false});if(this._hidden)this._needsRefresh=true;else await this.refresh();}}catch(e){if(!this._disposed&&!this._hidden&&epoch===this._epoch&&showTurn===this._showTurn){const current=s.api.getSession();if((e.status||e.statusCode)===401&&!current)s.fail(this,e);else if(current?.token===token&&this._owner===token)this.setData({conflict:(e.status||e.statusCode)===409||(options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)),actionError:options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)?'排序结果尚未确认，请重新载入核对后再操作。':(e.status||e.statusCode)===409?'比赛已被修改，内容已保留，请重新载入核对。':e.message});}}finally{if(!this._disposed&&epoch===this._epoch&&this._writeAttempt===attempt)this.setData({busy:false});}},
- saveNotice(){if(this.data.uncertain)return;const notice=this.data.notice;return this.perform(()=>s.api.request('/matches/'+this.id,'PUT',{revision:this.revision,notice}),()=>{this._savedNotice=notice;this.alertDraft();});},
+ async saveNotice(){
+  if(!this.editable()||this.data.uncertain)return;
+  const notice=this.data.notice,server=this._savedNotice||'',revision=this.revision,epoch=this._epoch,owner=this._owner,showTurn=this._showTurn;
+  if(this.data.noticeConflict&&notice!==server){const result=await ui.showModal(this,{title:'确认替换比赛须知',content:replacementMessage(server,notice),confirmText:'确认替换'});if(!result.confirm)return;}
+  if(!this.editable()||this.data.uncertain||owner!==s.api.getSession()?.token||epoch!==this._epoch||showTurn!==this._showTurn||revision!==this.revision||notice!==this.data.notice)return;
+  return this.perform(()=>s.api.request('/matches/'+this.id,'PUT',{revision,notice}),()=>{this._savedNotice=notice;this.setData({noticeConflict:false});this.alertDraft();});
+ },
  upload(){let p=owned(this.id);if(p?.inFlight)return;if(this.data.uncertain&&!p){this._image=null;this.setData({preview:'',caption:'',uncertain:false});return this.refresh();}if(!p){if(!this._image||this.data.photos.length>=9)return;p={token:this._owner,matchId:this.id,requestId:key(),dataUrl:this._image,caption:this.data.caption,notice:this.data.notice,revision:this.revision,inFlight:false};}return this.perform(async()=>{owned(this.id);pendingByMatch.set(this.id,p);p.inFlight=true;this.alertDraft();try{const result=await s.api.request('/matches/'+this.id+'/photos','POST',{revision:p.revision,requestId:p.requestId,dataUrl:p.dataUrl,caption:p.caption});drop(p);return result;}catch(e){const status=e.status||e.statusCode||0;if(status>=400&&status<500)drop(p);if(!this._disposed&&p.token===s.api.getSession()?.token)this.setData({uncertain:owned(this.id)===p});throw e;}finally{p.inFlight=false;}},()=>{this._image=null;this.setData({preview:'',caption:'',uncertain:false});this.alertDraft();});},
  remove(e){if(this.data.uncertain)return;const id=e.currentTarget.dataset.id,epoch=this._epoch;ui.showModal(this,{title:'移除照片',content:'从这场比赛移除此照片？',confirmText:'移除',success:r=>{if(r.confirm&&!this._disposed&&epoch===this._epoch)this.perform(()=>s.api.request('/matches/'+this.id+'/photos/'+id,'DELETE',{revision:this.revision}));}});},
  cover(e){if(this.data.uncertain)return;return this.perform(()=>s.api.request('/matches/'+this.id+'/photos/cover','PUT',{revision:this.revision,photoId:e.currentTarget.dataset.id}));},
