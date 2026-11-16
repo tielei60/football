@@ -35,7 +35,7 @@
       ><view wx:if="{{!recent.length}}" class="card empty"
         >赛后记录会出现在这里</view
       ></view
-    ><view class="section annual-record"><view class="section-title">球队这一年</view><view class="hero-metrics"><view><text class="hero-number">{{playerCount}}</text><text>位在队队员</text></view><view><text class="hero-number">{{stats.team.matches}}</text><text>本年完赛</text></view><view><text class="hero-number">{{stats.team.wins}}</text><text>胜场</text></view></view><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view></view
+    ><view class="section annual-record"><view class="section-title">球队这一年</view><view class="hero-metrics"><view><text class="hero-number">{{playerCount}}</text><text>当前在队</text></view><view><text class="hero-number">{{stats.team.matches}}</text><text>本年完赛</text></view><view><text class="hero-number">{{stats.team.wins}}</text><text>胜场</text></view></view><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view></view
     ></block
   ></view
 >
