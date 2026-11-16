@@ -11,7 +11,7 @@
 <button class="primary ui-button ui-block" bindtap="submit" disabled="{{busy||!hasCredential}}" loading="{{busy}}" size="mini">提交或恢复认领</button>
 </view>
 <view wx:if="{{status}}" class="card">
-<view class="section-title">{{statusLabel}}</view>
+<view class="section-title claim-status {{status==='claimed'?'is-waiting':status==='approved'?'is-approved':''}}">{{statusLabel}}</view>
 <view wx:if="{{confirmationCode}}" class="confirmation">{{confirmationCode}}</view>
 <view wx:if="{{status==='claimed'}}" class="hint">请通过原有联系渠道把核验编号告知管理员。审核前没有球队访问权限。</view>
 <view wx:if="{{status==='approved'}}" class="hint">审批记录不代表当前绑定仍有效，请重新登录核验。</view>

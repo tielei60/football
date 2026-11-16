@@ -210,7 +210,10 @@ test("new entry markup is narrowly capability-gated and password ability is chec
     /wx:if="{{session.user.passwordEnabled!==false}}" class="card section"/,
   );
   assert.equal((manage.match(/bindtap="openWechat"/g) || []).length, 1);
-  assert.match(manage, /id&&status==='active'&&wechatEnabled/);
+  assert.match(manage, /<button wx:if="{{id}}" bindtap="openWechat" disabled="{{busy}}"[^>]*>微信邀请与绑定<\/button>/);
+  assert.match(manage, /<invite-sheet id="invite-sheet" player="{{id}}"\/>/);
+  const sheet=fs.readFileSync(path.join(root,"components/invite-sheet/index.js"),"utf8");
+  assert.match(sheet, /!this.ready\(\) \|\| this.data.archived \|\| this.data.unconfirmed \|\| this.data.binding\?\.bound \|\| this.data.activeInvite\?\.status === 'claimed'/);
   const css = fs.readFileSync(
     path.join(root, "pages/login/index.wxss"),
     "utf8",

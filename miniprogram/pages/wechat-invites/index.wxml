@@ -7,15 +7,15 @@
       <view class="invite-subtitle">{{playerName}}</view>
       <view class="card">
         <view class="invite-heading">当前绑定</view>
-        <view class="binding-status">{{binding.bound?'已绑定微信':'尚未绑定'}}</view>
+        <view class="binding-status {{binding.bound?'is-bound':''}}">{{binding.bound?'已绑定微信':'尚未绑定'}}</view>
         <view wx:if="{{unconfirmed}}" class="hint">球员状态尚未确认，设为在队后即可创建邀请。</view>
         <view wx:elif="{{archived}}" class="hint">球员已归档，恢复在队后才能创建邀请。</view>
         <button size="mini" wx:if="{{unconfirmed||archived}}" class="ui-button ui-block" bindtap="editPlayer" disabled="{{busy||loadingMore}}">确认球员状态</button>
-        <button size="mini" wx:if="{{binding.bound}}" class="ui-button ui-block" bindtap="unbind" disabled="{{busy||needsRefresh||loadingMore}}">解除绑定</button>
+        <button size="mini" wx:if="{{binding.bound}}" class="ui-button ui-block invite-danger" bindtap="unbind" disabled="{{busy||needsRefresh||loadingMore}}">解除绑定</button>
         <button id="create-invite-card" size="mini" wx:elif="{{!archived&&!unconfirmed&&(!activeInvite||activeInvite.status!=='claimed')}}" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||needsRefresh||loadingMore}}" loading="{{busy}}">{{activeInvite?'重新生成邀请卡片':'生成邀请卡片'}}</button>
       </view>
       <view wx:if="{{activeInvite}}" class="card">
-        <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag">{{activeInvite.label}}</text></view>
+        <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag {{activeInvite.status==='pending'||activeInvite.status==='claimed'?'invite-pending':activeInvite.status==='approved'?'invite-approved':'invite-closed'}}">{{activeInvite.label}}</text></view>
         <view class="hint">有效期至 {{activeInvite.expires}}</view>
         <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'邀请卡片仅交给球员本人。':'重新生成后，之前未认领的卡片将失效。'}}</view>
         <view wx:if="{{activeInvite.status==='claimed'}}" class="hint">请联系球员本人核对确认编号，再批准申请。</view>
@@ -23,7 +23,7 @@
           <button size="mini" class="primary ui-button" data-action="approve" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">核对并批准</button>
           <button size="mini" class="ui-button" data-action="reject" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">拒绝申请</button>
         </view>
-        <button size="mini" class="ui-button ui-block" data-action="revoke" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">撤销邀请</button>
+        <button size="mini" class="ui-button ui-block invite-danger" data-action="revoke" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">撤销邀请</button>
       </view>
       <view wx:if="{{actionError}}" class="error" aria-role="alert">{{actionError}}</view>
       <button size="mini" class="ui-button ui-block" bindtap="refresh" disabled="{{busy||loadingMore}}">重新载入</button>

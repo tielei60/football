@@ -146,3 +146,12 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 实际从首页入口离开时触发未保存警告，确认放弃后重入，原标题恢复、标签为空。没有保存；随后实际退出至 375 宽度空登录页。最终独立核验确认：本轮匿名库会话数为 0，23 张业务表与基线一致；来源库 24 张表摘要不变。配置经双 SHA 守卫恢复原字节；本轮服务正常 SIGTERM 退出、执行会话 exit 0，对应端口无监听，没有操作既有开发工具服务。数据与环境收尾完成，不扩大本节输入验证范围。
 
 本节不改写历史 34 个模板实例的结论，也不代表其他新增输入、密码字段、全部空值/长文本组合、真机软键盘或其他设备通过。
+
+## 2026-11-16 当前版本清单补齐（非本轮新增控件）
+
+对照本轮起点提交的原始WXML，已有以下两个输入未纳入此前43项清单。当前合计45个模板实例，其中4个textarea；本轮视觉调整没有增加或改变输入类型、数据绑定及原生光标几何。补清单不代表完成聚焦验收。
+
+| 序号 | 模板 | 输入 | 验证边界 |
+| --- | --- | --- | --- |
+| 44 | pages/match-edit/index.wxml | maxParticipants；number，value=form.maxParticipants，bindinput=input，maxlength=5，保留loading/busy禁用条件 | 仅静态与原始模板核对，实际聚焦/键盘待验 |
+| 45 | pages/manage-venue/index.wxml | fieldNumber；text，value=form.fieldNumber，bindinput=input，maxlength=50，保留loading/busy禁用条件 | 仅静态与原始模板核对，实际聚焦/键盘待验 |

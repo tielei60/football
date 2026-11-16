@@ -9,7 +9,7 @@ test('播放端点采用固定像素净距且时间保持独立宽度', () => {
   const rules = [...css.matchAll(/\.playback-controls slider\.grow\{([^}]*)\}/g)];
   assert.equal(rules.length, 1);
   assert.equal(rules[0][1], 'flex:1;min-width:0;margin:0 18px');
-  assert.match(css, /\.playback-controls>text\{flex:0 0 auto;font-size:20rpx;font-variant-numeric:tabular-nums;white-space:nowrap\}/);
+  assert.match(css, /\.playback-controls>text\{flex:0 0 auto;font-size:24rpx;font-variant-numeric:tabular-nums;white-space:nowrap\}/);
   // 假设默认圆钮直径 28px；只用于检查静态预算，不声称已实测三种屏宽。
   for (const width of [320, 375, 430]) {
     const assumedRadius = 14;

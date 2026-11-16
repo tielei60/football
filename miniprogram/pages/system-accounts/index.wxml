@@ -5,8 +5,8 @@
   <block wx:if="{{!loading&&!error}}">
     <view wx:if="{{authorized}}" class="card section">
       <view class="section-title">新增普通管理员</view>
-      <input class="input field" value="{{username}}" data-field="username" bindinput="input" maxlength="80" placeholder="用户名" disabled="{{busy||uncertain}}"/>
-      <input class="input field" password value="{{password}}" data-field="password" bindinput="input" maxlength="200" placeholder="初始密码 · 10–200 位" disabled="{{busy||uncertain}}"/>
+      <text class="field-label">用户名</text><input class="input field" value="{{username}}" data-field="username" bindinput="input" maxlength="80" placeholder="用户名" disabled="{{busy||uncertain}}"/>
+      <text class="field-label">初始密码 · 10–200 位</text><input class="input field" password value="{{password}}" data-field="password" bindinput="input" maxlength="200" placeholder="初始密码 · 10–200 位" disabled="{{busy||uncertain}}"/>
       <button size="mini" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||uncertain}}" loading="{{busy}}">创建管理员</button>
     </view>
     <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
@@ -14,10 +14,10 @@
     <button size="mini" class="ui-button ui-block section" bindtap="refresh" disabled="{{busy}}">重新载入核对</button>
     <view wx:for="{{accounts}}" wx:key="id" class="card section">
       <view class="section-title account-name">{{item.username}}</view>
-      <view class="hint">{{item.systemAdmin?'系统管理员':item.role==='admin'?'普通管理员':'球员'}} · {{item.enabled?'已启用':'已停用'}}{{item.mustChangePassword?' · 首次登录须改密':''}}</view>
+      <view class="hint"><text class="account-role">{{item.systemAdmin?'系统管理员':item.role==='admin'?'普通管理员':'球员'}}</text> · <text class="account-state {{item.enabled?'is-enabled':'is-disabled'}}">{{item.enabled?'已启用':'已停用'}}</text>{{item.mustChangePassword?' · 首次登录须改密':''}}</view>
       <view wx:if="{{authorized&&!item.systemAdmin}}" class="account-actions">
         <button wx:if="{{item.playerId}}" size="mini" class="ui-button" data-id="{{item.id}}" data-kind="role" bindtap="update" disabled="{{busy||uncertain}}">{{item.role==='admin'?'撤销管理权限':'设为管理员'}}</button>
-        <button size="mini" class="ui-button" data-id="{{item.id}}" data-kind="enabled" bindtap="update" disabled="{{busy||uncertain}}">{{item.enabled?'停用账号':'启用账号'}}</button>
+        <button size="mini" class="ui-button {{item.enabled?'account-danger':''}}" data-id="{{item.id}}" data-kind="enabled" bindtap="update" disabled="{{busy||uncertain}}">{{item.enabled?'停用账号':'启用账号'}}</button>
       </view>
       <view wx:elif="{{item.systemAdmin}}" class="hint">系统管理员账号在此只读。</view>
     </view>

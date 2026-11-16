@@ -1,11 +1,52 @@
-// 静态约束不代表真实字号、键盘或可访问性验收。
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const root=path.resolve(__dirname,'../pages');
-const expected={"manage-team": "55da24e8be390ba6fa129babd4d8f8d4427f48adb190b9d7a93a204a9c9fc694", "manage-players": "67fe3f64e2cb4b78bd72e7d3722bf91bea52dae5ce813c4f09e59f01b2d21aac", "manage-player": "f642d85299dc1fe01747e6c5be37d32ebb4854fd8f5d8d8ee51c4a54918b8f9b", "manage-seasons": "4bb0e3ee14692b7116dfbd079c90435ad3d0b606cc76589021b33eea42574c5b", "manage-season": "c6b43e23b3fb3b3de831456b0fcf1f5ad6e40dd8b5430614e7b62cd276d41400", "manage-venues": "d9b2a35423076e0bb1722acb5c7e64c12d836356d71aa2a0e79a0b2c3a1f22f5", "manage-venue": "3ca6abb5674fd10aecfa568df92f0a7d0723bcee657a13384e5a9d68bcccd6c8", "season-roster": "c8ed8b7fcccc40a3cc17a13504c81f567a96de9a7890dd6905e5937d88fe7164"};
-const read=(n,ext)=>fs.readFileSync(path.join(root,n,'index.'+ext),'utf8');
-test('eight management pages retain structure and bindings apart from visual classes',()=>{for(const [n,hash]of Object.entries(expected)){const source=require('./membership-markup.cjs')(read(n,'wxml')).replace('<view wx:else class="avatar large player-placeholder">{{initial}}</view>', '<view wx:else class="avatar large">球</view>').replace(/<button[^>]*bindtap="openPhotos"[^>]*>(?:管理|查看)出场照片<\/button>/g,'').replace(/<button[^>]*bindtap="openWechat"[^>]*>微信邀请与绑定<\/button>/g,'').replace('wx:if="{{status===\'active\'&&(!hasAccount||passwordEnabled)}}" class="small ui-button ui-compact" bindtap="toggleAccount"','wx:if="{{status===\'active\'}}" class="small ui-button ui-compact" bindtap="toggleAccount"').replace('wx:if="{{accountOpen&&(!hasAccount||passwordEnabled)}}" class="section"','wx:if="{{accountOpen}}" class="section"').replace(/\sclass="[^"]*"/g,'');assert.equal(crypto.createHash('sha256').update(source).digest('hex'),hash,n);}});
-test('management typography additions do not override native input or layout geometry',()=>{for(const n of Object.keys(expected)){const extra=read(n,'wxss').split('/* 管理文字层级：')[1];assert.ok(extra,n);assert.doesNotMatch(extra,/(?:input|textarea|canvas|[;{](?:height|width|position|display|grid-template[^:]*|padding):)/,n);assert.match(extra,/var\(--ink\)/);assert.doesNotMatch(extra,/max\(/);}
-assert.match(read('manage-player','wxss'),/\.card textarea\{min-height:160rpx;line-height:1.65\}/);
-assert.match(read('season-roster','wxss'),/\.number input\{padding:0 8rpx;font-variant-numeric:tabular-nums\}/);
+// 2026-11 全页视觉优化：严格保护当前业务模板/JS，不再冻结旧版文字几何。
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const baseline = require('./managed-ui-contract-baseline.json');
+const root = path.resolve(__dirname, '..');
+const hash = s => crypto.createHash('sha256').update(s).digest('hex');
+function markup(source, item) {
+  // 仅允许本轮明确新增的可见字段标签及主次文字包装；所有其他字面内容/属性完全保持。
+  if (item === 'pages/manage-players') source = source.replace('{{item.name}}<text class="player-number-note">{{item.numberDescription}}</text>', '{{item.name}} · {{item.numberDescription}}');
+  if (item === 'pages/system-accounts') {
+    source = source.replace('<text class="field-label">用户名</text>', '').replace('<text class="field-label">初始密码 · 10–200 位</text>', '');
+    source = source.replace(/<text class="account-role">([^<]*)<\/text>/, '$1').replace(/<text class="account-state [^"]*">([^<]*)<\/text>/, '$1');
+  }
+  return source.replace(/\sclass="[^"]*"/g, '');
+}
+for (const [item, expected] of Object.entries(baseline)) {
+  test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
+    const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+    assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'除明确的视觉包装外模板必须完全一致');
+    assert.equal(hash(read('js')),expected.js,'禁止修改业务JS');
+    const css = read('wxss');
+    assert.match(css,/var\(--type-/,'每页明确接入共同层级');
+    assert.doesNotMatch(css,/text-overflow:\s*ellipsis/,'本次不能截断必要信息');
+  });
+}
+test('管理列表、状态与认证表单保留语义，不用颜色代替文字', () => {
+ const read = p => fs.readFileSync(path.join(root,'pages',p,'index.wxml'),'utf8');
+ assert.match(read('manage-players'),/player-number-note/);
+ assert.match(read('manage-player'),/status-pending/);
+ assert.match(read('manage-player'),/状态未确认/);
+ assert.match(read('manage-venues'),/已停用/);
+ assert.match(read('system-accounts'),/<text class="field-label">用户名<\/text>/);
+ assert.match(read('system-accounts'),/account-role/);
+ assert.match(read('system-accounts'),/item.systemAdmin/);
+ assert.match(read('force-password'),/password maxlength="200"/);
+ assert.match(read('wechat-invites'),/invite-pending/);
 });
-test('account spacing and readonly roster keep existing state and all information',()=>{assert.match(read('manage-player','wxss'),/\.account-heading\{margin-bottom:16rpx\}/);assert.match(read('manage-player','wxml'),/between account-heading/);assert.match(read('season-roster','wxml'),/admin\?'':'roster-readonly'/);assert.match(read('season-roster','wxml'),/赛季留存资料/);assert.match(read('season-roster','wxss'),/\.roster-readonly \.member\{padding-top:22rpx;padding-bottom:22rpx\}/);});
+test('邀请组件样式隔离与小屏操作保留', () => {
+ const css=fs.readFileSync(path.join(root,'components/invite-sheet/index.wxss'),'utf8');
+ assert.match(css,/var\(--type-page,38rpx\)/);
+ assert.match(css,/safe-area-inset-bottom/);
+ assert.match(css,/min-height:44px/);
+ assert.match(css,/height:58vh/);
+});
+
+test('危险色仅对可操作的按钮生效，禁用态沿用共享样式',()=>{
+ for(const folder of ['pages/wechat-invites','components/invite-sheet'])assert.match(fs.readFileSync(path.join(root,folder,'index.wxss'),'utf8'),/\.page button\.invite-danger\[size="mini"\]:not\(\[disabled\]\)/);
+ assert.match(fs.readFileSync(path.join(root,'pages/system-accounts/index.wxss'),'utf8'),/\.account-actions button\.account-danger:not\(\[disabled\]\)/);
+});

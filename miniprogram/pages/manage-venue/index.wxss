@@ -22,3 +22,15 @@ button.location-pick[size="mini"],button.venue-save[size="mini"]{display:flex;ju
 @media(max-width:346px){.field-label,.venue-status>text{font-size:12px}}
 @media(max-width:360px){.hint{font-size:12px}}
 @media(max-width:375px){.location-status{font-size:12px}}
+
+/* 球场表单：地图仍保持大预览，位置状态和次要移除操作分开。 */
+.title { font-size:var(--type-page); line-height:1.35; }
+.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); margin-bottom:var(--space-1); }
+.location-section { margin-top:var(--space-4); }
+.location-status { color:var(--success); font-size:var(--type-meta); font-weight:500; }
+.location-actions { gap:var(--space-2); }
+.location-actions>button[size="mini"],button.location-pick[size="mini"],button.venue-save[size="mini"] { min-height:44px; }
+.location-actions .location-clear { color:var(--danger); }
+.venue-status { margin-top:var(--space-4); padding-top:var(--space-3); align-items:center; }
+.venue-status>text { font-size:var(--type-body); font-weight:400; }
+.hint { font-size:var(--type-meta); margin-top:var(--space-2); }

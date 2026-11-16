@@ -5,7 +5,7 @@ const root=path.join(__dirname,'../pages');
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
 const read=(p,e)=>fs.readFileSync(path.join(root,p,'index.'+e),'utf8');
 for(const [page,b] of Object.entries(baseline)) {
-if(page==='match-detail'||page==='match-roster')continue; // 已重新设计的页面使用当前结构约束。
+if(page==='match-detail'||page==='match-roster'||page==='match-edit'||page==='match-media')continue; // match-media 的完整原模板/JS与非文字几何现由 ui-depth 精确保护。 // 已重新设计的页面使用当前结构约束。
 test(`match typography ${page}: structure, existing geometry and scope unchanged`,()=>{
  const markup=read(page,'wxml').replace('<view wx:if="{{admin}}" class="photo-order-actions"><button size="mini" class="ui-button" data-id="{{item.id}}" data-delta="-1" bindtap="move" disabled="{{loading||busy||conflict||uncertain||index===0}}">上移</button><button size="mini" class="ui-button" data-id="{{item.id}}" data-delta="1" bindtap="move" disabled="{{loading||busy||conflict||uncertain||index===photos.length-1}}">下移</button></view>','').replace('<button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button>','').replace('busy || conflict || uncertain || savedId','busy || conflict || uncertain').replace(/\sclass="[^"]*"/g,'');assert.equal(hash(markup),b.markupSha256);
  const css=read(page,'wxss').replace('\n/* 相册排序独立双列，避免与封面、移除操作挤在同一行。 */\n.photo-order-actions{display:flex;gap:12rpx;margin-top:12rpx;min-width:0}\n.photo-order-actions button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;min-height:44px;margin:0;box-sizing:border-box;padding:16rpx 12rpx;line-height:1.5;white-space:nowrap}\n',''),start=css.indexOf('\n/* 比赛文字层级：');assert.ok(start>=0);

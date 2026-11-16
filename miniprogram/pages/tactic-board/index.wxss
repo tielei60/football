@@ -39,3 +39,10 @@
 .type-expanded .tactic-objective{font-size:28rpx;font-weight:600;color:var(--ink)}
 @media(max-width:375px){.type-expanded .tag,.type-expanded .hint{font-size:12px}}
 @media(max-width:346px){.type-expanded .tactic-meta{font-size:12px}}
+
+/* 深度视觉层级：保留既有专注与操作几何。 */
+.type-expanded .title{font-size:var(--type-page,38rpx);font-weight:600;line-height:1.35}
+.type-expanded .tactic-meta,.type-expanded .hint{font-size:var(--type-meta,24rpx);line-height:1.6}
+.type-expanded .prewrap{font-size:var(--type-body,28rpx);line-height:1.65}
+.type-expanded .tactic-objective{font-size:var(--type-card,30rpx);font-weight:600;line-height:1.5}
+@media(max-width:375px){.type-expanded .tactic-meta,.type-expanded .hint{font-size:12px}}

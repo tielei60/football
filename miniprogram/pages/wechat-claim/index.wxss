@@ -7,3 +7,14 @@
 .error{font-size:26rpx;line-height:1.6}
 @media(max-width:360px){.hint{font-size:12px}}
 @media(max-width:346px){.field-label,.error{font-size:12px}}
+
+/* 邀请认领：核验编号是核心信息，状态与操作保留明确文字。 */
+.title { font-size:var(--type-page); line-height:1.35; }
+.section-title { font-size:var(--type-section); line-height:1.45; }
+.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); }
+.hint { font-size:var(--type-meta); line-height:1.6; }
+.confirmation { font-size:44rpx; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:4rpx; padding:var(--space-2); background:var(--brand-soft); border-radius:16rpx; }
+.claim-status { padding-left:var(--space-2); border-left:3px solid var(--line); }
+.claim-status.is-waiting { border-color:var(--warning); }
+.claim-status.is-approved { border-color:var(--success); }
+.error { font-size:var(--type-field); overflow-wrap:anywhere; }

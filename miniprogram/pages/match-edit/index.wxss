@@ -13,3 +13,13 @@
 @media(max-width:321px){.section-title{font-size:12px}}
 
 .capacity-hint{margin-top:8rpx;color:var(--muted);font-size:24rpx;line-height:1.5}
+
+/* 比赛编辑：时间与比分分组清楚，字段标签低于填写内容。 */
+.title { font-size:var(--type-page); line-height:1.35; }
+.section-title { font-size:var(--type-section); line-height:1.4; margin-bottom:var(--space-2); }
+.field-label { font-size:var(--type-field); color:var(--muted); font-weight:400; margin-bottom:var(--space-1); }
+.subtitle,.hint,.capacity-hint { font-size:var(--type-meta); line-height:1.6; }
+.filter-row { gap:var(--space-2); margin-bottom:var(--space-3); }
+.filter-row>.grow { flex:1; min-width:0; }
+.error { line-height:1.6; overflow-wrap:anywhere; }
+@media(max-width:340px) { .filter-row { flex-wrap:wrap; } .filter-row>.grow { flex-basis:240rpx; } }

@@ -20,3 +20,23 @@
 
 /* Keep the full invitation visible and actions reachable on short screens. */
 .invite-modal-overlay{padding-bottom:calc(32rpx + env(safe-area-inset-bottom))}.invite-modal{max-height:calc(100vh - 64rpx - env(safe-area-inset-bottom));overscroll-behavior:contain}.invite-card-preview{height:58vh;max-height:840rpx}.invite-modal-actions{align-items:stretch;gap:16rpx}.invite-modal-actions button{width:0;min-width:0;margin:0}
+
+/* 邀请管理：球员、绑定、申请与历史分层；独立组件提供主题回退值。 */
+.title { font-size:var(--type-page,38rpx); line-height:1.35; font-weight:600; }
+.invite-subtitle { font-size:var(--type-body,28rpx); color:var(--ink,#292431); margin:8rpx 0 24rpx; }
+.invite-heading { font-size:var(--type-section,32rpx); line-height:1.4; }
+.binding-status { font-size:var(--type-card,30rpx); color:var(--muted,#6d6375); font-weight:500; margin:16rpx 0; }
+.binding-status.is-bound { color:var(--success,#176b4a); }
+.invite-between { flex-wrap:wrap; align-items:flex-start; }
+.hint { font-size:var(--type-meta,24rpx); line-height:1.6; margin-top:8rpx; }
+.tag.invite-pending { color:var(--warning,#805600); background:var(--warning-soft,#fff4da); }
+.tag.invite-approved { color:var(--success,#176b4a); background:var(--success-soft,#edf6f1); }
+.tag.invite-closed { color:var(--muted,#6d6375); background:var(--canvas,#f6f4f8); }
+.history-row { gap:8rpx; }
+.history-status { font-size:var(--type-body,28rpx); font-weight:500; }
+.page button.invite-danger[size="mini"]:not([disabled]) { color:var(--danger,#b04758); background:var(--danger-soft,#faedf0); }
+.invite-modal-heading { font-size:var(--type-section,32rpx); line-height:1.4; }
+.invite-modal { padding:24rpx; }
+.invite-modal-actions { margin-top:24rpx; }
+.invite-modal-actions button.ui-button[size="mini"] { min-height:44px; white-space:normal; line-height:1.5; font-size:var(--type-field,26rpx); }
+.error { font-size:var(--type-field,26rpx); }

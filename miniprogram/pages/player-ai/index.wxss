@@ -1,17 +1,22 @@
 /* 复用现有紫色主题；独立操作分组避免默认按钮宽度挤压。 */
 .field-label{display:block;margin-top:20rpx;margin-bottom:10rpx}
-.ai-warning{color:var(--brand-ink);background:var(--brand-soft);padding:20rpx;border-radius:12rpx;line-height:1.6;overflow-wrap:anywhere;margin:16rpx 0}
+.ai-warning{color:var(--warning);background:var(--warning-soft);padding:20rpx;border-radius:12rpx;line-height:1.6;overflow-wrap:anywhere;margin:16rpx 0}
 .ai-picture{width:100%;height:480rpx;display:block;border-radius:16rpx;background:var(--canvas);margin-bottom:16rpx}
-.ai-status{font-size:30rpx;font-weight:600;color:var(--ink);margin:24rpx 0 16rpx}
+.ai-status{font-size:var(--type-card);font-weight:600;color:var(--ink);margin:24rpx 0 16rpx}
 .ai-actions{display:flex;gap:16rpx}
 .ai-actions>button.ui-button[size=mini]{flex:1;width:0;min-width:0;margin:0;min-height:44px;box-sizing:border-box;white-space:normal}
 
 /* 本页说明层级，不改变全局组件、原图比例或业务动作。 */
-.ai-intro,.ai-help{font-size:26rpx;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.ai-intro,.ai-help{font-size:var(--type-field);line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
 .ai-intro{margin-top:16rpx;margin-bottom:24rpx}
 .ai-help{margin:12rpx 0}
-.ai-disclosure{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
-.ai-complete{margin-top:16rpx;font-size:26rpx;line-height:1.6;color:var(--brand-ink)}
-.ai-adopted{border-left:6rpx solid var(--brand)}
+.ai-disclosure{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:var(--type-body);color:var(--ink)}
+.ai-complete{margin-top:16rpx;font-size:var(--type-field);line-height:1.6;color:var(--success)}
+.ai-adopted{border-left:6rpx solid var(--success)}
 .ai-disabled .muted{line-height:1.6;overflow-wrap:anywhere}
 @media(max-width:346.154px){.ai-intro,.ai-help,.ai-complete{font-size:12px}}
+
+/* 页面身份与三步操作分层，候选图片和按钮几何保持原值。 */
+.title{font-size:var(--type-page);line-height:1.35}
+.section-title{font-size:var(--type-section);line-height:1.4}
+.subtitle{font-size:var(--type-meta);margin-top:8rpx}

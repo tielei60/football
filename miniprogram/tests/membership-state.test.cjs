@@ -12,7 +12,7 @@ for(const name of ['players','manage-players']){
 
 test('管理球员顶部标签优先待确认且兼容旧字段，不改变技术状态',()=>{
  const markup=fs.readFileSync(path.join(__dirname,'../pages/manage-player/index.wxml'),'utf8');
- const expression=markup.match(/<text class="tag">\{\{(.*?)\}\}<\/text>/)[1];
+ const expression=markup.match(/<text class="tag[^"]*">\{\{(membershipConfirmed[^}]+)\}\}<\/text>/)[1];
  for(const status of ['active','inactive'])for(const membershipConfirmed of [false,true,undefined]){
   const data={status,membershipConfirmed};
   assert.equal(vm.runInNewContext(expression,data),membershipConfirmed===false?'状态未确认':status==='active'?'在队':'已归档');
@@ -23,6 +23,6 @@ test('管理球员顶部标签优先待确认且兼容旧字段，不改变技�
 test('管理球员三态选择后顶部标签与选择器一致',()=>{
  const {p}=page('manage-player');Object.assign(p.data,{authorized:true,loading:false,status:'inactive',membershipConfirmed:false});p._ownerToken='A';
  const markup=fs.readFileSync(path.join(__dirname,'../pages/manage-player/index.wxml'),'utf8');
- const expression=markup.match(/<text class="tag">\{\{(.*?)\}\}<\/text>/)[1];
+ const expression=markup.match(/<text class="tag[^"]*">\{\{(membershipConfirmed[^}]+)\}\}<\/text>/)[1];
  for(const original of ['active','inactive']){p.data.status=original;for(const value of [0,1,2,0]){const before=p.data.status;p.membership({detail:{value}});assert.equal(vm.runInNewContext(expression,{...p.data}),p.data.membershipOptions[p.data.membershipIndex]);if(value===0)assert.equal(p.data.status,before);}}
 });

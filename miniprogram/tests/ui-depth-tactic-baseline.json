@@ -1,0 +1,37 @@
+{
+  "tactics": {
+    "js": "60b1cf893be39acacf6a7d085187f8a229b2311826fef4627eb947e685c08b09",
+    "wxml": "0b657ec39a1ffc265b00f71545f1feb6a204be8ded4f413aac51be6c0c5fcdfa",
+    "css": "ffa938d826dd6a2423feb86acc83c2ab3354b00cb31f8394651a375b3f2fdf3f"
+  },
+  "tactic-board": {
+    "js": "d3f340465ccfd03243b0148569583c8cac2d8c8ac213199c76a6914ec85d0cfc",
+    "wxml": "9c22ebd45d66918eb75249db757b0ca6de545ea9203654db814aaa3d3dd3df88",
+    "css": "c3e6a61408beefb5a804a7f66efb8c464c0dfc37098b5815af548a654788d638"
+  },
+  "tactic-compose": {
+    "js": "cff607f9075388ca7622dba0521f4d8c148d36c343efbfba1fa9e82927cee9b2",
+    "wxml": "c90aaccaa0fc74c8a583a3af1a5f4b45882bf8f77fec89ebfb1d9bc95c293b87",
+    "css": "544f3230e70c695c01edb67eede86c835a14cf0b18b3a68986fbdff96ae80ea8"
+  },
+  "tactic-transfer": {
+    "js": "ce66d09a5609c052395006004422f7e7b2e3459fc8d1ec753cd5f714e494ce5c",
+    "wxml": "b1e1b5d28bfb0a00e9371fabb4de699d5b139795b27daedde31bf5f591ca53e6",
+    "css": "b6ab79a160e393fe9a5c4f57a2f9bbdfe04a64b4929cbb8a857deeaf3ce6cebd"
+  },
+  "tactic-setup": {
+    "js": "1140dc92f58f0d9aaae6e756210c9b65a3d3ece72e88f032e5bbe348d173c5bc",
+    "wxml": "dfdb36ca089ae5c50712696c47ffc5132896ce0902b96f93335224e4f926eb12",
+    "css": "be3f99055218453462cacdb6bbaae2361783a26e629923fd1634f6b6480c6558"
+  },
+  "tactic-export": {
+    "js": "c7c0314e1da6087038bd990a8a257d673024a28cdb3f7df602d05ddc1a1fc823",
+    "wxml": "4c387a7289ec5831990117b947ad969a3e80e79d7a7359dc9734c8f6f1c1e999",
+    "css": "3adec40900f6c1d4addf2d5c76d505975d1a1e8791b569eefa53f426c5ed4e8e"
+  },
+  "tactic-create": {
+    "js": "096b8511819314526d8f1512f0875d8ca649b22b4b868ce147f47c68533c46a6",
+    "wxml": "c95aa9296730fda133a64a195f67bc9dc7fbc4d6eecd042a21d29f06a82b7376",
+    "css": "ee4a75f8817859c2f6aafafd2232208434644c726c61b745310a131b91401dcb"
+  }
+}

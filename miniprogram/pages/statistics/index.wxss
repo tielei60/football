@@ -15,7 +15,7 @@
   font-size: 26rpx;
 }
 .rank-value {
-  font-size: 34rpx;
+  font-size: 38rpx;
   font-weight: 650;
   color: var(--brand-ink);
   font-variant-numeric: tabular-nums;
@@ -55,7 +55,7 @@
 .ranking-header {
   padding: 0 0 10rpx;
   color: var(--muted);
-  font-size: 24rpx;
+  font-size: var(--type-meta);
 }
 .ranking-header-name { flex: 1; }
 .ranking-header > text:not(.ranking-header-name), .ranking-values > text {
@@ -94,7 +94,7 @@
   min-width: 0;
 }
 .page>.title {
-  font-size: 34rpx;
+  font-size: var(--type-page);
   font-weight: 650;
   line-height: 1.4;
 }
@@ -103,7 +103,7 @@
   line-height: 1.6;
 }
 .scope-title, .opponent-name, .rank-row .bold {
-  font-size: 29rpx;
+  font-size: var(--type-card);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -111,11 +111,11 @@
   font-size: 25rpx;
 }
 .card .muted, .hint {
-  font-size: 25rpx;
+  font-size: var(--type-field);
   line-height: 1.6;
 }
 .section-title {
-  font-size: 28rpx;
+  font-size: var(--type-section);
   font-weight: 600;
 }
 .tag {
@@ -134,5 +134,5 @@
   .rank { font-size: 12px; }
 }
 @media (max-width: 321.429px) {
-  .section-title { font-size: 12px; }
+  .section-title { font-size: var(--type-section); }
 }

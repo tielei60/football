@@ -24,3 +24,9 @@
 @media(max-width:375px){.type-expanded .hint{font-size:12px}.type-expanded .formation-impact{font-size:25rpx}}
 @media(max-width:360px){.type-expanded .slot>text,.type-expanded .formation-impact{font-size:12px}}
 @media(max-width:346px){.type-expanded .card label{font-size:12px}}
+
+/* 深度视觉层级：保留既有专注与操作几何。 */
+.type-expanded .title{font-size:var(--type-section,32rpx);font-weight:600;line-height:1.4}
+.type-expanded .card label{font-size:var(--type-field,26rpx);font-weight:400;color:var(--muted);line-height:1.55}
+.type-expanded .formation-impact{font-size:var(--type-field,26rpx);font-weight:500;color:var(--warning,#805600);line-height:1.65}
+@media(max-width:346px){.type-expanded .card label,.type-expanded .formation-impact{font-size:12px}}

@@ -1,19 +1,19 @@
 /* 球员照片集沿用现有紫色主题，不改变原生输入几何。 */
-.title{font-size:34rpx;font-weight:650;color:var(--ink)}
+.title{font-size:var(--type-page);font-weight:650;color:var(--ink);line-height:1.35}
 .photo{width:100%;height:360rpx;border-radius:18rpx;background:var(--canvas);margin-bottom:16rpx}
-.section-title{margin-top:24rpx;font-size:28rpx;font-weight:600}
+.section-title{margin-top:24rpx;font-size:var(--type-section);font-weight:600}
 .card .between{gap:14rpx;align-items:flex-start}
-.photo-caption{flex:1;min-width:0;font-size:27rpx;font-weight:500;color:var(--ink);overflow-wrap:anywhere;line-height:1.55}
+.photo-caption{flex:1;min-width:0;font-size:var(--type-body);font-weight:500;color:var(--ink);overflow-wrap:anywhere;line-height:1.55}
 .tag{flex-shrink:0;font-size:24rpx;font-weight:500}
 /* 独立动作组避开全局.actions规则：主要操作两列，排序与移除三列。 */
 .photo-actions-main,.photo-actions-secondary{display:flex;gap:12rpx;margin-top:16rpx;min-width:0}
 .page .photo-actions-main>button.ui-button[size="mini"],.page .photo-actions-secondary>button.ui-button[size="mini"]{box-sizing:border-box;flex:1 1 0;width:0;min-width:0;max-width:100%;min-height:44px;margin:0;font-size:25rpx;padding:16rpx 12rpx;line-height:1.5;white-space:normal}
 .card>.input{margin:16rpx 0}
-.hint{font-size:25rpx;line-height:1.6;color:var(--muted)}
+.hint{font-size:var(--type-meta);line-height:1.6;color:var(--muted)}
 .upload-uncertain{font-weight:500;color:var(--ink)}
-.error{font-size:26rpx;font-weight:500}
+.error{font-size:var(--type-field);font-weight:500}
 @media(max-width:375px){.tag{font-size:12px}}
 @media(max-width:360px){.hint{font-size:12px}}
 @media(max-width:346px){.error{font-size:12px}}
-@media(max-width:333px){.photo-caption{font-size:12px}}
-@media(max-width:321px){.section-title{font-size:12px}}
+@media(max-width:333px){.photo-caption{font-size:var(--type-body)}}
+@media(max-width:321px){.section-title{font-size:var(--type-section)}}

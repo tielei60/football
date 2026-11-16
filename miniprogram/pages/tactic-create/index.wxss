@@ -32,3 +32,12 @@ button.ui-block {
     font-size: 12px;
   }
 }
+
+/* 深度视觉层级：保留既有专注与操作几何。 */
+.title{font-size:var(--type-page,38rpx);font-weight:600;line-height:1.35}
+.field-label{font-size:var(--type-field,26rpx);font-weight:400;color:var(--muted);line-height:1.55}
+.hint{font-size:var(--type-meta,24rpx);line-height:1.65}
+.feedback{font-size:var(--type-field,26rpx);font-weight:500;color:var(--warning,#805600)}
+.feedback-error{color:var(--danger)}
+@media(max-width:375px){.hint{font-size:12px}.feedback{font-size:var(--type-field,26rpx)}}
+@media(max-width:346px){.feedback{font-size:12px}}

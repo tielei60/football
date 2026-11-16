@@ -10,3 +10,12 @@
 .card>.hint{font-size:25rpx;color:var(--muted)}
 @media(max-width:360px){.card>.hint{font-size:12px}}
 @media(max-width:346px){.filename,.warning{font-size:12px}}
+
+/* 深度视觉层级：保留既有专注与操作几何。 */
+.section-title{font-size:var(--type-section,32rpx);font-weight:600;line-height:1.4}
+.filename{font-size:var(--type-field,26rpx);line-height:1.65}
+.transfer-count{font-size:var(--type-card,30rpx);font-weight:600;line-height:1.6}
+.warning{font-size:var(--type-field,26rpx);color:var(--warning,#805600);line-height:1.65}
+.card>.hint{font-size:var(--type-meta,24rpx);line-height:1.65}
+@media(max-width:375px){.card>.hint{font-size:12px}}
+@media(max-width:346px){.filename,.warning{font-size:12px}}

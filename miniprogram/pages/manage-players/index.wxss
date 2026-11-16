@@ -10,3 +10,14 @@
 .tabs .tab{font-size:26rpx;font-weight:500}
 @media(max-width:360px){.card .muted{font-size:12px}}
 @media(max-width:375px){.card .tag{font-size:12px}}
+
+/* 球员列表：姓名优先、号码次级；账号状态不压缩姓名。 */
+.admin-header { flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3); }
+.admin-header .title { font-size:var(--type-page); line-height:1.35; }
+.card.row { align-items:flex-start; gap:var(--space-2); }
+.card .grow { flex:1; min-width:0; }
+.card .bold { font-size:var(--type-card); line-height:1.45; }
+.player-number-note { display:block; font-size:var(--type-meta); font-weight:400; color:var(--muted); margin-top:var(--space-1); }
+.card .muted { font-size:var(--type-field); margin-top:var(--space-1); }
+.card .tag { max-width:160rpx; white-space:normal; text-align:center; font-size:var(--type-meta); background:var(--canvas); color:var(--muted); }
+.tabs { margin-top:var(--space-2); }

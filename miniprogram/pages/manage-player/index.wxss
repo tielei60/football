@@ -41,3 +41,17 @@
 @media(max-width:346px){.field-label{font-size:12px}}
 @media(max-width:360px){.position-options button.ui-button.ui-compact[size="mini"]{font-size:12px}}
 @media(max-width:375px){.hint,.account-heading .tag,.admin-header .tag{font-size:12px}}
+
+/* 球员编辑：状态、字段与账号区有独立权重，不更改输入光标样式。 */
+.admin-header { flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3); }
+.admin-header .title { font-size:var(--type-page); line-height:1.35; }
+.field-label { color:var(--muted); font-size:var(--type-field); font-weight:400; margin-bottom:var(--space-1); }
+.position-options { gap:var(--space-1); }
+.position-options button.ui-button.ui-compact[size="mini"] { min-height:44px; white-space:normal; font-size:var(--type-field); }
+.account-heading { gap:var(--space-2); flex-wrap:wrap; }
+.account-heading .bold { font-size:var(--type-section); }
+.account-card { margin-top:var(--space-4); }
+.hint { font-size:var(--type-meta); line-height:1.6; }
+.tag.status-pending { color:var(--warning); background:var(--warning-soft); }
+.tag.status-active { color:var(--success); background:var(--success-soft); }
+.tag.status-inactive { color:var(--muted); background:var(--canvas); }

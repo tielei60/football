@@ -1,1 +1,9 @@
 .subtitle{line-height:1.6}.error{margin:20rpx 0}.field-label{display:block;margin-bottom:12rpx}
+
+/* 首次改密：步骤说明与字段区分，主操作保持唯一突出。 */
+.title { font-size:var(--type-page); font-weight:600; line-height:1.35; }
+.subtitle { font-size:var(--type-field); line-height:1.6; margin-top:var(--space-1); }
+.card { padding:var(--space-3); }
+.field { margin-bottom:var(--space-3); }
+.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); margin-bottom:var(--space-1); }
+.error { font-size:var(--type-field); line-height:1.6; overflow-wrap:anywhere; }

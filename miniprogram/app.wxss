@@ -5,11 +5,27 @@ page {
   --surface: #ffffff;
   --canvas: #f6f4f8;
   --ink: #292431;
-  --muted: #716779;
+  --muted: #6d6375;
   --line: #eae5ef;
   --control-border: #8d7b96;
   --focus: #8845a0;
   --danger: #b04758;
+  /* 层级令牌只用于内容文字，不改变原生输入与紧凑工具几何。 */
+  --type-page: 38rpx;
+  --type-section: 32rpx;
+  --type-card: 30rpx;
+  --type-body: 28rpx;
+  --type-field: 26rpx;
+  --type-meta: 24rpx;
+  --space-1: 8rpx;
+  --space-2: 16rpx;
+  --space-3: 24rpx;
+  --space-4: 32rpx;
+  --success: #176b4a;
+  --success-soft: #edf6f1;
+  --warning: #805600;
+  --warning-soft: #fff4da;
+  --danger-soft: #faedf0;
   background: var(--canvas);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -54,13 +70,13 @@ button.small {
 }
 button.danger {
   color: var(--danger);
-  background: #faedf0;
+  background: var(--danger-soft);
 }
 .page {
   padding: 32rpx 28rpx calc(40rpx + env(safe-area-inset-bottom));
 }
 .title {
-  font-size: 40rpx;
+  font-size: var(--type-page);
   font-weight: 700;
   letter-spacing: -0.5rpx;
 }
@@ -73,9 +89,9 @@ button.danger {
   margin-top: 32rpx;
 }
 .section-title {
-  font-size: 30rpx;
-  font-weight: 650;
-  margin-bottom: 18rpx;
+  font-size: var(--type-section);
+  font-weight: 600;
+  margin-bottom: 16rpx;
 }
 .card {
   background: var(--surface);
@@ -120,7 +136,7 @@ button.danger {
 }
 .tag.cancelled {
   color: var(--danger);
-  background: #faedf0;
+  background: var(--danger-soft);
 }
 .divider {
   height: 1rpx;
@@ -150,8 +166,8 @@ button.danger {
   color: var(--muted);
 }
 /* 报名状态使用统一的文字颜色，保留文字标签辅助辨认。 */
-.signup-count-yes, .metric .number.signup-count-yes { color: #176b4a; }
-.signup-count-maybe, .metric .number.signup-count-maybe { color: #805600; }
+.signup-count-yes, .metric .number.signup-count-yes { color: var(--success); }
+.signup-count-maybe, .metric .number.signup-count-maybe { color: var(--warning); }
 .signup-count-no, .metric .number.signup-count-no { color: #a13f4e; }
 .avatar {
   width: 82rpx;
@@ -182,8 +198,9 @@ button.danger {
 }
 .field-label {
   display: block;
-  font-size: 25rpx;
-  font-weight: 600;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--muted);
   margin-bottom: 12rpx;
 }
 .input,
@@ -234,7 +251,7 @@ textarea {
 }
 .error {
   padding: 22rpx;
-  background: #faedf0;
+  background: var(--danger-soft);
   color: var(--danger);
   border-radius: 16rpx;
   margin: 20rpx 0;
@@ -311,7 +328,7 @@ textarea {
 }
 
 /* Shared compact controls and resilient layout, including native button defaults. */
-page{--surface-tint:#faf8fc;--skeleton-fill:#ebe6ef;--success:#42765a;--warning:#946121}
+page{--surface-tint:#faf8fc;--skeleton-fill:#ebe6ef;--success:#176b4a;--warning:#805600}
 button{min-width:0;max-width:100%;word-break:break-word;transition:background-color .15s ease}
 button.primary{box-shadow:0 5rpx 14rpx rgba(99,50,119,.10)}
 button[disabled]{opacity:.55;box-shadow:none}
@@ -374,6 +391,9 @@ textarea{border-color:var(--control-border,#8d7b96)}
 /* Keep secondary labels legible on narrow screens without resizing canvas tools. */
 @media(max-width:375px){.tag,.hint,.metric .label{font-size:12px}}
 
+/* 仅内容令牌设小屏下限；不更改原生输入、日历或画布工具。 */
+@media(max-width:375px){page{--type-page:19px;--type-section:16px;--type-card:15px;--type-body:14px;--type-field:13px;--type-meta:12px}}
+
 /* 仅主要动作设置小屏触控高度下限；普通紧凑工具不放大，宽屏沿用原 rpx。 */
 @media(max-width:392.857px){button.ui-button:not(.ui-compact)[size="mini"]{min-height:44px}}
 @media(max-width:458.333px){button.ui-button.primary.ui-compact[size="mini"]{min-height:44px}}
@@ -383,7 +403,7 @@ button{border:1rpx solid transparent;border-radius:18rpx;letter-spacing:.2rpx;tr
 button.ui-button{border-color:#e5d7eb;background:#f5eef8;color:var(--brand-ink)}
 button.ui-button.primary{border-color:var(--brand);background:var(--brand);color:#fff;box-shadow:0 5rpx 14rpx rgba(99,50,119,.16)}
 button.ui-button.ghost{border-color:transparent;background:transparent;color:var(--brand-ink);box-shadow:none}
-button.ui-button.danger{border-color:#f0d5dc;background:#faedf0;color:var(--danger);box-shadow:none}
+button.ui-button.danger{border-color:#f0d5dc;background:var(--danger-soft);color:var(--danger);box-shadow:none}
 button.button-hover{opacity:.72}
 .page button.ui-button[disabled]{border-color:transparent;color:#8b8191;background:#eeebf1;box-shadow:none;opacity:1}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
@@ -392,5 +412,5 @@ button.button-hover{opacity:.72}
 button:not(.ui-button){border-color:#e5d7eb}
 button.primary:not(.ui-button){border-color:var(--brand);background:var(--brand);color:#fff}
 button.ghost:not(.ui-button){border-color:transparent;background:transparent;color:var(--brand-ink)}
-button.danger:not(.ui-button){border-color:#f0d5dc;background:#faedf0;color:var(--danger)}
+button.danger:not(.ui-button){border-color:#f0d5dc;background:var(--danger-soft);color:var(--danger)}
 button[disabled]:not(.ui-button){border-color:transparent;opacity:.55;box-shadow:none}

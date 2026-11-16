@@ -1,0 +1,66 @@
+{
+  "pages/match-edit": {
+    "wxml": "31ef8712ba48cf2eb9fd01c96d55b3a351af686ff08e673f343235431e4df2e7",
+    "js": "e1723d591a24e68994bdec57d580b1775b05c03327416fbcc2652ac9bdea0549"
+  },
+  "pages/manage-team": {
+    "wxml": "55da24e8be390ba6fa129babd4d8f8d4427f48adb190b9d7a93a204a9c9fc694",
+    "js": "2ab1ac6ded5ce0b7ba5aed2e3cc077ec18f2b4c53a26bff2bfd6bc56259705ec"
+  },
+  "pages/manage-players": {
+    "wxml": "bcb988a357796fd338e4603338b9ec0e01111bff9ee4e5444fed0870ab3cff10",
+    "js": "ba4e78b084eff614171ba2ca74206acbfdae0aa8132583a7c7ceee71a4e521db"
+  },
+  "pages/manage-player": {
+    "wxml": "ca35dce190598d25d9bb34a8d3d317061d103e9a4d3521598e930d336e4f1969",
+    "js": "b559f40fce4dede0fd41051ea99d6beec2fce683b7029145482a4f337161c18d"
+  },
+  "pages/manage-seasons": {
+    "wxml": "4bb0e3ee14692b7116dfbd079c90435ad3d0b606cc76589021b33eea42574c5b",
+    "js": "d4552737b47f117edac857a610aa0ab524fbcbe8c7fe58b53f9edbfc255bb7e3"
+  },
+  "pages/manage-season": {
+    "wxml": "c6b43e23b3fb3b3de831456b0fcf1f5ad6e40dd8b5430614e7b62cd276d41400",
+    "js": "e9e31b160f78f6f81fda1d40088192fb8a32feaba6870413b83da75d8adc3019"
+  },
+  "pages/manage-venues": {
+    "wxml": "330d51df398591af1b7719505e1edd9b9f8c7dab0446d30beb47c4f08bb263bb",
+    "js": "bd555a72842a0130aef96c0a45bf9982d4f62ea3c5c8ac93f9b62c91bd3ccd6f"
+  },
+  "pages/manage-venue": {
+    "wxml": "94be5cbf3ae978f6f6b4e38d27ed1efc2efdac9f9ac3c112994bf3ab7c515d3a",
+    "js": "7557333fe1b55c60bc3a548454226ac0f16fa585a6f10d824a109f883fd5f2d6"
+  },
+  "pages/match-roster": {
+    "wxml": "2c9b3b3725976ebe5931dbf97b24fdbf30019c57a5bfcc1c3dc0d5d842008ea5",
+    "js": "33baa3c5adb3f521d7b75f268d36c4e3a9a5c679ded820c72ed9a175ad3a821e"
+  },
+  "pages/season-roster": {
+    "wxml": "c8ed8b7fcccc40a3cc17a13504c81f567a96de9a7890dd6905e5937d88fe7164",
+    "js": "5fac7b162bf83794ca16f30f82e4c05a2e3129e1352a1acdac032aecf18facc3"
+  },
+  "pages/login": {
+    "wxml": "45b98905e14c5145394fbd38add0515e76cedcfdf244d54fc6c23644acda3838",
+    "js": "e41fc0e841c76cf0e37e5d1c22887ae85c81daed3d7ad9a2f5bccde6a2e8aafc"
+  },
+  "pages/wechat-claim": {
+    "wxml": "308ec4e3792f03a17a2ceffb9d7de4504faa49808d1ae6cc71577a2254b7a0b6",
+    "js": "36eccd8e552f57fd46d4599470288eb805932083fc3f5697c5d896745465b365"
+  },
+  "pages/wechat-invites": {
+    "wxml": "041cc73a9b10dbf1568b2300961bf3d8aa8df2287afffae70b9854bc02e6609c",
+    "js": "06d78b79e7265d2d30db4baf6853749187a2b728b8c681088669aef126a1376c"
+  },
+  "pages/force-password": {
+    "wxml": "211a8258b81c8f811f21780786f4df7687bfcb2c122409ad484239b6377f1ba9",
+    "js": "05b59cc931e6fc8c6dc572e07f7c6a3798701cc6f04a42eb6bbadf673d331ac9"
+  },
+  "pages/system-accounts": {
+    "wxml": "af91f4f1d1aeb0a7caa002b2245917575e129a1bdc9da5bcdceb85cb3502af96",
+    "js": "28b2e7c496bb683a1f2e583d72a7e008bc6a2b4867472a50135c1e6a799fd91c"
+  },
+  "components/invite-sheet": {
+    "wxml": "22651ee5fee54197b48bcbbf7a7b6f87d23829e6d325bf16fc39296690c97f47",
+    "js": "f65012f72efda632e635f1bd1c2629d36ad8b1eebe5cac552c62afd93f20c5e4"
+  }
+}

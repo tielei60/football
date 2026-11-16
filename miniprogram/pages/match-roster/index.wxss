@@ -45,3 +45,22 @@
 .page button.reload-button[size="mini"]{min-height:88rpx;margin-top:20rpx}
 .save-note{text-align:center;padding-top:14rpx}
 @media(max-width:360px){.roster-kicker,.roster-total-label,.section-note,.player-number,.identity-note,.stats-note,.roster-reminder,.save-note{font-size:12px}}
+
+/* 名单：对手是标题，数量是次级核心数据，球员身份与操作不抢位。 */
+.roster-heading { gap:var(--space-2); padding-bottom:var(--space-4); flex-wrap:wrap; }
+.roster-opponent { font-size:var(--type-page); font-weight:600; }
+.roster-total-number { font-size:40rpx; font-weight:600; }
+.roster-kicker,.roster-total-label,.section-note { font-size:var(--type-meta); }
+.section-heading,.list-heading { flex-wrap:wrap; gap:var(--space-1); }
+.section-title { font-size:var(--type-section); font-weight:600; }
+.add-section,.roster-card { padding:var(--space-3); background:var(--surface); border-color:var(--line); }
+.player-name { font-size:var(--type-card); font-weight:600; }
+.player-number,.identity-note,.stats-note,.save-note { font-size:var(--type-meta); line-height:1.6; }
+.field-label { font-size:var(--type-field); color:var(--muted); font-weight:400; margin-bottom:var(--space-1); }
+.roster-grid,.appearance-field { margin-top:var(--space-3); }
+.page button.remove-button[size="mini"] { color:var(--danger); min-height:44px; }
+.page button.add-button[size="mini"],.page button.reload-button[size="mini"] { min-height:44px; }
+.clear-warning { background:var(--warning-soft); color:var(--warning); padding:var(--space-2); }
+@media(max-width:340px) { .player-header { flex-wrap:wrap; } .player-identity { min-width:160rpx; } }
+/* 移除按钮禁用时不能保留危险强调。 */
+.page button.remove-button[size="mini"][disabled] { color:var(--muted); background:var(--canvas); }

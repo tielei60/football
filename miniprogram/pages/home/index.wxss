@@ -7,10 +7,10 @@
   border-color: var(--line);
 }
 .hero .title {
-  font-size: 36rpx;
+  font-size: var(--type-page);
   margin-top: 6rpx;
   line-height: 1.35;
-  font-weight: 650;
+  font-weight: 700;
 }
 .hero-metrics {
   display: grid;
@@ -24,9 +24,9 @@
 }
 .hero-number {
   display: block;
-  font-size: 38rpx;
+  font-size: 40rpx;
   color: var(--brand-ink);
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
@@ -34,7 +34,7 @@
   border-color: var(--brand-soft);
 }
 .match-title {
-  font-size: 32rpx;
+  font-size: var(--type-section);
   font-weight: 600;
   margin: 20rpx 0 12rpx;
   line-height: 1.4;
@@ -44,6 +44,8 @@
   font-size: 24rpx;
   letter-spacing: 0;
   line-height: 1.6;
+
+  color: var(--muted);
 }
 .hero .avatar {
   width: 96rpx;
@@ -60,22 +62,22 @@
   font-weight: 650;
 }
 .match-time {
-  font-size: 28rpx;
+  font-size: var(--type-body);
   font-weight: 500;
   line-height: 1.6;
   color: var(--ink);
 }
 .match-place {
-  font-size: 26rpx;
+  font-size: var(--type-field);
   line-height: 1.6;
 }
 .recent-name {
-  font-size: 29rpx;
+  font-size: var(--type-card);
   font-weight: 600;
   line-height: 1.4;
 }
 .section-title {
-  font-size: 28rpx;
+  font-size: var(--type-section);
   font-weight: 600;
 }
 .card .muted, .card .tag, .section .link {
@@ -93,7 +95,7 @@
   .card .muted.match-place { font-size: 12px; }
 }
 @media (max-width: 321.429px) {
-  .match-time, .section-title { font-size: 12px; }
+  .match-time { font-size: var(--type-body); }
 }
 
 /* Schedule link keeps a full tap area while looking like a light navigation action. */

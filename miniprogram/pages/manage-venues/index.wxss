@@ -12,3 +12,15 @@
 @media(max-width:346px){.card .muted{font-size:12px}}
 @media(max-width:360px){.card .link,.subtitle{font-size:12px}}
 @media(max-width:375px){.card .tag{font-size:12px}}
+
+/* 球场列表：名称/状态与多行地址分层，保留完整位置说明。 */
+.page>.between { flex-wrap:wrap; gap:var(--space-2); }
+.page>.between .title { font-size:var(--type-page); line-height:1.35; }
+.card .between { align-items:flex-start; }
+.card .bold { flex:1; font-size:var(--type-card); line-height:1.45; }
+.card .muted { font-size:var(--type-field); margin:var(--space-2) 0; }
+.card .link { font-size:var(--type-meta); line-height:1.6; }
+.card .tag { white-space:normal; max-width:144rpx; font-size:var(--type-meta); }
+.card .tag.status-active { color:var(--success); background:var(--success-soft); }
+.card .tag.status-inactive { color:var(--muted); background:var(--canvas); }
+.subtitle { font-size:var(--type-meta); margin-top:var(--space-1); }

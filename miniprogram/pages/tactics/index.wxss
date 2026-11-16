@@ -13,3 +13,10 @@
 @media(max-width:375px){.card .tag,.tactic-help{font-size:12px}}
 @media(max-width:360px){.card .link{font-size:12px}}
 @media(max-width:346px){.card .muted{font-size:12px}}
+
+/* 深度视觉层级：保留既有专注与操作几何。 */
+.title{font-size:var(--type-page,38rpx);font-weight:600;line-height:1.35}
+.card .bold{font-size:var(--type-card,30rpx);line-height:1.5}
+.card .muted,.card .tag,.tactic-help{font-size:var(--type-meta,24rpx);line-height:1.6}
+.card .link{font-size:var(--type-field,26rpx);font-weight:500}
+@media(max-width:375px){.card .muted,.card .tag,.tactic-help{font-size:12px}}

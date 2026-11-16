@@ -9,3 +9,11 @@
 .actions button.ui-button[size="mini"]{font-weight:500}
 @media(max-width:346px){.field-label{font-size:12px}}
 @media(max-width:375px){.hint{font-size:12px}}
+
+/* 球队设置：名称是主体，队徽操作为次级，保留原图及输入几何。 */
+.admin-header { font-size:var(--type-page); line-height:1.35; margin-bottom:var(--space-3); }
+.field-label { color:var(--muted); font-size:var(--type-field); font-weight:400; margin-bottom:var(--space-1); }
+.picture-preview { border:1px solid var(--line); background:var(--surface); }
+.actions { gap:var(--space-2); align-items:stretch; }
+.actions button.ui-button[size="mini"] { flex:1; min-width:0; white-space:normal; line-height:1.5; }
+.hint { font-size:var(--type-meta); margin-top:var(--space-2); }
