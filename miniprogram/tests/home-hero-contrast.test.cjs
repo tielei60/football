@@ -37,7 +37,7 @@ test('首页 Hero 小字在最亮图片背景及整个透明渐变上至少达�
 
 test('首页下一场卡内标题及赛果标题行保留原真实字段和入口', () => {
  const w = fs.readFileSync(path.join(__dirname, '../pages/home/index.wxml'), 'utf8');
- assert.match(w, /class="fixture-heading"><text class="fixture-heading-title">下一场比赛/);
+ assert.match(w, /class="fixture-heading"><text class="fixture-heading-title"><text class="fixture-heading-label">下一场比赛/);
  assert.match(w, /class="fixture-heading-meta"[\s\S]*next.competition[\s\S]*next.format/);
  assert.match(w, /class="result-ticket-heading"><text class="result-outcome {{item.resultTone}}">{{item.resultLabel}}<\/text><text class="result-date">{{item.dateLabel}}/);
  assert.equal((w.match(/bindtap="schedule"/g)||[]).length, 1);

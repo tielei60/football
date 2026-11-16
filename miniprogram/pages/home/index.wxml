@@ -11,14 +11,14 @@
         class="card next"
         data-id="{{next.id}}"
         bindtap="openMatch"
-         hover-class="club-card-pressed"><view class="fixture-heading"><text class="fixture-heading-title">下一场比赛</text><view class="fixture-heading-meta"><text>{{next.competition || '球队比赛'}}</text><text>{{next.format ? next.format + '人制' : '赛制待定'}}</text></view></view
+         hover-class="club-card-pressed"><view class="fixture-heading"><text class="fixture-heading-title"><text class="fixture-heading-label">下一场比赛</text></text><view class="fixture-heading-meta"><text>{{next.competition || '球队比赛'}}</text><text>{{next.format ? next.format + '人制' : '赛制待定'}}</text></view></view
         ><view class="fixture-teams"><view class="fixture-team"><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="fixture-symbol">足</text><text>{{team.name}}</text></view><view class="fixture-versus">VS<text>{{next.side==='home'?'主场':next.side==='away'?'客场':next.side==='neutral'?'中立场':'主客场待定'}}</text></view><view class="fixture-team"><view class="fixture-symbol opponent" aria-hidden="true"><view class="opponent-ball"/></view><text class="match-title">{{next.opponent}}</text></view></view
-        ><view class="match-time">{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
-        ><view class="muted match-place">{{next.location || '地点待定'}}</view
-        ><view class="fixture-cta">查看比赛 · 去报名 ›</view><view class="divider"></view
+        ><view class="match-time fixture-info"><image src="/assets/ui-v3-calendar.png" mode="aspectFit" aria-hidden="true"/><text>{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</text></view
+        ><view class="muted match-place fixture-info"><image src="/assets/ui-v3-pin.png" mode="aspectFit" aria-hidden="true"/><text>{{next.location || '地点待定'}}</text></view
+        ><view class="fixture-cta"><image src="/assets/ui-v3-people.png" mode="aspectFit" aria-hidden="true"/><text>查看比赛 · 去报名</text></view><view class="divider"></view
         ><view class="between signup-summary"
-          ><view class="signup-counts"><text class="signup-count-yes">参加 {{next.signupCountLabel}}</text><text class="signup-count-maybe">{{next.maybeCount}} 人待定</text><text class="signup-count-no">{{next.noCount}} 人请假</text></view
-          ><text class="tag">{{next.responseLabel}}</text></view
+          ><view class="signup-counts"><text class="signup-count-yes">参加 {{next.signupCountLabel}}</text><text class="signup-count-maybe">待定 {{next.maybeCount}}</text><text class="signup-count-no">请假 {{next.noCount}}</text></view
+          ><text class="tag">我：{{next.responseLabel}}</text></view
         ></view
       ><view wx:else class="card empty">还没有即将开始的比赛</view></view
     ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"

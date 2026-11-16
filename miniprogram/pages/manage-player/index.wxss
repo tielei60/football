@@ -21,3 +21,6 @@
 
 /* V3 管理表单：持久标签与实际命中区，不改输入事件。 */
 .page .portrait-editor .stack button.ui-button.ui-compact[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}
+
+/* 紧凑入口保留原视觉，显式覆盖全局 compact 的 rpx 最小触控尺寸。 */
+.page button.ui-button.ui-compact.account-toggle[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}

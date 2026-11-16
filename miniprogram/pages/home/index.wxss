@@ -128,3 +128,21 @@
 /* 下一场标题融入卡片；赛事/人数制可换行，不改变整卡详情事件。 */
 .fixture-heading{display:flex;align-items:stretch;margin:0 -28rpx;background:var(--brand-soft);gap:12rpx}.fixture-heading-title{display:flex;align-items:center;flex:none;padding:18rpx 24rpx;background:var(--brand);color:#fff;font-size:var(--type-card);font-weight:700}.fixture-heading-meta{display:flex;flex:1;min-width:0;flex-wrap:wrap;align-content:center;justify-content:flex-end;gap:4rpx 12rpx;padding:14rpx 18rpx 14rpx 0;font-size:var(--type-field);color:var(--brand-ink);overflow-wrap:anywhere}
 .result-ticket{text-align:left}.result-ticket-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8rpx;flex-wrap:wrap}.result-ticket-heading .result-date{min-width:0;flex:1;text-align:right;overflow-wrap:anywhere}.result-outcome{padding:4rpx 10rpx;border-radius:10rpx;background:var(--surface);font-weight:600}.result-outcome.win{background:#e2f5eb}.result-outcome.loss{background:#fff0f3}.result-outcome.draw{background:var(--brand-soft)}
+
+/* 截图反馈：首页顶边与 Hero 对齐；下一场沿用原图信息图标和摘要层级。 */
+.page{padding-top:28rpx}
+.fixture-heading-title{position:relative;z-index:0;padding-right:32rpx}
+.fixture-heading-label{position:relative;z-index:1}
+.fixture-heading-title::after{content:"";position:absolute;z-index:0;top:0;bottom:0;right:-20rpx;width:40rpx;background:var(--brand);transform:skewX(26deg);transform-origin:bottom;pointer-events:none}
+.fixture-heading-meta{padding-left:24rpx}
+.fixture-info{display:flex;align-items:flex-start;gap:12rpx;min-width:0;margin-top:8rpx}
+.fixture-info image{width:30rpx;height:30rpx;flex:none;margin-top:5rpx}
+.fixture-info text{flex:1;min-width:0;overflow-wrap:anywhere}
+.fixture-cta{display:flex;align-items:center;justify-content:center;gap:14rpx;min-height:44px;padding:20rpx 12rpx}
+.fixture-cta image{width:32rpx;height:32rpx;flex:none;filter:brightness(0) invert(1)}
+.fixture-cta text{min-width:0;overflow-wrap:anywhere}
+.next .divider{display:none}
+.signup-summary{margin-top:18rpx;align-items:center}
+.signup-counts{gap:6rpx 12rpx;font-size:24rpx}
+.signup-counts text+text::before{content:"·";margin-right:12rpx;color:var(--muted)}
+.signup-summary>.tag{padding:0;background:transparent;color:var(--muted);border:0;font-weight:400;white-space:normal;max-width:42%;overflow-wrap:anywhere;font-size:24rpx}

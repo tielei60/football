@@ -12,3 +12,6 @@
 .card textarea { min-height:200rpx; }
 .capacity-hint { margin-top:12rpx; font-size:24rpx; color:var(--muted); line-height:1.6; }
 @media(max-width:340px) { .filter-row { flex-wrap:wrap; } .filter-row>.grow { flex-basis:240rpx; } }
+
+/* 紧凑入口保留原视觉，显式覆盖全局 compact 的 rpx 最小触控尺寸。 */
+.page button.ui-button.ui-compact.clear-kickoff[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}

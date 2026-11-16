@@ -111,3 +111,7 @@
 /* 管理双列图标与文字按V3排列，保持原按钮完整命中区。 */
 .page .management-grid>button.ui-button[size="mini"]{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:24rpx;padding:28rpx;min-height:144rpx;text-align:left}
 .management-icon{width:46rpx;height:46rpx;flex:none}
+
+/* 全幅身份区沿用 -28rpx 抵消页边距；顶部必须同为 28rpx，
+   避免全局 32rpx 留下 4rpx 浅色缝。不移动原生导航或状态组件。 */
+.page{padding-top:28rpx}

@@ -50,7 +50,7 @@
         ></view
       ><button
         wx:if="{{form.kickoff}}"
-        class="small ghost ui-button ui-compact"
+        class="small ghost ui-button ui-compact clear-kickoff"
         bindtap="clearTime"
         disabled="{{loading || (busy)}}"
        size="mini">清除开球时间</button><view class="field"><text class="field-label">选择球场</text><business-picker title="比赛球场" bind:pickeropen="openBusinessPicker" range="{{venues}}" range-key="displayName" value="{{venueIndex}}" data-field="venueIndex" bindchange="pick" disabled="{{loading || (busy)}}"><view class="picker"><text class="picker-value">{{venues[venueIndex].displayName}}</text></view></business-picker></view><view class="field"
