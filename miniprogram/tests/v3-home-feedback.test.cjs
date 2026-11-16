@@ -18,12 +18,14 @@ test('下一场三宽真实长文本不截断、不溢出，CTA不低于44px',as
  try{for(const width of [320,375,430]){
  let html=w.slice(w.indexOf('<view class="section next-section">'),w.indexOf('<view wx:else class="card empty">'));
  html=html.replace(/{{([^}]+)}}/g,(_,k)=>k.includes('location')?'真实球场详细地址城市区域体育中心内柔道训练馆西侧及长道路门牌信息'.repeat(3):k.includes('name')||k.includes('opponent')?'很长的足球俱乐部球队全称':k.includes('competition')?'周中朋友联赛特别场次':k.includes('side')?'主客场待定':k.includes('dateLabel')?'11月18日 周三':k.includes('kickoff')?'20:00':k.includes('responseLabel')?'未回应':'9');
- html=html.replace(/<image\b[^>]*\/>/g,'<img alt=""/>').replace(/<view\b/g,'<div').replace(/<\/view>/g,'</div>').replace(/<text\b/g,'<span').replace(/<\/text>/g,'</span>');
+ html=html.replace(/<image\b[^>]*\/>/g,'<img alt=""/>').replace(/<view\b/g,'<div').replace(/<\/view\s*>/g,'</div>').replace(/<text\b/g,'<span').replace(/<\/text\s*>/g,'</span>');
  const styles=(fs.readFileSync(path.join(root,'app.wxss'),'utf8')+'\n'+css).replace(/([\d.]+)rpx/g,(_,n)=>Number(n)*width/750+'px').replace(/\bimage\b/g,'img').replace(/\btext\b(?=\s*[{+])/g,'span').replace(/(^|\})\s*page\s*\{/g,'$1 body{');
  const page=await browser.newPage({viewport:{width,height:1200}});
  await page.setContent('<style>body{margin:0}'+styles+'</style><div class="page">'+html+'</div>');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),width);
- const data=await page.locator('.fixture-info span').evaluateAll(xs=>xs.map(x=>({h:x.clientHeight,sh:x.scrollHeight,overflow:getComputedStyle(x).overflow,clamp:getComputedStyle(x).webkitLineClamp})));
+ assert.equal(await page.locator('.fixture-info').count(),2);
+ const info=page.locator('.fixture-info > span');assert.equal(await info.count(),2);
+ const data=await info.evaluateAll(xs=>xs.map(x=>({h:x.clientHeight,sh:x.scrollHeight,overflow:getComputedStyle(x).overflow,clamp:getComputedStyle(x).webkitLineClamp})));
  for(const x of data){assert.ok(x.sh<=x.h+1);assert.notEqual(x.overflow,'hidden');assert.ok(x.clamp==='none'||x.clamp==='');}
  assert.ok((await page.locator('.fixture-cta').boundingBox()).height>=44);
  await page.close();
