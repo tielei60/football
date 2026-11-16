@@ -15,14 +15,15 @@ test('packaged badge preserves confirmed source bytes without image editing', ()
   assert.equal(asset.readUInt32BE(16), 256);
   assert.equal(asset.readUInt32BE(20), 256);
 });
-test('login uses aspectFit packaged image and friendly non-FC fallback; rest of markup unchanged', () => {
+test('v3 登录使用独立队徽与品牌场景，保留全部登录门禁和事件', () => {
   const w = read('pages/login/index.wxml');
   assert.match(w, /src="\/assets\/team-badge.png" mode="aspectFit" binderror="badgeError"/);
-  assert.match(w, /<text wx:else class="brand-fallback">队徽暂不可用<\/text>/);
-  const original = require('./membership-markup.cjs')(w.replace(/<view class="brand-mark">[\s\S]*?<\/view>/, '<view class="brand-mark">FC</view>'))
-    .replace(/<view wx:if="{{wechatEnabled}}" class="page wechat-entry">[\s\S]*?<\/view>\n(?=<business-dialog)/, '')
-    .replace(/\sclass="[^"]*"/g, '');
-  assert.equal(hash(original), 'd6b56a86c5d01ff5b5c31951f6c644d23c5e057fdd86cbcdd470ba2b377bb062');
+  assert.match(w, /<text wx:else class="brand-fallback">柏林花园 FC<\/text>/);
+  assert.match(w, /class="login-atmosphere" src="\/assets\/club-atmosphere.jpg"/);
+  assert.match(w, /class="login-art"/);
+  // 仅展示结构可变化；登录输入、条件、提交事件和微信入口保持原始契约。
+  const attrs = w.match(/(?:wx:(?:if|elif|else|for|key)|(?:bind|catch)[\w:]*|data-[\w-]+|disabled|loading|password|maxlength|value)\s*(?:=\s*"[^"]*")?/g).sort();
+  assert.equal(hash(JSON.stringify(attrs)), 'a1e7e40abc1f3577916082b06571cd8d0b1bd714877f9feab2648467b6636891');
 });
 test('badge error changes only badge state, never requests login or team data', () => {
   let definition;

@@ -23,20 +23,30 @@
 
 /* 邀请管理：球员、绑定、申请与历史分层；独立组件提供主题回退值。 */
 .title { font-size:var(--type-page,38rpx); line-height:1.35; font-weight:600; }
-.invite-subtitle { font-size:var(--type-body,28rpx); color:var(--ink,#292431); margin:8rpx 0 24rpx; }
+.invite-subtitle { font-size:var(--type-body,28rpx); color:var(--ink,#24182f); margin:8rpx 0 24rpx; }
 .invite-heading { font-size:var(--type-section,32rpx); line-height:1.4; }
-.binding-status { font-size:var(--type-card,30rpx); color:var(--muted,#6d6375); font-weight:500; margin:16rpx 0; }
-.binding-status.is-bound { color:var(--success,#176b4a); }
+.binding-status { font-size:var(--type-card,30rpx); color:var(--muted,#6e617a); font-weight:500; margin:16rpx 0; }
+.binding-status.is-bound { color:var(--success,#157b4c); }
 .invite-between { flex-wrap:wrap; align-items:flex-start; }
 .hint { font-size:var(--type-meta,24rpx); line-height:1.6; margin-top:8rpx; }
-.tag.invite-pending { color:var(--warning,#805600); background:var(--warning-soft,#fff4da); }
-.tag.invite-approved { color:var(--success,#176b4a); background:var(--success-soft,#edf6f1); }
-.tag.invite-closed { color:var(--muted,#6d6375); background:var(--canvas,#f6f4f8); }
+.tag.invite-pending { color:var(--warning,#8b5b08); background:var(--warning-soft,#fff5de); }
+.tag.invite-approved { color:var(--success,#157b4c); background:var(--success-soft,#eaf8ef); }
+.tag.invite-closed { color:var(--muted,#6e617a); background:var(--canvas,#f5f3ff); }
 .history-row { gap:8rpx; }
 .history-status { font-size:var(--type-body,28rpx); font-weight:500; }
-.page button.invite-danger[size="mini"]:not([disabled]) { color:var(--danger,#b04758); background:var(--danger-soft,#faedf0); }
+.page button.invite-danger[size="mini"]:not([disabled]) { color:var(--danger,#b33951); background:var(--danger-soft,#fff0f3); }
 .invite-modal-heading { font-size:var(--type-section,32rpx); line-height:1.4; }
 .invite-modal { padding:24rpx; }
 .invite-modal-actions { margin-top:24rpx; }
 .invite-modal-actions button.ui-button[size="mini"] { min-height:44px; white-space:normal; line-height:1.5; font-size:var(--type-field,26rpx); }
 .error { font-size:var(--type-field,26rpx); }
+
+/* v3：绑定、有效邀请和历史形成三个明确分组。 */
+.invite-subtitle { display:inline-block; padding:10rpx 20rpx; margin:0 0 24rpx; border-radius:14rpx; color:var(--brand-ink); background:var(--brand-soft); font-weight:600; }
+.card { padding:32rpx; border-radius:30rpx; }
+.binding-status { padding:20rpx 24rpx; background:var(--canvas); border-radius:20rpx; }
+.binding-status.is-bound { background:var(--success-soft); }
+.invite-heading { font-size:32rpx; font-weight:650; }
+.history-heading { margin:36rpx 0 20rpx; padding-left:18rpx; border-left:6rpx solid var(--brand); }
+.history-row { padding:26rpx 32rpx; }
+.invite-modal { border-radius:32rpx; border:1px solid var(--line); }

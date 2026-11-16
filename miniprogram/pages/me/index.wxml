@@ -4,7 +4,7 @@
     error="{{error}}"
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error && session}}"
-    ><view aria-role="button" class="card row" bindtap="profile"
+    ><view aria-role="button" class="card row membership-hero" bindtap="profile"
       ><view class="avatar large {{!player.avatar?'player-placeholder':''}}"
         ><image
           wx:if="{{player.avatar}}"
@@ -19,8 +19,8 @@
         ><text class="tag"
           >{{session.user.role==='admin'?'管理员':session.user.role==='player'?'球员':'球队成员'}}</text
         ></view
-      ></view
-    ><view wx:if="{{session.user.role==='admin'}}" class="card section"><view class="section-title">球队管理</view><view class="management-grid"><button disabled="{{loading}}" data-page="team" bindtap="manage" class="ui-button" size="mini">球队资料</button><button disabled="{{loading}}" data-page="players" bindtap="manage" class="ui-button" size="mini">球员与账号</button><button disabled="{{loading}}" data-page="seasons" bindtap="manage" class="ui-button" size="mini">赛季管理</button><button disabled="{{loading}}" data-page="venues" bindtap="manage" class="ui-button" size="mini">球场管理</button><button wx:if="{{session.user.systemAdmin}}" disabled="{{loading}}" bindtap="systemAccounts" class="ui-button" size="mini">系统账号</button></view></view><view wx:if="{{registration}}" class="section"
+      ><view wx:if="{{player && player.number!==null && player.number!==undefined}}" class="member-shirt"><text>{{player.number}}</text><text>我的号码</text></view></view
+    ><view class="member-shortcuts"><button wx:if="{{player}}" bindtap="profile" class="ui-button" size="mini"><image src="/assets/me-active.png"/><text>我的资料</text></button><button bindtap="matches" class="ui-button" size="mini"><image src="/assets/schedule-active.png"/><text>球队比赛</text></button><button wx:if="{{player}}" bindtap="photos" class="ui-button" size="mini"><image src="/assets/photos-shortcut.png"/><text>出场照片</text></button><button bindtap="tactics" class="ui-button" size="mini"><image src="/assets/tactics-shortcut.png"/><text>球队战术</text></button></view><view wx:if="{{session.user.role==='admin'}}" class="card section"><view class="section-title">球队管理</view><view class="management-grid"><button disabled="{{loading}}" data-page="team" bindtap="manage" class="ui-button" size="mini">球队资料</button><button disabled="{{loading}}" data-page="players" bindtap="manage" class="ui-button" size="mini">球员与账号</button><button disabled="{{loading}}" data-page="seasons" bindtap="manage" class="ui-button" size="mini">赛季管理</button><button disabled="{{loading}}" data-page="venues" bindtap="manage" class="ui-button" size="mini">球场管理</button><button wx:if="{{session.user.systemAdmin}}" disabled="{{loading}}" bindtap="systemAccounts" class="ui-button" size="mini">系统账号</button></view></view><view wx:if="{{registration}}" class="section"
       ><view class="section-title">{{year}} 年，我的报名</view
       ><view class="metrics"
         ><view class="metric"

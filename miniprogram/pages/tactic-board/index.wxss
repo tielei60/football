@@ -1,4 +1,4 @@
-.board-wrap{width:100%;margin-top:20rpx;border-radius:20rpx;background:#e8eff1}.row{gap:16rpx}.tag{margin-top:12rpx}canvas{display:block}.title{font-size:34rpx;line-height:1.4}.edit-actions{display:flex;gap:16rpx;margin-top:16rpx}.edit-action{flex:1;text-align:center;padding:18rpx 0;border-radius:16rpx;background:#eee7f3;color:var(--brand-ink);font-weight:600;font-size:28rpx;line-height:40rpx}.edit-save{background:var(--brand);color:#fff}.edit-disabled{opacity:.45}
+.board-wrap{width:100%;margin-top:20rpx;border-radius:20rpx;background:#e8eff1}.row{gap:16rpx}.tag{margin-top:12rpx}canvas{display:block}.title{font-size:34rpx;line-height:1.4}.edit-actions{display:flex;gap:16rpx;margin-top:16rpx}.edit-action{flex:1;text-align:center;padding:18rpx 0;border-radius:16rpx;background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:28rpx;line-height:40rpx}.edit-save{background:var(--brand);color:#fff}.edit-disabled{opacity:.45}
 
 .board-wrap canvas{margin-left:auto;margin-right:auto}
 
@@ -23,7 +23,7 @@
 .focus-toggle{width:100%;margin:0 0 8rpx;min-height:64rpx;padding:10rpx;font-size:24rpx;line-height:40rpx;background:var(--brand-soft);color:var(--brand-ink)}
 
 /* Compact selectors keep the portrait pitch dominant. */
-.picker{background:#fff;border:1rpx solid #e8e1ef;border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
+.picker{background:#fff;border:1rpx solid var(--control-border);border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
 .canvas-focus .picker,.canvas-focus .editor-tools .picker{min-height:60rpx;padding:10rpx 12rpx}
 .canvas-focus .picker-value,.editor-tools .picker-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -46,3 +46,14 @@
 .type-expanded .prewrap{font-size:var(--type-body,28rpx);line-height:1.65}
 .type-expanded .tactic-objective{font-size:var(--type-card,30rpx);font-weight:600;line-height:1.5}
 @media(max-width:375px){.type-expanded .tactic-meta,.type-expanded .hint{font-size:12px}}
+
+/* UI v3：不改变球场尺寸、触点或专注模式布局。 */
+.type-expanded .title { color: var(--brand-ink); font-weight: 700; }
+.type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }
+.type-expanded .card { border-radius: 28rpx; }
+.type-expanded .hint { line-height: 1.7; }
+
+.type-expanded .board-shortcuts { margin: 24rpx 0; gap: 16rpx; }
+.type-expanded .board-shortcuts .shortcut { border-radius: 20rpx; min-height: 44px; border: 1rpx solid var(--line); }
+.type-expanded .focus-toggle { background: #fff; border: 1rpx solid var(--control-border); border-radius: 20rpx; }
+.type-expanded .tag { margin-bottom: 12rpx; }

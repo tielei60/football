@@ -218,5 +218,5 @@ test("new entry markup is narrowly capability-gated and password ability is chec
     path.join(root, "pages/login/index.wxss"),
     "utf8",
   );
-  assert.match(css, /\.wechat-entry\{padding-top:0\}/);
+  assert.match(css, /\.wechat-entry\s*\{\s*padding-top:\s*0;?\s*\}/);
 });

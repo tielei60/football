@@ -4,7 +4,7 @@
     error="{{error}}"
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error}}"
-    ><view class="title">{{editing ? '编辑比赛' : '安排一场比赛'}}</view
+    ><view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">{{editing ? '编辑比赛' : '安排一场比赛'}}</view><view class="club-banner-subtitle">球队管理</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view
     ><view class="subtitle">草稿仅管理员可见，选择“发布报名”后球员才能报名</view
     ><view class="card section"
       ><view class="field"
@@ -88,7 +88,7 @@
           ></view
         ></view
       ><view class="field"><text class="field-label">报名人数</text><input class="input" type="number" value="{{form.maxParticipants}}" data-field="maxParticipants" bindinput="input" maxlength="5" placeholder="不限（留空）" disabled="{{loading || (busy)}}"/><view class="capacity-hint">仅“参加”计入人数，留空表示不限。</view></view
-      ><view class="field"
+      ></view><view class="card"><view class="section-title">归属与状态</view><view class="field"
         ><text class="field-label">所属赛季</text
         ><business-picker title="所属赛季" bind:pickeropen="openBusinessPicker"
           range="{{seasons}}"

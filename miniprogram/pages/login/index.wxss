@@ -1,87 +1,25 @@
-/* 本页文字层级；不改变输入、按钮、列数或画布几何。 */
-.login {
-  padding-top: 100rpx;
-}
-.brand-mark {
-  width: 88rpx;
-  height: 88rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--brand);
-  color: #fff;
-  font-size: 30rpx;
-  font-weight: 750;
-  border-radius: 24rpx;
-  margin-bottom: 32rpx;
-  box-shadow: 0 8rpx 24rpx rgba(99,50,119,.1);
-  line-height: 88rpx;
-}
-/* 打包队徽保留原图背景，适应原标识占位，不挪动登录表单。 */
-.brand-image {
-  width: 88rpx;
-  height: 88rpx;
-  display: block;
-}
-.brand-fallback {
-  font-size: 24rpx;
-  line-height: 1.3;
-  text-align: center;
-}
-.login-card {
-  margin-top: 42rpx;
-  padding: 30rpx;
-  border-radius: 24rpx;
-}
-.login>.title {
-  font-size: 38rpx;
-  letter-spacing: 1rpx;
-  font-weight: 650;
-  line-height: 1.4;
-}
-.login>.subtitle {
-  font-size: 25rpx;
-  line-height: 1.65;
-  margin-top: 10rpx;
-}
-.login-card .field {
-  margin-bottom: 24rpx;
-}
-.login .hint {
-  font-size: 24rpx;
-  line-height: 1.65;
-  margin-top: 24rpx;
-}
-.field-label {
-  font-size: 26rpx;
-  font-weight: 500;
-}
-.error {
-  font-size: 26rpx;
-  font-weight: 500;
-}
+/* v3：品牌氛围与白色登录卡分层，输入尺寸沿用全局原生控件。 */
+.login { padding-top: 0; }
+.login-art { position:relative; margin:0 -28rpx; padding:52rpx 32rpx 64rpx; text-align:center; color:#fff; background:linear-gradient(135deg,#4d125f,#760b88 65%,#9345ae); border-radius:0 0 48rpx 48rpx; }
+.brand-mark { width:144rpx; height:144rpx; margin:0 auto 24rpx; display:flex; align-items:center; justify-content:center; }
+.brand-image { width:144rpx; height:144rpx; display:block; }
+.brand-fallback { font-size:28rpx; line-height:1.5; font-weight:600; }
+.login-eyebrow { font-size:22rpx; letter-spacing:3rpx; color:#d9e9ff; line-height:1.6; }
+.login-art .title { margin:16rpx 0 8rpx; color:#fff; font-size:52rpx; line-height:1.4; font-weight:750; }
+.login-team { font-size:28rpx; color:#efe1f7; }
+.login-card { position:relative; margin-top:-24rpx; padding:36rpx 32rpx; border-radius:32rpx; box-shadow:0 12rpx 32rpx rgba(81,18,98,.08); }
+.login-card .field { margin-bottom:28rpx; }
+.field-label { font-size:26rpx; color:var(--muted); font-weight:500; margin-bottom:12rpx; }
+.login .hint { font-size:24rpx; line-height:1.7; text-align:center; margin:24rpx 20rpx 0; }
+.wechat-entry { padding-top:0; }
+.wechat-entry .card { padding:28rpx; }
+.wechat-entry .hint { font-size:24rpx; line-height:1.6; margin-top:20rpx; }
+.error { font-size:26rpx; line-height:1.6; overflow-wrap:anywhere; }
+@media(max-height:650px) { .login-art { padding-top:28rpx; padding-bottom:48rpx; } .brand-mark,.brand-image { width:112rpx; height:112rpx; } }
 
-/* 小屏正文下限 12px，仅覆盖以上内容文字，不影响控件。 */
-@media (max-width: 375.000px) {
-  .login .hint { font-size: 12px; }
-}
-@media (max-width: 360.000px) {
-  .login>.subtitle { font-size: 12px; }
-}
-@media (max-width: 346.154px) {
-  .field-label, .error { font-size: 12px; }
-}
-
-/* 微信入口复用主布局，不改变密码输入几何。 */
-.wechat-entry{padding-top:0}
-
-/* 登录：账号表单为主，邀请与说明为辅，保留队徽和原输入尺寸。 */
-.login>.title { font-size:var(--type-page); font-weight:600; line-height:1.35; letter-spacing:0; }
-.login>.subtitle { font-size:var(--type-field); line-height:1.6; margin-top:var(--space-1); }
-.login-card { margin-top:var(--space-4); padding:var(--space-3); }
-.login-card .field { margin-bottom:var(--space-3); }
-.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); }
-.login .hint,.wechat-entry .hint { font-size:var(--type-meta); line-height:1.6; }
-.wechat-entry .card { padding:var(--space-3); }
-.brand-mark { box-shadow:none; background:var(--surface); }
-@media(max-height:650px) { .login { padding-top:48rpx; } }
+/* 品牌背景仅作氛围，队徽、标题与表单保持真实独立元素。 */
+.login-art { overflow:hidden; }
+.login-atmosphere,.login-shade { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.login-atmosphere { opacity:.46; }
+.login-shade { background:linear-gradient(110deg,rgba(61,8,77,.8),rgba(87,8,105,.55)); }
+.brand-mark,.login-eyebrow,.login-art .title,.login-team { position:relative; }

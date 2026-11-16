@@ -2,6 +2,12 @@ const ui=require('../../utils/ui');
 const s = require("../shared");
 Page({
   data: {
+    shortcuts: [
+      { page: "schedule", label: "比赛", icon: "/assets/schedule-active.png" },
+      { page: "players", label: "球员", icon: "/assets/players-active.png" },
+      { page: "statistics", label: "数据", icon: "/assets/statistics-active.png" },
+      { page: "tactics", label: "战术", icon: "/assets/tactics-shortcut.png" },
+    ],
     loading: true,
     error: "",
     team: {},
@@ -54,6 +60,12 @@ Page({
           .map((m) => s.matchView(m, session.user.playerId)),
       };
     });
+  },
+  shortcut(e) {
+    if (this._hidden || this._disposed || this.data.loading || this.data.error) return;
+    const page = e.currentTarget.dataset.page;
+    if (page === "tactics") wx.navigateTo({ url: "/pages/tactics/index" });
+    else if (["schedule", "players", "statistics"].includes(page)) wx.switchTab({ url: "/pages/" + page + "/index" });
   },
   schedule() {
     wx.switchTab({ url: "/pages/schedule/index" });

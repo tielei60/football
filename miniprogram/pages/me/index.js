@@ -63,6 +63,14 @@ Page({
     if(this._hidden||this._disposed||this.data.loading||this.data.busy||!this.data.session?.user.systemAdmin)return;
     wx.navigateTo({url:"/pages/system-accounts/index"});
   },
+  matches() {
+    if (this._hidden || this._disposed || this.data.loading || this.data.error || this.data.busy) return;
+    wx.switchTab({ url: "/pages/schedule/index" });
+  },
+  photos() {
+    if (this._hidden || this._disposed || this.data.loading || this.data.error || this.data.busy || !this.data.player || this.data.player.id !== this.data.session?.user.playerId) return;
+    wx.navigateTo({ url: "/pages/player-photos/index?id=" + encodeURIComponent(this.data.player.id) });
+  },
   tactics() {
     wx.navigateTo({ url: "/pages/tactics/index" });
   },

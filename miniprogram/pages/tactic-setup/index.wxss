@@ -1,4 +1,4 @@
-.title{font-size:32rpx;font-weight:650;margin:14rpx 0}.row,.slot{display:flex;align-items:center;gap:12rpx;margin:12rpx 0}.grow{flex:1;min-width:0}.row button{width:auto;min-width:0;flex-shrink:0;margin:0}.small{font-size:25rpx;padding:8rpx 16rpx}.picker{box-sizing:border-box;background:var(--brand-soft);border-radius:12rpx;padding:14rpx;font-size:26rpx;min-width:0}.slot>text{width:105rpx;font-size:25rpx;color:var(--muted)}.card label{display:block;font-size:26rpx;margin:12rpx 0}input,textarea{box-sizing:border-box;background:#fff;border:1rpx solid #e7deec;border-radius:12rpx;padding:12rpx;width:100%;font-size:27rpx}.hint{font-size:24rpx;line-height:1.6;color:var(--muted);margin:12rpx 0}.preview{border-radius:16rpx;background:#e8eff1;margin-top:20rpx;padding:12rpx}.preview-frame{display:block;margin:auto}.preview-image{display:block}
+.title{font-size:32rpx;font-weight:650;margin:14rpx 0}.row,.slot{display:flex;align-items:center;gap:12rpx;margin:12rpx 0}.grow{flex:1;min-width:0}.row button{width:auto;min-width:0;flex-shrink:0;margin:0}.small{font-size:25rpx;padding:8rpx 16rpx}.picker{box-sizing:border-box;background:var(--brand-soft);border-radius:12rpx;padding:14rpx;font-size:26rpx;min-width:0}.slot>text{width:105rpx;font-size:25rpx;color:var(--muted)}.card label{display:block;font-size:26rpx;margin:12rpx 0}input,textarea{box-sizing:border-box;background:#fff;border:1rpx solid var(--control-border);border-radius:12rpx;padding:12rpx;width:100%;font-size:27rpx}.hint{font-size:24rpx;line-height:1.6;color:var(--muted);margin:12rpx 0}.preview{border-radius:16rpx;background:#e8eff1;margin-top:20rpx;padding:12rpx}.preview-frame{display:block;margin:auto}.preview-image{display:block}
 
 /* Page-specific density, hierarchy and long-content safeguards. */
 .title{font-size:32rpx;line-height:1.4}.card label{font-size:24rpx;color:var(--muted)}.card input,.card textarea{margin-top:8rpx;color:var(--ink)}.roster{padding:6rpx 0}.slot{gap:12rpx}.slot>text{width:96rpx;flex-shrink:0;font-size:23rpx;color:var(--muted);font-variant-numeric:tabular-nums}.slot .picker{font-size:25rpx;line-height:1.5;white-space:normal;overflow-wrap:anywhere}.preview{border:1rpx solid var(--line);padding:16rpx}.hint{font-size:23rpx;line-height:1.65}
@@ -6,7 +6,7 @@
 .preview-toggle{width:100%;margin:8rpx 0;font-size:26rpx;min-height:72rpx;line-height:40rpx;padding:12rpx}.preview-focus{padding:8rpx 16rpx 16rpx}.preview-focus .preview{padding:0;margin-top:8rpx}.preview-focus .preview-toggle{margin:0}.preview-focus .hint{font-size:22rpx}
 
 /* Compact selectors keep the portrait pitch dominant. */
-.picker{background:#fff;border:1rpx solid #e8e1ef;border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
+.picker{background:#fff;border:1rpx solid var(--control-border);border-radius:12rpx;color:var(--brand-ink);padding:12rpx 14rpx;min-height:64rpx;line-height:1.4;font-size:25rpx;gap:10rpx}
 .canvas-focus .picker,.canvas-focus .editor-tools .picker{min-height:60rpx;padding:10rpx 12rpx}
 .canvas-focus .picker-value,.editor-tools .picker-value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Native input has a default fixed height; include padding without clipping glyphs. */
@@ -30,3 +30,14 @@
 .type-expanded .card label{font-size:var(--type-field,26rpx);font-weight:400;color:var(--muted);line-height:1.55}
 .type-expanded .formation-impact{font-size:var(--type-field,26rpx);font-weight:500;color:var(--warning,#805600);line-height:1.65}
 @media(max-width:346px){.type-expanded .card label,.type-expanded .formation-impact{font-size:12px}}
+
+/* UI v3：不改变球场尺寸、触点或专注模式布局。 */
+.type-expanded .title { color: var(--brand-ink); font-weight: 700; }
+.type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }
+.type-expanded .card { border-radius: 28rpx; }
+.type-expanded .hint { line-height: 1.7; }
+
+.type-expanded .roster { margin-top: 24rpx; background: #fff; border: 1rpx solid var(--line); border-radius: 24rpx; padding: 12rpx 20rpx; }
+.type-expanded .slot { padding: 12rpx 0; margin: 0; border-bottom: 1rpx solid var(--line); }
+.type-expanded .slot:last-child { border-bottom: 0; }
+.type-expanded .formation-impact { padding: 20rpx; background: var(--warning-soft); border-left: 4rpx solid var(--warning); border-radius: 12rpx; }

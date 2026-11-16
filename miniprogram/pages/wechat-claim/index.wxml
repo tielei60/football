@@ -1,7 +1,7 @@
 <view class="page">
 <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
 <block wx:if="{{!loading&&!error}}">
-<view class="title">接受球队邀请</view>
+<view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">接受球队邀请</view><view class="club-banner-subtitle">仅限已获邀请的球队成员</view></view>
 <view wx:if="{{!enabled}}" class="card empty">微信邀请尚未启用，请使用球队账号登录。</view>
 <block wx:else>
 <view class="card">

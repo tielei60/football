@@ -1,42 +1,28 @@
-// 本批静态/行为基线保护，不代替微信画面、拖动或真机验收。
+// v3 允许重组展示，不允许更改战术事件、权限、触点和持久化语义。
 const test=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), path=require('node:path'), crypto=require('node:crypto');
-const baseline=require('./ui-depth-tactic-baseline.json');
+const baseline=require('./ui-v3-tactic-contract.json');
 const root=path.resolve(__dirname,'../pages');
 const read=(page,ext)=>fs.readFileSync(path.join(root,page,'index.'+ext),'utf8');
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
-const marker='\n/* 深度视觉层级：';
-test('七个战术页保留当前全部业务代码、字段、事件和条件',()=>{
-  assert.equal(Object.keys(baseline).length,7);
-  for(const [page,b] of Object.entries(baseline)) {
-    assert.equal(hash(read(page,'js')),b.js,page+' JS');
-    assert.equal(hash(read(page,'wxml').replace(/\sclass="[^"]*"/g,'')),b.wxml,page+' WXML');
-  }
+const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:data-)[\w-]+|id|disabled|hidden|value|checked|range|range-key|maxlength|min|max|step|type|style|disable-scroll|scroll-x)="[^"]*")/g),m=>m[1]).sort();
+test('v3 七个战术页业务代码和全部绑定条件保持不变',()=>{
+ assert.equal(Object.keys(baseline).length,7);
+ for(const [page,b] of Object.entries(baseline)) {
+  assert.equal(hash(read(page,'js')),b.js,page+' JS');
+  const actual=attributes(read(page,'wxml')).filter(x=>x!=='aria-hidden="true"');
+  assert.deepEqual(actual,b.attrs,page+' events, values, permissions and pending conditions');
+ }
 });
-test('战术页新规则仅调整文字表现，既有控件和球场几何逐字节保持',()=>{
-  for(const [page,b] of Object.entries(baseline)) {
-    const css=read(page,'wxss'),at=css.indexOf(marker);
-    assert.ok(at>=0,page);
-    assert.equal(hash(css.slice(0,at)),b.css,page+' original CSS');
-    const extra=css.slice(at);
-    for(const rule of extra.matchAll(/\{([^{}]*)\}/g))
-      for(const declaration of rule[1].split(';').filter(Boolean))
-        assert.match(declaration.trim(),/^(font-size|font-weight|color|line-height):/,page);
-    assert.doesNotMatch(extra,/\b(input|textarea|canvas|slider|button)\b/,page);
-  }
+test('v3 球场坐标、原生遮挡和专注几何保持原样',()=>{
+ for(const [page,b] of Object.entries(baseline)) {
+  assert.deepEqual(read(page,'wxml').match(/<canvas\b[^>]+>/g)||[],b.canvas,page);
+  for(const rule of b.focusRules)assert.ok(read(page,'wxss').includes(rule),page+' focus geometry');
+ }
 });
-test('专注编辑与放大预览不套用非专注阅读字号',()=>{
-  for(const page of ['tactic-board','tactic-compose','tactic-setup']) {
-    const extra=read(page,'wxss').split(marker)[1].split('*/').slice(1).join('*/');
-    for(const rule of extra.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
-      const selector=rule[1].trim(); if(selector.startsWith('@'))continue;
-      for(const part of selector.split(',')) assert.ok(part.trim().startsWith('.type-expanded '),page+': '+part);
-    }
-  }
-});
-test('战术警告、文件就绪、创建错误维持明确语义和字号层级',()=>{
-  assert.match(read('tactic-transfer','wxss').split(marker)[1],/\.warning\{[^}]*var\(--warning/);
-  assert.match(read('tactic-export','wxss').split(marker)[1],/\.export-ready\{[^}]*var\(--success/);
-  assert.match(read('tactic-create','wxml'),/wx:if="\{\{actionError\}\}" class="hint feedback feedback-error"/);
-  assert.match(read('tactic-create','wxss').split(marker)[1],/\.feedback-error\{color:var\(--danger\)\}/);
-  for(const page of Object.keys(baseline)) assert.match(read(page,'wxss').split(marker)[1],/var\(--type-/);
+test('v3 战术快捷操作位于球场后，危险与未知提示保持明确',()=>{
+ const board=read('tactic-board','wxml');
+ assert.ok(board.indexOf('class="board-shortcuts"')>board.indexOf('id="tactic-canvas"'));
+ assert.match(read('tactic-transfer','wxss'),/\.warning\s*\{[^}]*var\(--warning\)/);
+ assert.match(read('tactic-create','wxml'),/wx:if="\{\{actionError\}\}" class="hint feedback feedback-error"/);
+ assert.match(read('tactic-create','wxss'),/\.feedback-error\s*\{[^}]*var\(--danger\)/);
 });

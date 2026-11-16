@@ -1,4 +1,11 @@
-.title{font-size:34rpx}.field-label{font-size:24rpx;margin-bottom:10rpx}
+/* UI v3：管理页共享视觉由 app.wxss 令牌与品牌横幅提供。 */
+.admin-header { gap:16rpx; flex-wrap:wrap; margin:24rpx 0; }
+.field-label { font-size:26rpx; font-weight:500; color:var(--muted); margin-bottom:12rpx; }
+.hint,.subtitle { font-size:24rpx; line-height:1.65; color:var(--muted); }
+.section-title { font-size:32rpx; font-weight:650; line-height:1.4; }
+.card { padding:34rpx; }
+.error { overflow-wrap:anywhere; }
+
 .location-section{margin-top:30rpx;min-width:0}
 .location-heading{display:flex;align-items:center;justify-content:space-between;gap:16rpx;margin-bottom:16rpx}
 .location-heading .field-label{margin:0}.location-status{font-size:24rpx;color:var(--muted)}
@@ -13,24 +20,6 @@ button.location-pick[size="mini"],button.venue-save[size="mini"]{display:flex;ju
 .uncertain-actions{display:flex;flex-direction:column;gap:16rpx;margin:20rpx 0}.hint{line-height:1.65;overflow-wrap:anywhere}
 @media(min-width:600px){.venue-map{height:360px}}
 
-/* 管理文字层级：仅文字与组间留白，不改原生输入及业务布局。 */
-.title{font-size:34rpx;font-weight:650;color:var(--ink)}
-.field-label{font-size:26rpx;font-weight:500;color:var(--ink)}
-.location-status{font-size:24rpx;font-weight:500;color:var(--muted)}
-.venue-status>text{font-size:26rpx;font-weight:500;color:var(--ink)}
-.hint{font-size:25rpx;font-weight:400;line-height:1.65;color:var(--muted)}
-@media(max-width:346px){.field-label,.venue-status>text{font-size:12px}}
-@media(max-width:360px){.hint{font-size:12px}}
-@media(max-width:375px){.location-status{font-size:12px}}
 
-/* 球场表单：地图仍保持大预览，位置状态和次要移除操作分开。 */
-.title { font-size:var(--type-page); line-height:1.35; }
-.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); margin-bottom:var(--space-1); }
-.location-section { margin-top:var(--space-4); }
-.location-status { color:var(--success); font-size:var(--type-meta); font-weight:500; }
-.location-actions { gap:var(--space-2); }
-.location-actions>button[size="mini"],button.location-pick[size="mini"],button.venue-save[size="mini"] { min-height:44px; }
-.location-actions .location-clear { color:var(--danger); }
-.venue-status { margin-top:var(--space-4); padding-top:var(--space-3); align-items:center; }
-.venue-status>text { font-size:var(--type-body); font-weight:400; }
-.hint { font-size:var(--type-meta); margin-top:var(--space-2); }
+.location-actions>button[size="mini"],button.location-pick[size="mini"],button.venue-save[size="mini"] {min-height:44px;}
+.location-clear {color:var(--danger);}

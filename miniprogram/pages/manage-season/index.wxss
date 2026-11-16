@@ -1,17 +1,9 @@
-.position-options{display:flex;flex-wrap:wrap;gap:14rpx}.position-options .selected{background:var(--brand);color:#fff}.admin-header{margin-bottom:28rpx}.picture-preview{width:140rpx;height:140rpx;border-radius:28rpx;background:var(--brand-soft)}
-/* Page-specific density, hierarchy and long-content safeguards. */
-.admin-header{font-size:34rpx;margin-bottom:22rpx}.field-label{font-size:24rpx;margin-bottom:10rpx}.field{margin-bottom:24rpx}.hint{font-size:24rpx;line-height:1.7}.page>button{margin-top:16rpx}
-
-/* 管理文字层级：仅文字与组间留白，不改原生输入及业务布局。 */
-.admin-header{font-size:34rpx;font-weight:650;color:var(--ink)}
-.field-label{font-size:26rpx;font-weight:500;margin-bottom:12rpx;color:var(--ink)}
-.picker{font-size:28rpx;font-weight:500}
-.hint{font-size:25rpx;font-weight:400;line-height:1.65;color:var(--muted)}
-@media(max-width:346px){.field-label{font-size:12px}}
-@media(max-width:360px){.hint{font-size:12px}}
-
-/* 赛季表单：名称、起止时间为主要字段，周期规则保持可读。 */
-.admin-header { font-size:var(--type-page); line-height:1.35; margin-bottom:var(--space-3); }
-.field-label { font-size:var(--type-field); font-weight:400; color:var(--muted); margin-bottom:var(--space-1); }
-.field { margin-bottom:var(--space-3); }
-.hint { font-size:var(--type-meta); line-height:1.6; padding-top:var(--space-1); }
+/* UI v3：管理页共享视觉由 app.wxss 令牌与品牌横幅提供。 */
+.admin-header { gap:16rpx; flex-wrap:wrap; margin:24rpx 0; }
+.field-label { font-size:26rpx; font-weight:500; color:var(--muted); margin-bottom:12rpx; }
+.hint,.subtitle { font-size:24rpx; line-height:1.65; color:var(--muted); }
+.section-title { font-size:32rpx; font-weight:650; line-height:1.4; }
+.card { padding:34rpx; }
+.error { overflow-wrap:anywhere; }
+ .card .field { margin-bottom:32rpx; }
+.card .hint { padding:20rpx; border-radius:20rpx; background:var(--sky-soft); }

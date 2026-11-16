@@ -1,14 +1,27 @@
-// 静态保护不代替专注画布矩形、键盘或真实视觉验收。
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const baseline=require('./tactic-typography-baseline.json'),root=path.resolve(__dirname,'../pages');
-const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
-const read=(n,e)=>fs.readFileSync(path.join(root,n,'index.'+e),'utf8');
-const marker='\n/* 战术文字层级：';
-test('six tactic pages retain all nonclass template content and JavaScript',()=>{for(const[n,b]of Object.entries(baseline)){assert.equal(hash(read(n,'wxml').replace(/<button wx:if="{{canManage}}" disabled="{{loading}}" id="new-tactic" bindtap="create" class="primary ui-button ui-block section" size="mini">新建战术<\/button>/g,'').replace(/\sclass="[^"]*"/g,'')),b.wxml,n);assert.equal(hash(read(n,'js').replace('create(){if(this.matchId||!this.data.canManage||this.data.loading||this.data.error)return;wx.navigateTo({url:"/pages/tactic-create/index"});},\n','')),b.js,n);}});
-test('original CSS remains byte-identical and new rules only adjust text',()=>{for(const[n,b]of Object.entries(baseline)){const css=read(n,'wxss'),i=css.indexOf(marker);assert.ok(i>=0,n);const original=css.slice(0,i).replace('/* 播放滑块端点保留固定像素净距，避免原生滑块圆钮遮住时间；不改变画布。 */\n','').replace('.playback-controls slider.grow{flex:1;min-width:0;margin:0 18px}', '.playback-controls slider.grow{flex:1;min-width:0;margin:0 4rpx}').replace('.playback-controls>text{flex:0 0 auto;font-size:24rpx;', '.playback-controls>text{font-size:20rpx;');assert.equal(hash(original),b.css,n);const extra=css.slice(i);for(const body of extra.matchAll(/\{([^{}]*)\}/g)){for(const d of body[1].split(';').filter(Boolean)){assert.match(d.trim(),/^(font-size|font-weight|color|line-height):/,n+': '+d);}}assert.doesNotMatch(extra,/\b(?:input|textarea|canvas|button|slider)\b/);}});
-test('focused board compose and setup receive no typography overrides',()=>{for(const n of ['tactic-board','tactic-compose','tactic-setup']){const extra=read(n,'wxss').split(marker)[1].split('*/').slice(1).join('*/').replace(/\/\*[\s\S]*?\*\//g,'');assert.doesNotMatch(extra,/canvas-focus|preview-focus|playback-controls|editor-tools|selection-status/);for(const m of extra.matchAll(/([^{}]+)\{[^{}]*\}/g)){const selectors=m[1].trim();if(selectors.startsWith('@'))continue;for(const selector of selectors.split(','))assert.ok(selector.trim().startsWith('.type-expanded '),n+': '+selector);}}
-assert.match(read('tactic-board','wxml'),/editing\|\|focusCanvas\?'canvas-focus':'type-expanded'/);
-assert.match(read('tactic-compose','wxml'),/focusCanvas&&tab===0\?'canvas-focus':'type-expanded'/);
-assert.match(read('tactic-setup','wxml'),/previewFocus\?'preview-focus':'type-expanded'/);
+// 展示规范检查不代替微信真机画布、键盘和逐页视觉验收。
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'../pages'),read=(n,e)=>fs.readFileSync(path.join(root,n,'index.'+e),'utf8');
+test('v3 战术列表与导入导出使用独立品牌页头和内容层级',()=>{
+ for(const n of ['tactics','tactic-create','tactic-transfer','tactic-export']) {
+  assert.match(read(n,'wxml'),/tactical-header/);assert.match(read(n,'wxss'),/\.tactical-header/);
+  assert.match(read(n,'wxss'),/44px/);
+ }
+ assert.match(read('tactics','wxml'),/pitch-symbol/);
+ assert.match(read('tactic-transfer','wxml'),/step-number/);
 });
-test('scope and import warnings remain separate from ordinary hints',()=>{assert.match(read('tactic-compose','wxml'),/hint scope-warning/);assert.match(read('tactic-setup','wxml'),/hint formation-impact/);assert.match(read('tactic-transfer','wxss'),/\.warning\{font-size:26rpx;font-weight:500;color:var\(--danger\)\}/);assert.match(read('tactic-export','wxml'),/hint export-ready/);});
+test('专注状态保持独立，不继承非专注标题与表单装饰',()=>{
+ assert.match(read('tactic-board','wxml'),/editing\|\|focusCanvas\?'canvas-focus':'type-expanded'/);
+ assert.match(read('tactic-compose','wxml'),/focusCanvas&&tab===0\?'canvas-focus':'type-expanded'/);
+ assert.match(read('tactic-setup','wxml'),/previewFocus\?'preview-focus':'type-expanded'/);
+ for(const n of ['tactic-board','tactic-compose','tactic-setup']) {
+  const extra=read(n,'wxss').split('/* UI v3：不改变球场尺寸、触点或专注模式布局。 */')[1];
+  assert.ok(extra,n);
+  for(const m of extra.matchAll(/([^{}]+)\{[^{}]*\}/g))for(const selector of m[1].split(','))assert.ok(selector.trim().startsWith('.type-expanded '),n+': '+selector);
+ }
+});
+test('作用范围警告与临时文件完成提示仍然可辨',()=>{
+ assert.match(read('tactic-compose','wxml'),/hint scope-warning/);
+ assert.match(read('tactic-setup','wxml'),/hint formation-impact/);
+ assert.match(read('tactic-export','wxml'),/hint export-ready/);
+ assert.match(read('tactic-transfer','wxss'),/var\(--warning-soft\)/);
+});

@@ -1,28 +1,12 @@
-<view class="page"
-  ><view class="title">属于球队的记录</view
-  ><view class="subtitle">只统计已完赛 · 未知不计作零</view
-  ><view class="filter-row"
-    ><business-picker title="统计赛季" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
-      range="{{seasons}}"
-      range-key="name"
-      value="{{seasonIndex}}"
-      bindchange="season"
-      ><view class="picker"
-        ><text class="picker-value">{{seasons[seasonIndex].name || '全部比赛'}}</text></view></business-picker
-    ><business-picker title="统计年份" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
-      wx:if="{{selectedSeasonId===null}}"
-      mode="date"
-      fields="year"
-      value="{{year}}"
-      bindchange="year"
-      ><view class="picker"><text class="picker-value">{{year}} 年</text></view></business-picker
-    ></view
-  ><page-state id="page-state" skeleton-type="detail"
+<view class="page statistics-page"
+  ><view class="statistics-banner"><view class="statistics-eyebrow">THE CLUB RECORDS</view><view class="title">每一场，都算数。</view><view class="subtitle">比赛留下成绩，也留下我们的故事。</view></view>
+
+<page-state id="page-state" skeleton-type="detail"
     loading="{{loading}}"
     error="{{error}}"
     bind:retry="refresh"
   /><button wx:if="{{!loading && error && selectedSeasonId!==null}}" id="statistics-reset-year" class="ui-button ui-block" size="mini" bindtap="resetYearScope">改看自然年统计</button><block wx:if="{{!loading && !error && stats}}"
-    ><view class="card"
+    ><view class="card record-card"
       ><view class="between"
         ><view class="bold scope-title">{{stats.filter.label}}</view
         ><text class="tag">{{stats.team.matches}} 场完赛</text></view
@@ -43,8 +27,24 @@
         ><text class="muted"
           >比分完整 {{stats.team.scoredMatches}}/{{stats.team.matches}}</text
         ></view
-      ></view
-    ><view class="tabs"
+      ><view wx:if="{{stats.team.matches > stats.team.scoredMatches}}" class="record-coverage">另有 {{stats.team.matches - stats.team.scoredMatches}} 场比分未完整记录，不计入胜平负。</view></view
+    ></block><view class="stats-filter-section"><view class="filter-label">统计范围</view><view class="filter-row"
+    ><business-picker title="统计赛季" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
+      range="{{seasons}}"
+      range-key="name"
+      value="{{seasonIndex}}"
+      bindchange="season"
+      ><view class="picker"
+        ><text class="picker-value">{{seasons[seasonIndex].name || '全部比赛'}}</text></view></business-picker
+    ><business-picker title="统计年份" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
+      wx:if="{{selectedSeasonId===null}}"
+      mode="date"
+      fields="year"
+      value="{{year}}"
+      bindchange="year"
+      ><view class="picker"><text class="picker-value">{{year}} 年</text></view></business-picker
+    ></view></view><block wx:if="{{!loading && !error && stats}}"><view class="section-title">球员榜单</view>
+<view class="tabs"
       ><view aria-role="button"
         class="tab {{metric==='overall'?'active':''}}"
         data-metric="overall"

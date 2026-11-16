@@ -1,17 +1,17 @@
 page {
-  --brand: #8845a0;
-  --brand-ink: #633277;
-  --brand-soft: #f0e7f5;
+  --brand: #760b88;
+  --brand-ink: #61046f;
+  --brand-soft: #f0e6fa;
   --surface: #ffffff;
-  --canvas: #f6f4f8;
-  --ink: #292431;
-  --muted: #6d6375;
-  --line: #eae5ef;
-  --control-border: #8d7b96;
-  --focus: #8845a0;
-  --danger: #b04758;
+  --canvas: #f5f3ff;
+  --ink: #24182f;
+  --muted: #6e617a;
+  --line: #e8def5;
+  --control-border: #8d6a9e;
+  --focus: #760b88;
+  --danger: #b33951;
   /* 层级令牌只用于内容文字，不改变原生输入与紧凑工具几何。 */
-  --type-page: 38rpx;
+  --type-page: 46rpx;
   --type-section: 32rpx;
   --type-card: 30rpx;
   --type-body: 28rpx;
@@ -21,11 +21,11 @@ page {
   --space-2: 16rpx;
   --space-3: 24rpx;
   --space-4: 32rpx;
-  --success: #176b4a;
-  --success-soft: #edf6f1;
-  --warning: #805600;
-  --warning-soft: #fff4da;
-  --danger-soft: #faedf0;
+  --success: #157b4c;
+  --success-soft: #eaf8ef;
+  --warning: #8b5b08;
+  --warning-soft: #fff5de;
+  --danger-soft: #fff0f3;
   background: var(--canvas);
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -96,7 +96,7 @@ button.danger {
 .card {
   background: var(--surface);
   border: 1rpx solid var(--line);
-  border-radius: 26rpx;
+  border-radius: 30rpx;
   padding: 28rpx;
   margin-bottom: 20rpx;
   box-shadow: 0 8rpx 30rpx rgba(63, 33, 78, 0.025);
@@ -172,7 +172,7 @@ button.danger {
 .avatar {
   width: 82rpx;
   height: 82rpx;
-  border-radius: 24rpx;
+  border-radius: 50%;
   flex-shrink: 0;
   background: var(--brand-soft);
   color: var(--brand-ink);
@@ -190,7 +190,7 @@ button.danger {
 .avatar.large {
   width: 124rpx;
   height: 124rpx;
-  border-radius: 36rpx;
+  border-radius: 50%;
   font-size: 48rpx;
 }
 .field {
@@ -208,7 +208,7 @@ button.danger {
 textarea {
   width: 100%;
   padding: 22rpx 24rpx;
-  background: #faf8fc;
+  background: #fcfaff;
   border: 1rpx solid var(--line);
   border-radius: 16rpx;
   min-height: 84rpx;
@@ -328,12 +328,12 @@ textarea {
 }
 
 /* Shared compact controls and resilient layout, including native button defaults. */
-page{--surface-tint:#faf8fc;--skeleton-fill:#ebe6ef;--success:#176b4a;--warning:#805600}
+page{--surface-tint:#fcfaff;--skeleton-fill:#e9def3;--success:#157b4c;--warning:#8b5b08}
 button{min-width:0;max-width:100%;word-break:break-word;transition:background-color .15s ease}
 button.primary{box-shadow:0 5rpx 14rpx rgba(99,50,119,.10)}
 button[disabled]{opacity:.55;box-shadow:none}
 .title,.section-title{word-break:break-word}
-.card{border-radius:24rpx;box-shadow:0 4rpx 20rpx rgba(63,33,78,.025)}
+.card{border-radius:30rpx;box-shadow:0 8rpx 20rpx rgba(110,43,131,.06)}
 .row,.between,.actions,.filter-row{min-width:0}
 .between>view,.between>text{min-width:0;overflow-wrap:anywhere}
 .actions>button{flex:1 1 0;width:0;min-width:0;max-width:100%;margin:0}
@@ -345,15 +345,15 @@ button[disabled]{opacity:.55;box-shadow:none}
 .empty{line-height:1.7}
 .error{border:1rpx solid #f1dce1;line-height:1.6;word-break:break-word}
 .hint{line-height:1.65;word-break:break-word}
-button:focus-visible,.input:focus-visible,textarea:focus-visible{outline:3rpx solid var(--focus,#8845a0);outline-offset:4rpx}
+button:focus-visible,.input:focus-visible,textarea:focus-visible{outline:3rpx solid var(--focus,#760b88);outline-offset:4rpx}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
 
 /* Lightweight selector triggers: value owns wrapping, chevron never shrinks. */
-.picker{box-sizing:border-box;width:100%;min-width:0;min-height:76rpx;padding:16rpx 20rpx;gap:12rpx;border:1rpx solid var(--control-border,#8d7b96);border-radius:12rpx;background:#fff;color:var(--brand-ink);font-size:26rpx;line-height:1.5;text-align:left;box-shadow:0 2rpx 4rpx rgba(49,27,65,.025)}
+.picker{box-sizing:border-box;width:100%;min-width:0;min-height:76rpx;padding:16rpx 20rpx;gap:12rpx;border:1rpx solid var(--control-border,#8d6a9e);border-radius:12rpx;background:#fff;color:var(--brand-ink);font-size:26rpx;line-height:1.5;text-align:left;box-shadow:0 2rpx 4rpx rgba(49,27,65,.025)}
 .picker-value{display:block;flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 .picker::after{content:"";display:block;box-sizing:border-box;width:12rpx;height:12rpx;flex:0 0 12rpx;border-right:2rpx solid #8b739b;border-bottom:2rpx solid #8b739b;transform:rotate(45deg);margin:0 2rpx 6rpx 6rpx}
 .picker-swatch{width:26rpx;height:26rpx;flex:0 0 26rpx;border:1rpx solid #cbbfd2;border-radius:50%;box-sizing:border-box}
-.filter-row .picker{background:#fff;border-color:var(--control-border,#8d7b96);min-height:76rpx;font-size:25rpx}
+.filter-row .picker{background:#fff;border-color:var(--control-border,#8d6a9e);min-height:76rpx;font-size:25rpx}
 
 /* Nested field selectors are not flex items: never collapse them to zero width. */
 .filter-row>.grow{flex:1 1 0;width:0;min-width:0}
@@ -375,8 +375,8 @@ input.input{height:88rpx;min-height:88rpx;padding:0 24rpx;line-height:42rpx}
 .metric .number{overflow-wrap:anywhere;word-break:break-word}
 
 /* Interactive field boundary only; decorative surfaces keep --line. */
-input.input{border-color:var(--control-border,#8d7b96)}
-textarea{border-color:var(--control-border,#8d7b96)}
+input.input{border-color:var(--control-border,#8d6a9e)}
+textarea{border-color:var(--control-border,#8d6a9e)}
 
 /* 无照片的球员统一姓名占位；不改变真图、队徽或头像盒子尺寸。 */
 .avatar.player-placeholder {
@@ -392,7 +392,7 @@ textarea{border-color:var(--control-border,#8d7b96)}
 @media(max-width:375px){.tag,.hint,.metric .label{font-size:12px}}
 
 /* 仅内容令牌设小屏下限；不更改原生输入、日历或画布工具。 */
-@media(max-width:375px){page{--type-page:19px;--type-section:16px;--type-card:15px;--type-body:14px;--type-field:13px;--type-meta:12px}}
+@media(max-width:375px){page{--type-page:23px;--type-section:16px;--type-card:15px;--type-body:14px;--type-field:13px;--type-meta:12px}}
 
 /* 仅主要动作设置小屏触控高度下限；普通紧凑工具不放大，宽屏沿用原 rpx。 */
 @media(max-width:392.857px){button.ui-button:not(.ui-compact)[size="mini"]{min-height:44px}}
@@ -400,7 +400,7 @@ textarea{border-color:var(--control-border,#8d7b96)}
 
 /* Shared button finish; page-specific sizing and selected states remain in place. */
 button{border:1rpx solid transparent;border-radius:18rpx;letter-spacing:.2rpx;transition:background-color .15s ease,opacity .15s ease,box-shadow .15s ease}
-button.ui-button{border-color:#e5d7eb;background:#f5eef8;color:var(--brand-ink)}
+button.ui-button{border-color:#dfcdee;background:#f4edfc;color:var(--brand-ink)}
 button.ui-button.primary{border-color:var(--brand);background:var(--brand);color:#fff;box-shadow:0 5rpx 14rpx rgba(99,50,119,.16)}
 button.ui-button.ghost{border-color:transparent;background:transparent;color:var(--brand-ink);box-shadow:none}
 button.ui-button.danger{border-color:#f0d5dc;background:var(--danger-soft);color:var(--danger);box-shadow:none}
@@ -409,8 +409,33 @@ button.button-hover{opacity:.72}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
 
 /* Native tactical and venue controls share the same visual finish. */
-button:not(.ui-button){border-color:#e5d7eb}
+button:not(.ui-button){border-color:#dfcdee}
 button.primary:not(.ui-button){border-color:var(--brand);background:var(--brand);color:#fff}
 button.ghost:not(.ui-button){border-color:transparent;background:transparent;color:var(--brand-ink)}
 button.danger:not(.ui-button){border-color:#f0d5dc;background:var(--danger-soft);color:var(--danger)}
 button[disabled]:not(.ui-button){border-color:transparent;opacity:.55;box-shadow:none}
+
+/* 柏林花园 FC · v3：集中管理品牌视觉；不改变表单、画布和业务状态。 */
+page{--brand-origin:#6a0068;--brand-deep:#4a075f;--sky:#aee2ff;--sky-soft:#eaf6ff;--club-gradient:linear-gradient(115deg,#a326c8 0%,#7a0b8c 58%,#61026f 100%);--radius-card:30rpx;--radius-control:22rpx;background:var(--canvas)}
+.card{border-color:#e5d7f3;background:linear-gradient(135deg,#fff 0%,#fff 78%,#fbf8ff)}
+button,button.ui-button{border-radius:var(--radius-control)}
+button.primary,button.ui-button.primary,button.primary:not(.ui-button){background:var(--club-gradient);border-color:#72037e;box-shadow:0 8rpx 18rpx rgba(124,22,133,.11)}
+.page button.ui-button[disabled],button.primary[disabled]{background:#e9e4ef;border-color:#e2d8eb;color:#766a80;box-shadow:none;opacity:1}
+.section-title{color:#30143e;border-left:6rpx solid var(--brand);padding-left:16rpx;line-height:1.45}
+.title{color:#3e174e}
+.input,textarea,.picker{border-radius:var(--radius-control);background:#fff}
+.tabs{background:#ede4fa;border:1rpx solid #e2d4f2;border-radius:22rpx;padding:8rpx}
+.tab{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:16rpx;white-space:normal}
+.tab.active{background:var(--club-gradient);color:#fff;box-shadow:0 4rpx 10rpx rgba(123,20,133,.15)}
+.metric{background:#faf6ff;border:1rpx solid var(--line);border-radius:24rpx}
+.metric .number{font-variant-numeric:tabular-nums;font-size:48rpx;line-height:1.35}
+.avatar{border:3rpx solid #fff;box-shadow:0 0 0 1rpx #e4d2ee}
+.fixed-actions{box-shadow:0 -8rpx 28rpx rgba(74,7,95,.05)}
+@media(max-width:375px){.picker,.filter-row .picker{min-height:44px}.title{line-height:1.4}}
+/* 管理和编辑页复用紧凑品牌标题，不替换原生导航或增加状态栏高度。 */
+.club-page-banner{position:relative;overflow:hidden;margin:-32rpx -28rpx 32rpx;padding:40rpx 40rpx 52rpx;background:linear-gradient(110deg,#4d095e,#7d298c);color:#fff;min-height:192rpx}
+.club-page-banner::after{content:"";position:absolute;right:-25%;bottom:-110rpx;width:95%;height:190rpx;border-radius:50%;transform:rotate(-13deg);background:linear-gradient(100deg,#b6ddff99,#ac7ee388);pointer-events:none}
+.club-eyebrow{position:relative;z-index:1;font-size:22rpx;font-weight:600;letter-spacing:3rpx;color:#c7e8ff}
+.club-banner-title{position:relative;z-index:1;font-size:44rpx;line-height:1.4;font-weight:700;color:#fff;margin:8rpx 0 10rpx;max-width:82%;overflow-wrap:anywhere}
+.club-banner-subtitle{position:relative;z-index:1;font-size:24rpx;color:#eddbf6;line-height:1.6;max-width:85%;overflow-wrap:anywhere}
+.club-banner-mark{position:absolute;right:24rpx;top:32rpx;width:152rpx;height:152rpx;opacity:.13;pointer-events:none}

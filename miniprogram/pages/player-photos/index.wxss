@@ -17,3 +17,12 @@
 @media(max-width:346px){.error{font-size:12px}}
 @media(max-width:333px){.photo-caption{font-size:var(--type-body)}}
 @media(max-width:321px){.section-title{font-size:var(--type-section)}}
+
+/* v3 照片卡：图片、来源、说明、操作逐层排列。 */
+.card { padding:28rpx; border-radius:30rpx; }
+.photo { height:420rpx; border-radius:24rpx; }
+.section-title { margin:36rpx 0 18rpx; padding-left:18rpx; border-left:6rpx solid var(--brand); }
+.card .between { padding:4rpx 0 12rpx; flex-wrap:wrap; }
+.photo-caption { flex-basis:50%; }
+.photo-actions-secondary { padding-top:16rpx; border-top:1px solid var(--line); }
+.generated-origin { color:var(--warning); background:var(--warning-soft); }

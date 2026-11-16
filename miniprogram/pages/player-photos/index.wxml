@@ -1,8 +1,7 @@
 <view class="page">
 <page-state id="page-state" skeleton-type="cards" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
 <block wx:if="{{!loading&&!error}}">
-<view class="title">{{playerName}}</view>
-<view class="hint">{{playerNumber}}</view>
+<view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">出场照片</view><view class="club-banner-subtitle">{{playerName}}{{playerNumber?' · '+playerNumber:''}}</view></view>
 <button wx:if="{{admin}}" id="open-player-ai" bindtap="openAi" disabled="{{busy||loading}}" class="ui-button ui-block" size="mini">出场照与头像生成</button>
 <view class="section-title">球员出场照片 · {{admin?photos.length+' / 9':photos.length+' 张'}}</view>
 <view class="hint">{{admin?'照片集与头像独立。仅上传已获授权的照片，每张最多 2 MB。':(photos.length?'点击照片查看大图。':'')}}</view>

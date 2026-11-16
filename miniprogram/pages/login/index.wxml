@@ -1,9 +1,7 @@
-<view class="page login"
-  ><view class="brand-mark">
+<view class="page login"><view class="login-art"><image class="login-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill" aria-hidden="true"/><view class="login-shade"></view><view class="brand-mark">
     <image wx:if="{{!badgeFailed}}" class="brand-image" src="/assets/team-badge.png" mode="aspectFit" binderror="badgeError" aria-label="柏林花园 FC 队徽" />
-    <text wx:else class="brand-fallback">队徽暂不可用</text>
-  </view><view class="title">欢迎归队</view
-  ><view class="subtitle">管理员与球员共用此入口，登录后显示对应功能</view
+    <text wx:else class="brand-fallback">柏林花园 FC</text>
+  </view><view class="login-eyebrow">BERLIN SECRET GARDEN</view><view class="title">欢迎归队</view><view class="login-team">柏林花园 FC</view></view
   ><view class="card login-card"
     ><view class="field"
       ><text class="field-label">账号</text
@@ -33,7 +31,7 @@
       disabled="{{busy}}"
       bindtap="submit"
      size="mini">登录</button></view
-  ><view class="hint">使用球队分配的账号。账号或密码问题请联系球队管理员。</view></view
+  ><view class="hint">管理员与球员共用此入口，登录后按账号权限显示功能。账号问题请联系球队管理员。</view></view
 >
 
 <view wx:if="{{wechatEnabled}}" class="page wechat-entry"><view class="card"><button class="primary ui-button ui-block" bindtap="wechatLogin" disabled="{{busy}}" size="mini">微信登录</button><button class="ui-button ui-block" bindtap="acceptInvite" disabled="{{busy}}" size="mini">接受球队邀请</button><view class="hint">仅限已获邀请并批准的球队成员，不开放注册。</view></view></view>

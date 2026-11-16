@@ -27,3 +27,8 @@
 .read-number { font-size:36rpx; font-weight:600; }
 .member button.ghost { color:var(--danger); }
 .footer { margin-top:var(--space-4); }
+
+.roster-card {border-radius:30rpx;}
+.member {padding:28rpx 30rpx;}
+.heading .title {font-size:32rpx;color:var(--brand-ink);}
+.read-number {font-size:44rpx;}

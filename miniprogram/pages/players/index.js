@@ -29,7 +29,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       this._filterOwner = owner;
       this.setData({status:"active",statusInitialized:false});
     }
-    return s.load(this, async () => {
+    return s.load(this, async (session) => {
       const players = (await s.api.request("/players")).map(s.playerView);
       const status = this.data.statusInitialized ? this.data.status : !players.some(p=>p.status==="active"&&p.membershipConfirmed!==false)&&players.some(p=>p.membershipConfirmed===false) ? "unconfirmed" : "active";
       const positions = [
@@ -47,6 +47,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           ? positions.indexOf(selectedPosition)
           : 0,
         players,
+        team: s.teamView(session.team),
+        activeCount: players.filter(p => p.membershipConfirmed !== false && p.status === "active").length,
+        inactiveCount: players.filter(p => p.membershipConfirmed !== false && p.status === "inactive").length,
+        unconfirmedCount: players.filter(p => p.membershipConfirmed === false).length,
         positions,
         visible: this.filter(
           players,

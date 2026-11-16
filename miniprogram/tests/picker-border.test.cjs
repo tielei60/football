@@ -13,5 +13,5 @@ test('picker trigger allows slot border to render without larger clipping radius
  assert.match(trigger,/padding:0;margin:0/);
  assert.match(trigger,/font-size:inherit/);
  const app=fs.readFileSync(path.join(root,'app.wxss'),'utf8');
- assert.match(app,/\.picker\{[^}]*border:1rpx solid var\(--control-border,#8d7b96\);border-radius:12rpx/);
+ assert.match(app,/\.picker\{[^}]*border:1rpx solid var\(--control-border,#8d6a9e\);border-radius:12rpx/);
 });

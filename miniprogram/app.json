@@ -35,14 +35,14 @@
   ],
   "window": {
     "navigationBarTitleText": "足球俱乐部",
-    "navigationBarBackgroundColor": "#F8F5FA",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#F8F5FA",
+    "navigationBarBackgroundColor": "#6A147B",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F5F3FF",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#827589",
-    "selectedColor": "#8845A0",
+    "color": "#82758F",
+    "selectedColor": "#760B88",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
@@ -54,7 +54,7 @@
       },
       {
         "pagePath": "pages/schedule/index",
-        "text": "赛程",
+        "text": "比赛",
         "iconPath": "assets/schedule.png",
         "selectedIconPath": "assets/schedule-active.png"
       },
@@ -66,7 +66,7 @@
       },
       {
         "pagePath": "pages/statistics/index",
-        "text": "统计",
+        "text": "数据",
         "iconPath": "assets/statistics.png",
         "selectedIconPath": "assets/statistics-active.png"
       },

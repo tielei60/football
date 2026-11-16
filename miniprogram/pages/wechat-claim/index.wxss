@@ -18,3 +18,9 @@
 .claim-status.is-waiting { border-color:var(--warning); }
 .claim-status.is-approved { border-color:var(--success); }
 .error { font-size:var(--type-field); overflow-wrap:anywhere; }
+
+/* v3：凭证输入与申请结果分卡，核验编号独立可读。 */
+.card { padding:32rpx; border-radius:30rpx; }
+.confirmation { font-size:48rpx; line-height:1.5; text-align:center; padding:28rpx 20rpx; border:1px solid var(--line); border-radius:24rpx; }
+.claim-status { font-size:32rpx; margin-bottom:20rpx; }
+.card .hint { margin:20rpx 0; }

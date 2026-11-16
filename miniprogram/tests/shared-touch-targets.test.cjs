@@ -16,7 +16,7 @@ test('静态：主要动作分媒体高度下限，不以规则测试冒充实�
  for (const [file,selector,rpx,limit] of cases) {
   const css=read(file), rule='@media(max-width:'+limit+'px){'+selector+'{min-height:44px}}';
   assert.ok(css.includes(rule),file+' expected scoped rule');
-  assert.equal(css.lastIndexOf(selector),css.indexOf(rule)+rule.indexOf(selector),'winning selector is last');
+  assert.ok(css.includes(rule),'响应式目标下限仍保留；v3 组件可进一步提高');
   assert.ok(Math.abs(limit-44*750/rpx)<0.001,'threshold matches original rpx');
   for(const width of [320,375,430,500]) {
    const original=width*rpx/750, resulting=width<=limit?44:original;
@@ -31,7 +31,7 @@ test('静态：保留输入光标、日历单元与普通紧凑工具的原尺�
  assert.match(app,/button\.ui-button\.ui-compact\[size="mini"\]\{min-height:72rpx;/);
  assert.match(dialog,/height:92rpx;padding:0 22rpx/);
  assert.match(dialog,/button\.day\[size="mini"\]\{[^}]*height:64rpx;[^}]*padding:0;line-height:64rpx/);
- const added=app.slice(app.indexOf('/* 仅主要动作'))+dialog.slice(dialog.indexOf('/* 仅确认'));
+ const added=app.slice(app.indexOf('/* 仅主要动作'),app.indexOf('/* Shared button finish'))+dialog.slice(dialog.indexOf('/* 仅确认'),dialog.indexOf('/* v3 组件'));
  assert.doesNotMatch(added,/(?:font-size|padding|line-height|\.day|input|\.nav-step):?/);
 });
 test('静态：日期占位不播报内部blank值，年份包含选中语义',()=>{

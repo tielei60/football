@@ -4,33 +4,9 @@
     error="{{error}}"
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error}}"
-    ><view class="hero"
-      ><view class="row"
-        ><view class="avatar large"
-          ><image
-            wx:if="{{team.crest}}"
-            src="{{team.crest}}"
-            data-target="team"
-            binderror="imageError"
-            mode="aspectFit"
-          /><text wx:else>足</text></view
-        ><view class="grow"
-          ><view class="subtitle">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view
-          ><view class="title break">{{team.name}}</view></view
-        ></view
-      ><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view><view class="hero-metrics"
-        ><view
-          ><text class="hero-number">{{playerCount}}</text
-          ><text>位在队队员</text></view
-        ><view
-          ><text class="hero-number">{{stats.team.matches}}</text
-          ><text>本年完赛</text></view
-        ><view
-          ><text class="hero-number">{{stats.team.wins}}</text
-          ><text>胜场</text></view
-        ></view
-      ></view
-    ><view class="section"
+    ><view class="hero club-home-hero"><image class="hero-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="hero-shade"/><view class="hero-content"><view class="hero-brand"><image wx:if="{{team.crest}}" src="{{team.crest}}" data-target="team" binderror="imageError" mode="aspectFit"/><text wx:else class="hero-badge-fallback">足</text><text>{{team.name}}</text></view><view class="hero-tagline">足球 · 伙伴 · 花园</view><view class="hero-headline">一起踢球，<text>
+</text>更好的我们。</view><view class="hero-caption">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view></view></view><view class="hero-metrics"><view><text class="hero-number">{{playerCount}}</text><text>位在队队员</text></view><view><text class="hero-number">{{stats.team.matches}}</text><text>本年完赛</text></view><view><text class="hero-number">{{stats.team.wins}}</text><text>胜场</text></view></view><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view>
+<view class="section"
       ><view class="between"
         ><view class="section-title">下一场，一起踢</view
         ><button class="ui-button home-schedule-link" size="mini" bindtap="schedule">全部赛程 ›</button></view
@@ -44,16 +20,16 @@
           ><text class="muted"
             >{{next.format ? next.format + '人制' : '赛制待定'}}</text
           ></view
-        ><view class="match-title">对阵 {{next.opponent}}</view
+        ><view class="fixture-teams"><view class="fixture-team"><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="fixture-symbol">足</text><text>{{team.name}}</text></view><view class="fixture-versus">VS<text>{{next.side==='home'?'主场':next.side==='away'?'客场':next.side==='neutral'?'中立场':'主客场待定'}}</text></view><view class="fixture-team"><view class="fixture-symbol opponent" aria-hidden="true"><view class="opponent-ball"/></view><text class="match-title">{{next.opponent}}</text></view></view
         ><view class="match-time">{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
         ><view class="muted match-place">{{next.location || '地点待定'}}</view
-        ><view class="divider"></view
+        ><view class="fixture-cta">查看比赛 · 去报名 ›</view><view class="divider"></view
         ><view class="between signup-summary"
           ><view class="signup-counts"><text class="signup-count-yes">参加 {{next.signupCountLabel}}</text><text class="signup-count-maybe">{{next.maybeCount}} 人待定</text><text class="signup-count-no">{{next.noCount}} 人请假</text></view
           ><text class="tag">{{next.responseLabel}}</text></view
         ></view
       ><view wx:else class="card empty">还没有即将开始的比赛</view></view
-    ><view class="section"
+    ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
       ><view class="section-title">最近赛果</view
       ><view aria-role="button"
         wx:for="{{recent}}"

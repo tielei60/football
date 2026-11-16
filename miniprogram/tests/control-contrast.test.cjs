@@ -8,16 +8,16 @@ test('shared interactive border and focus tokens exceed 3:1 on existing light su
  for(const name of ['control-border','focus'])for(const bg of [token('surface'),token('canvas'),token('brand-soft'),'#faf8fc','#faf7fc','#f7f4f9','#f5f2f7'])assert.ok(ratio(token(name),bg)>=3,`${name} on ${bg}`);
 });
 test('field and isolated component boundaries reference control tokens while decoration stays light',()=>{
- assert.equal(token('line'),'#eae5ef');
- assert.match(app,/input\.input\{border-color:var\(--control-border,#8d7b96\)\}/);
- assert.match(app,/textarea\{border-color:var\(--control-border,#8d7b96\)\}/);
- assert.match(app,/\.filter-row \.picker\{[^}]*border-color:var\(--control-border,#8d7b96\)/);
+ assert.equal(token('line'),'#e8def5');
+ assert.match(app,/input\.input\{border-color:var\(--control-border,#8d6a9e\)\}/);
+ assert.match(app,/textarea\{border-color:var\(--control-border,#8d6a9e\)\}/);
+ assert.match(app,/\.filter-row \.picker\{[^}]*border-color:var\(--control-border,#8d6a9e\)/);
  const dialog=read('components/business-dialog/index.wxss');
- assert.match(dialog,/\.dialog-input\{[^}]*border:2rpx solid var\(--control-border,#8d7b96\)/);
- assert.match(dialog,/\.selection-mark\{[^}]*border:2rpx solid var\(--control-border,#8d7b96\)/);
- for(const name of ['business-picker','business-dialog','page-state'])assert.match(read('components/'+name+'/index.wxss'),/outline:3rpx solid var\(--focus,#8845a0\)/);
- assert.match(dialog,/\.dialog-input:focus-visible\{outline:3rpx solid var\(--focus,#8845a0\)/);
- assert.match(dialog,/\.selector-dialog \.buttons\{[^}]*border-top:1rpx solid var\(--line,#eae5ef\)/);
+ assert.match(dialog,/\.dialog-input\{[^}]*border:2rpx solid var\(--control-border,#8d6a9e\)/);
+ assert.match(dialog,/\.selection-mark\{[^}]*border:2rpx solid var\(--control-border,#8d6a9e\)/);
+ for(const name of ['business-picker','business-dialog','page-state'])assert.match(read('components/'+name+'/index.wxss'),/outline:3rpx solid var\(--focus,#760b88\)/);
+ assert.match(dialog,/\.dialog-input:focus-visible\{outline:3rpx solid var\(--focus,#760b88\)/);
+ assert.match(dialog,/\.selector-dialog \.buttons\{[^}]*border-top:1rpx solid var\(--line,#e8def5\)/);
 });
 test('contrast-only changes retain native input geometry and existing compact control sizes',()=>{
  assert.match(app,/input\.input\{height:88rpx;min-height:88rpx;padding:0 24rpx;line-height:42rpx\}/);

@@ -1,5 +1,5 @@
 <view class="page">
- <view class="title">{{editing?'编辑球场':'添加球场'}}</view>
+ <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">{{editing?'编辑球场':'添加球场'}}</view><view class="club-banner-subtitle">保存常用地点，比赛安排直接选择</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
  <page-state id="page-state" skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
  <block wx:if="{{!loading && !error}}">
   <view class="card section">
@@ -14,7 +14,7 @@
      <view class="location-actions"><button id="venue-open" size="mini" disabled="{{loading}}" class="location-open" bindtap="open">查看位置</button><button id="venue-clear" size="mini" class="location-clear" bindtap="clear" disabled="{{loading || (busy)}}">移除坐标</button></view>
     </block>
    </view>
-   <view class="between venue-status"><text>比赛安排中可选</text><switch checked="{{form.status==='active'}}" color="#8845A0" bindchange="status" disabled="{{busy}}"/></view>
+   <view class="between venue-status"><text>比赛安排中可选</text><switch checked="{{form.status==='active'}}" color="#760B88" bindchange="status" disabled="{{busy}}"/></view>
   </view>
   <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
   <view wx:if="{{uncertain}}" class="uncertain-actions"><button disabled="{{loading}}" bindtap="checkList">返回球场列表核对</button><button disabled="{{loading}}" class="ghost" bindtap="confirmAbsent">已核对，确认未创建</button></view>

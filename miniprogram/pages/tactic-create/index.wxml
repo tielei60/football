@@ -1,5 +1,5 @@
 <view class="page">
-  <view class="title">新建战术</view>
+  <view class="tactical-header"><view class="tactical-eyebrow">战术工作台</view><view class="title">新建战术</view><view class="tactical-subtitle">设置人数与初始阵型，创建后继续编辑</view></view>
   <page-state id="page-state" skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
   <view wx:if="{{!loading&&!error&&admin}}" class="card section">
     <view class="field"><view class="field-label">战术名称</view><input class="input" value="{{title}}" maxlength="300" placeholder="例如：前场压迫" bindinput="input" disabled="{{busy||pending}}"/></view>

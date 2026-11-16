@@ -1,8 +1,7 @@
 <view class="page">
   <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
   <block wx:if="{{!loading&&!error&&admin}}">
-    <view class="title">{{playerName}}</view>
-    <view class="subtitle">AI 头像与出场照</view>
+    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">头像与出场照生成</view><view class="club-banner-subtitle">{{playerName}}</view></view>
     <view class="ai-intro">先选用途与素材，生成后预览，确认采用才会更新球员资料。</view>
     <view wx:if="{{!enabled}}" class="card ai-disabled">
 <view class="section-title">生成服务尚未启用</view>

@@ -20,3 +20,11 @@
 .account-actions { flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-3); }
 .account-actions button.ui-button[size="mini"] { flex-basis:200rpx; font-size:var(--type-field); white-space:normal; }
 .account-actions button.account-danger:not([disabled]) { color:var(--danger); background:var(--danger-soft); }
+
+/* v3：创建入口和现有账号清单分离，权限与启停保留文字标识。 */
+.card { padding:32rpx; border-radius:30rpx; }
+.accounts-heading { margin:40rpx 0 20rpx; padding-left:18rpx; border-left:6rpx solid var(--brand); }
+.account-name { font-size:32rpx; color:var(--ink); }
+.account-state { display:inline-block; padding:4rpx 12rpx; border-radius:10rpx; background:var(--canvas); }
+.account-state.is-enabled { background:var(--success-soft); }
+.account-actions { padding-top:22rpx; border-top:1px solid var(--line); }

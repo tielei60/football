@@ -4,11 +4,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const baseline = require('./ui-depth-baseline.json');
+const baseline = require('./ui-v3-core-contract.json');
 const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
-test('十个业务页及四公共组件保留全部模板、文本、条件、事件和业务代码',()=>{
+test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
   for (const [p,sha] of Object.entries(baseline.immutable))
     assert.equal(crypto.createHash('sha256').update(read(p)).digest('hex'),sha,p);
+  for (const [p,attrs] of Object.entries(baseline.bindings))
+    for(const attr of attrs) assert.ok(read(p).includes(attr),`${p}: ${attr}`);
 });
 function luminance(hex) {
   const c=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
@@ -36,24 +38,15 @@ test('首页主题、下场时间与赛程对阵、排名、个人身份分别�
   assert.match(read('components/business-picker/index.wxss'),/overflow:visible/);
   assert.match(read('components/business-dialog/index.wxss'),/height:64rpx;min-height:64rpx;max-height:64rpx/);
 });
-test('十页保留非文字布局；仅三项明确视觉色及副标题间距变化',()=>{
-  for(const [page,expected]of Object.entries(baseline.geometry)){
-    const result=[];
-    for(const [,selector,body] of read(`pages/${page}/index.wxss`).replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/([^{}]+)\{([^{}]*)\}/g)){
-      const props={};
-      for(const [,k,v]of body.matchAll(/([\w-]+)\s*:\s*([^;]+)/g))if(!['font-size','font-weight','line-height','color','letter-spacing'].includes(k))props[k]=v.trim();
-      if(Object.keys(props).length)result.push([selector.trim().replace(/\s+/g,' '),props]);
-    }
-    const allowed=structuredClone(expected);
-    if(page==='match-media')allowed.find(([s])=>s==='.photo')[1].background='var(--canvas)';
-    if(page==='player-ai'){
-      const warning=allowed.find(([s])=>s==='.ai-warning')[1];
-      warning.background='var(--warning-soft)';
-      allowed.find(([s])=>s==='.ai-adopted')[1]['border-left']='6rpx solid var(--success)';
-      allowed.push(['.subtitle',{'margin-top':'8rpx'}]);
-    }
-    assert.deepEqual(result,allowed,page);
+test('V3 核心视觉结构存在，数据仍绑定接口结果而非设计示例',()=>{
+  for(const [page,selector] of Object.entries({home:'club-home-hero',schedule:'fixture-focus',players:'squad-counts',statistics:'record-card',me:'membership-hero','match-detail':'match-brand-hero','player-detail':'profile-sheet'})) {
+    assert.ok(read(`pages/${page}/index.wxml`).includes(selector),page);
+    assert.doesNotMatch(read(`pages/${page}/index.wxml`),/林远|周泽|绿茵联队|11月22日/);
   }
+  assert.match(read('pages/players/index.js'),/activeCount: players\.filter\(p => p\.membershipConfirmed !== false && p\.status === "active"\)/);
+  assert.match(read('pages/players/index.js'),/unconfirmedCount: players\.filter\(p => p\.membershipConfirmed === false\)/);
+  assert.match(read('pages/me/index.wxml'),/player && player\.number!==null && player\.number!==undefined/);
+  assert.match(read('pages/statistics/index.wxml'),/stats\.team\.matches - stats\.team\.scoredMatches/);
 });
 test('合并CSS在320/375/430保持对手主色与标题层级；非微信实测',async t=>{
   let chromium;
@@ -65,8 +58,8 @@ test('合并CSS在320/375/430保持对手主色与标题层级；非微信实测
     const css=(read('app.wxss')+'\n'+read('pages/schedule/index.wxss')).replace(/([\d.]+)rpx/g,(_,n)=>Number(n)*width/750+'px').replace(/(^|[{}])\s*page\s*\{/g,'$1 body{');
     await page.setContent('<style>body{margin:0}'+css+'</style><div class="page"><div class="between"><div><div class="title">球队赛程</div><div class="subtitle">匿名长标题与状态测试</div></div></div><div class="section-title">某月赛程</div><div class="card"><div class="section-title break match-name">匿名测试对手长名称 Anonymous Football Club</div><div class="muted match-time">周六 19:30</div><div class="muted">匿名球场</div></div></div>');
     const result=await page.evaluate(()=>{const style=s=>getComputedStyle(document.querySelector(s));const r=document.querySelector('.match-name').getBoundingClientRect();return{title:parseFloat(style('.title').fontSize),meta:parseFloat(style('.subtitle').fontSize),name:style('.match-name').color,month:style('.page>.section-title').color,time:parseFloat(style('.match-time').fontSize),left:r.left,right:r.right,overflow:document.documentElement.scrollWidth>innerWidth};});
-    assert.equal(result.name,'rgb(41, 36, 49)');
-    assert.equal(result.month,'rgb(109, 99, 117)');
+    assert.equal(result.name,'rgb(36, 24, 47)');
+    assert.equal(result.month,'rgb(97, 4, 111)');
     assert.ok(result.title>result.meta&&result.title>=18);
     assert.ok(result.time>=14);
     assert.ok(result.left>=0&&result.right<=width&&!result.overflow);

@@ -836,3 +836,22 @@ test('报名人数显示上限，编辑时支持留空及有效人数', async ()
   f.page.data.seasons = [{ id: null }]; f.page.data.form.opponent = '对手'; f.page.data.form.date = '2026-11-15'; f.page.data.form.maxParticipants = '10';
   await f.page.save(); assert.equal(sent.maxParticipants, 10);
 });
+
+test('V3 首页四个快捷入口仅导航到既有页面，拒绝未知入口和失效页面', () => {
+  const {page,events}=setup('home');
+  page.data.loading=false;
+  for(const name of ['schedule','players','statistics','tactics']) page.shortcut({currentTarget:{dataset:{page:name}}});
+  assert.deepEqual(events.map(e=>[e[0],e[1].url]),[['switchTab','/pages/schedule/index'],['switchTab','/pages/players/index'],['switchTab','/pages/statistics/index'],['navigateTo','/pages/tactics/index']]);
+  page.shortcut({currentTarget:{dataset:{page:'system-accounts'}}});
+  page._hidden=true;page.shortcut({currentTarget:{dataset:{page:'players'}}});
+  assert.equal(events.length,4);
+});
+test('V3 我的快捷入口仅绑定本人可进入照片，未绑定和失效页面不导航',()=>{
+  const {page,events}=setup('me');
+  Object.assign(page.data,{loading:false,session,player:null});
+  page.photos();assert.equal(events.length,0);
+  page.data.player={id:'other'};page.photos();assert.equal(events.length,0);
+  page.data.player={id:'p1'};page.photos();page.matches();
+  assert.deepEqual(events.map(e=>[e[0],e[1].url]),[['navigateTo','/pages/player-photos/index?id=p1'],['switchTab','/pages/schedule/index']]);
+  page._hidden=true;page.photos();page.matches();assert.equal(events.length,2);
+});

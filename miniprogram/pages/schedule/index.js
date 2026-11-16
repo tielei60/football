@@ -30,6 +30,7 @@ Page({
       const tab = !admin && this.data.tab === "draft" ? "upcoming" : this.data.tab;
       return {
         matches,
+        team: s.teamView(session.team),
         admin,
         tab,
         visible: this.filter(matches, tab),
@@ -52,6 +53,8 @@ Page({
       )
       .map((m, i, rows) => ({
         ...m,
+        dayLabel: m.date.slice(8, 10),
+        weekdayLabel: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][new Date(m.date + "T12:00:00").getDay()] || "",
         monthHeading:
           i === 0 || m.date.slice(0, 7) !== rows[i - 1].date.slice(0, 7)
             ? m.date.slice(0, 7).replace("-", "年") + "月"

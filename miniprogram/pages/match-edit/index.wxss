@@ -1,25 +1,14 @@
-
-/* Page-specific density, hierarchy and long-content safeguards. */
-.field-label{font-size:24rpx;line-height:1.5;margin-bottom:10rpx}.filter-row{align-items:flex-start;gap:16rpx}.filter-row>.grow{min-width:0}.card .picker{white-space:normal;line-height:1.45;overflow-wrap:anywhere}.card textarea{min-height:180rpx;line-height:1.65}.title{font-size:34rpx}.subtitle{line-height:1.6}.actions{gap:14rpx}.page button.small.ghost{font-size:24rpx}
-
-/* 比赛文字层级：标签与说明，不覆盖控件文字或原生输入几何。 */
-.title{font-size:34rpx;font-weight:650}
-.field-label{font-size:26rpx;font-weight:500;color:var(--ink)}
-.section-title{font-size:28rpx;font-weight:600}
-.subtitle,.hint{font-size:25rpx;line-height:1.6;color:var(--muted)}
-.error{font-size:26rpx;font-weight:500}
-@media(max-width:360px){.subtitle,.hint{font-size:12px}}
-@media(max-width:346px){.field-label,.error{font-size:12px}}
-@media(max-width:321px){.section-title{font-size:12px}}
-
-.capacity-hint{margin-top:8rpx;color:var(--muted);font-size:24rpx;line-height:1.5}
-
-/* 比赛编辑：时间与比分分组清楚，字段标签低于填写内容。 */
-.title { font-size:var(--type-page); line-height:1.35; }
-.section-title { font-size:var(--type-section); line-height:1.4; margin-bottom:var(--space-2); }
-.field-label { font-size:var(--type-field); color:var(--muted); font-weight:400; margin-bottom:var(--space-1); }
-.subtitle,.hint,.capacity-hint { font-size:var(--type-meta); line-height:1.6; }
-.filter-row { gap:var(--space-2); margin-bottom:var(--space-3); }
+/* UI v3：管理页共享视觉由 app.wxss 令牌与品牌横幅提供。 */
+.admin-header { gap:16rpx; flex-wrap:wrap; margin:24rpx 0; }
+.field-label { font-size:26rpx; font-weight:500; color:var(--muted); margin-bottom:12rpx; }
+.hint,.subtitle { font-size:24rpx; line-height:1.65; color:var(--muted); }
+.section-title { font-size:32rpx; font-weight:650; line-height:1.4; }
+.card { padding:34rpx; }
+.error { overflow-wrap:anywhere; }
+ .filter-row { align-items:flex-start; gap:24rpx; margin-bottom:32rpx; }
 .filter-row>.grow { flex:1; min-width:0; }
-.error { line-height:1.6; overflow-wrap:anywhere; }
+.card .picker { white-space:normal; overflow-wrap:anywhere; }
+.card .section-title { margin-bottom:28rpx; }
+.card textarea { min-height:200rpx; }
+.capacity-hint { margin-top:12rpx; font-size:24rpx; color:var(--muted); line-height:1.6; }
 @media(max-width:340px) { .filter-row { flex-wrap:wrap; } .filter-row>.grow { flex-basis:240rpx; } }
