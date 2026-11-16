@@ -20,7 +20,7 @@
           ><view class="signup-counts"><text class="signup-count-yes">参加 {{next.signupCountLabel}}</text><text class="signup-count-maybe">待定 {{next.maybeCount}}</text><text class="signup-count-no">请假 {{next.noCount}}</text></view
           ><text class="tag">我：{{next.responseLabel}}</text></view
         ></view
-      ><view wx:else class="card empty">还没有即将开始的比赛</view></view
+      ><view wx:else class="card home-no-next"><view class="home-no-next-title">下一场，还在安排。</view><view class="home-no-next-description">比赛发布后，会显示在这里。</view><button class="ui-button home-records-link" size="mini" bindtap="schedule">查看比赛记录 <text aria-hidden="true">›</text></button></view></view
     ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
       ><view class="between"><view class="section-title">最近赛果</view><button class="ui-button home-schedule-link" size="mini" bindtap="schedule">全部赛程 ›</button></view
       ><scroll-view wx:if="{{recent.length}}" class="result-strip" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}"><view class="result-tickets"><view aria-role="button" wx:for="{{recent}}" wx:key="id" class="result-ticket" data-id="{{item.id}}" bindtap="openMatch" hover-class="club-card-pressed"><view class="result-ticket-heading"><text class="result-outcome {{item.resultTone}}">{{item.resultLabel}}</text><text class="result-date">{{item.dateLabel}}</text></view><text class="result-score">{{item.scoreLabel}}</text><text class="result-opponent">{{item.opponent}}</text></view></view></scroll-view

@@ -40,7 +40,7 @@ test('首页下一场卡内标题及赛果标题行保留原真实字段和入�
  assert.match(w, /class="fixture-heading"><text class="fixture-heading-title"><text class="fixture-heading-label">下一场比赛/);
  assert.match(w, /class="fixture-heading-meta"[\s\S]*next.competition[\s\S]*next.format/);
  assert.match(w, /class="result-ticket-heading"><text class="result-outcome {{item.resultTone}}">{{item.resultLabel}}<\/text><text class="result-date">{{item.dateLabel}}/);
- assert.equal((w.match(/bindtap="schedule"/g)||[]).length, 1);
+ assert.equal((w.match(/bindtap="schedule"/g)||[]).length, 2);
  assert.match(w, /{{item.scoreLabel}}/); assert.match(w, /{{item.opponent}}/);
  assert.equal((w.match(/bindtap="openMatch"/g)||[]).length, 2);
 });

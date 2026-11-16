@@ -7,7 +7,7 @@ test('下一场保留真实字段、整卡入口和未知状态，图标仅作�
  for(const key of ['next.id','next.competition','next.format','team.crest','team.name','next.side','next.opponent','next.dateLabel','next.kickoff','next.location','next.signupCountLabel','next.maybeCount','next.noCount','next.responseLabel'])assert.ok(w.includes(key),key);
  for(const text of ['主客场待定','地点待定','时间待定','赛制待定'])assert.ok(w.includes(text));
  assert.equal((w.match(/bindtap="openMatch"/g)||[]).length,2);
- assert.equal((w.match(/bindtap="schedule"/g)||[]).length,1);
+ assert.equal((w.match(/bindtap="schedule"/g)||[]).length,2);
  for(const icon of ['calendar','pin','people'])assert.match(w,new RegExp('ui-v3-'+icon+'\\.png" mode="aspectFit" aria-hidden="true"'));
  assert.match(css,/\.page\{padding-top:28rpx\}/);
  assert.match(css,/\.fixture-info text\{[^}]*overflow-wrap:anywhere/);
@@ -16,7 +16,7 @@ test('下一场三宽真实长文本不截断、不溢出，CTA不低于44px',as
  const {chromium}=require('../../app/node_modules/playwright');
  const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
  try{for(const width of [320,375,430]){
- let html=w.slice(w.indexOf('<view class="section next-section">'),w.indexOf('<view wx:else class="card empty">'));
+ let html=w.slice(w.indexOf('<view class="section next-section">'),w.indexOf('<view wx:else class="card home-no-next">'));
  html=html.replace(/{{([^}]+)}}/g,(_,k)=>k.includes('location')?'真实球场详细地址城市区域体育中心内柔道训练馆西侧及长道路门牌信息'.repeat(3):k.includes('name')||k.includes('opponent')?'很长的足球俱乐部球队全称':k.includes('competition')?'周中朋友联赛特别场次':k.includes('side')?'主客场待定':k.includes('dateLabel')?'11月18日 周三':k.includes('kickoff')?'20:00':k.includes('responseLabel')?'未回应':'9');
  html=html.replace(/<view\b([^>]*?)\/\s*>/g,'<view$1></view>');
  html=html.replace(/<image\b[^>]*\/>/g,'<img alt=""/>').replace(/<view\b/g,'<div').replace(/<\/view\s*>/g,'</div>').replace(/<text\b/g,'<span').replace(/<\/text\s*>/g,'</span>');
