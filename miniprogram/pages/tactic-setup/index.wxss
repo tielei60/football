@@ -45,7 +45,7 @@
 .type-expanded .preview-section-heading .preview-toggle{background:transparent;color:var(--brand-ink);border-color:var(--control-border)}
 .preview-focus .preview-section-label{display:none}
 
-/* UI v3：不改变球场尺寸、触点或专注模式布局。 */
+/* UI v3：保留原 JS 坐标算法；工具区布局已变化，实际画布空间与触点须原生复验。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }
 .type-expanded .card { border-radius: 28rpx; }

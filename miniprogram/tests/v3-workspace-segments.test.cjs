@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('22 工作区仅替换原选择器，薄入口与其他下拉/保存事件明确保留',()=>{
  const w=read('pages/tactic-compose/index.wxml'),js=read('pages/tactic-compose/index.js'),contract=require('./tactic-workspace-contract.cjs');
- assert.ok(w.includes(contract.segmented));assert.ok(js.includes(contract.adapter));assert.doesNotMatch(w,/<business-picker title="编辑内容"/);
+ assert.ok(w.includes(contract.segmented));assert.match(w, /wx:for="{{tabs}}" wx:key="\*this"/);assert.ok(js.includes(contract.adapter));assert.doesNotMatch(w,/<business-picker title="编辑内容"/);
  for(const id of ['stage-picker','stage-duration','compose-tool','curve-piece','piece-target','piece-picker','piece-position'])assert.ok(new RegExp('<business-picker[^>]*id="'+id+'"').test(w),id);
  assert.match(w,/id="compose-save"[^>]*bindtap="save"/);assert.match(w,/id="compose-undo"[^>]*bindtap="undo"/);
 });
