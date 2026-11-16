@@ -31,6 +31,20 @@
 .type-expanded .formation-impact{font-size:var(--type-field,26rpx);font-weight:500;color:var(--warning,#805600);line-height:1.65}
 @media(max-width:346px){.type-expanded .card label,.type-expanded .formation-impact{font-size:12px}}
 
+/* V3 信息与阵容分组；不改变初始画布尺寸和动态渲染代码。 */
+.type-expanded .metadata-card,.type-expanded .formation-card{padding:28rpx;background:var(--surface)}
+.type-expanded .metadata-card>.section-title{margin-bottom:24rpx}
+.type-expanded .favorite-row label{display:flex;align-items:center;justify-content:space-between;width:100%;margin:16rpx 0}
+.type-expanded .formation-card>button{min-height:44px;box-sizing:border-box}
+.type-expanded .metadata-card>button{display:block;width:100%;min-height:44px;margin:20rpx 0 0}
+.type-expanded .formation-selectors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:20rpx}
+.type-expanded .formation-field{min-width:0}.type-expanded .formation-field business-picker,.type-expanded .formation-card>business-picker{display:block;width:100%}
+.type-expanded .editor-field-label{display:block;font-size:var(--type-field);color:var(--muted);font-weight:600;line-height:1.5;margin:20rpx 0 12rpx}
+.type-expanded .formation-card .roster{padding:0;border:0;border-radius:0}
+.type-expanded .preview-section-heading{margin-top:32rpx}.type-expanded .preview-section-label{display:block;margin-bottom:16rpx}
+.type-expanded .preview-section-heading .preview-toggle{background:transparent;color:var(--brand-ink);border-color:var(--control-border)}
+.preview-focus .preview-section-label{display:none}
+
 /* UI v3：不改变球场尺寸、触点或专注模式布局。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

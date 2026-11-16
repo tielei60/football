@@ -42,3 +42,5 @@
 .capability-title { font-size:var(--type-page); font-weight:700; line-height:1.4; color:var(--ink); overflow-wrap:anywhere; }
 .capability-caption { margin:24rpx auto 0; max-width:540rpx; font-size:var(--type-body); line-height:1.7; color:var(--muted); overflow-wrap:anywhere; }
  .capability-spark { font-size:64rpx; line-height:1; }
+
+.ai-stage-heading{display:flex;align-items:center;gap:16rpx;border-left:0;padding-left:0}.ai-stage-number{display:inline-flex;align-items:center;justify-content:center;flex:none;width:52rpx;height:52rpx;border-radius:16rpx;background:var(--brand-soft);color:var(--brand);font-size:var(--type-field);font-variant-numeric:tabular-nums}.ai-pending{border-color:#f0d59e}.ai-pending-title{font-size:var(--type-section);font-weight:600;color:var(--warning);margin-bottom:16rpx}

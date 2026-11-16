@@ -1,7 +1,7 @@
 <view class="page">
   <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
   <block wx:if="{{!loading&&!error&&admin}}">
-    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">头像与出场照生成</view><view class="club-banner-subtitle">{{playerName}}</view></view>
+    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">头像与出场照生成</view><view class="club-banner-subtitle">{{playerName}}</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
 
     <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-spark" aria-hidden="true">✦</view><view class="capability-title">生成服务尚未启用</view><view class="capability-caption">照片生成功能暂不可用。原有头像与照片不受影响。</view></view>
     <block wx:else>
@@ -9,7 +9,7 @@
       <view wx:if="{{mode==='local-simulation'}}" class="ai-warning">本地模拟，不是真实 AI 生成。仅使用内置几何样本，不上传个人照片。</view>
       <view wx:if="{{disclosureText}}" class="card muted ai-disclosure">{{disclosureText}}</view>
       <view class="card">
-        <view class="section-title">1 · 用途与素材</view>
+        <view class="section-title ai-stage-heading"><text class="ai-stage-number">1</text>用途与素材</view>
         <view class="ai-help">{{purposeIndex===0?'头像用于列表与个人资料，不会更换出场封面。':'出场封面会新增一张照片并设为封面，原有照片不会删除。'}}</view>
         <text class="field-label">用途</text>
         <business-picker title="照片用途" range="{{purposes}}" value="{{purposeIndex}}" data-field="purposeIndex" bindchange="select" bind:pickeropen="openBusinessPicker" disabled="{{busy||pending||sourceReady||setupLocked}}">
@@ -36,12 +36,12 @@
 <image wx:if="{{preview}}" src="{{preview}}" mode="aspectFit" class="ai-picture"/>
 <button id="ai-choose" class="ui-button ui-block" size="mini" bindtap="choose" disabled="{{busy||pending||sourceReady}}">选择原图</button>
 </block>
-        <button id="ai-prepare" class="primary ui-button ui-block" size="mini" bindtap="prepare" disabled="{{busy||pending||sourceReady||!styles.length||(uploadMode==='sample'&&!samples.length)||(uploadMode==='file'&&!hasSelectedImage)}}">{{sourceReady?'素材已准备':uploadMode==='sample'?'准备模拟样本':'上传私有原图'}}</button>
+        <button id="ai-prepare" class="ui-button ui-block" size="mini" bindtap="prepare" disabled="{{busy||pending||sourceReady||!styles.length||(uploadMode==='sample'&&!samples.length)||(uploadMode==='file'&&!hasSelectedImage)}}">{{sourceReady?'素材已准备':uploadMode==='sample'?'准备模拟样本':'上传私有原图'}}</button>
         <view wx:if="{{!sourceReady&&!pending}}" class="ai-help">{{uploadMode==='sample'?'准备内置几何样本后，才能生成模拟候选。':'选择已获授权的原图后，再确认上传。'}}</view>
         <view wx:if="{{sourceReady}}" class="ai-complete">已准备：{{purposes[purposeIndex]}} · {{preparedStyleLabel}}。用途与风格已锁定。</view>
       </view>
       <view class="card">
-<view class="section-title">2 · 生成与核对</view>
+<view class="section-title ai-stage-heading"><text class="ai-stage-number">2</text>生成与核对</view>
 <view class="muted ai-help">{{priceLabel}}</view>
 
 <button id="ai-generate" class="primary ui-button ui-block" size="mini" bindtap="generate" disabled="{{busy||pending||!sourceReady||job}}">{{mode==='local-simulation'?'生成模拟候选':'生成候选'}}</button>
@@ -52,14 +52,14 @@
 <button size="mini" class="ui-button" bindtap="cancel" disabled="{{busy||pending||!job.canCancel}}">取消处理</button>
 </view>
 </view>
-      <view wx:if="{{pending}}" class="card">
-<view class="error">上次操作结果未确认，不会自动重新提交。</view>
+      <view wx:if="{{pending}}" class="card ai-pending">
+<view class="ai-pending-title">等待核对操作结果</view><view class="ai-warning">上次操作结果未确认，不会自动重新提交。</view>
 <button id="ai-recover" size="mini" class="ui-button ui-block" bindtap="recover" disabled="{{busy}}">核对操作结果</button>
 <button bindtap="retryPending" disabled="{{busy}}" size="mini" class="ui-button ui-block">明确重试原请求</button>
 <button wx:if="{{canResetAdoption}}" bindtap="resetAdoption" disabled="{{busy}}" size="mini" class="ui-button ui-block">重新核对采用目标</button>
 </view>
       <view wx:for="{{candidates}}" wx:key="id" class="card">
-<view class="section-title">3 · 预览与采用</view>
+<view class="section-title ai-stage-heading"><text class="ai-stage-number">3</text>预览与采用</view>
 <view class="ai-help">候选 {{index+1}}</view>
 <view class="ai-help">{{item.target==='avatar'?'确认后替换当前头像，相册与出场封面不变。':'确认后加入照片集并设为出场封面，头像不变。'}}</view>
 <image wx:if="{{item.src&&!item.imageError}}" class="ai-picture" src="{{item.src}}" mode="aspectFit" data-id="{{item.id}}" bindtap="preview" data-revision="{{item.revision}}" data-src="{{item.src}}" data-epoch="{{item.imageEpoch}}" binderror="candidateError" role="button" aria-label="点击查看候选大图"/>

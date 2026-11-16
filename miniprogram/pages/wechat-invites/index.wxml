@@ -1,7 +1,7 @@
 <view class="page">
   <page-state loading="{{loading}}" error="{{error}}" skeleton-type="cards" bind:retry="refresh"/>
   <block wx:if="{{!loading&&!error&&authorized}}">
-    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">微信邀请管理</view><view class="club-banner-subtitle">邀请、核验与绑定</view></view>
+    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">微信邀请管理</view><view class="club-banner-subtitle">邀请、核验与绑定</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
     <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-lock" aria-hidden="true"></view><view class="capability-title">微信登录尚未启用</view><view class="capability-caption">原账号密码登录不受影响。</view></view>
     <block wx:else>
       <view class="invite-subtitle">{{playerName}}</view>
@@ -18,7 +18,7 @@
         <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag {{activeInvite.status==='pending'||activeInvite.status==='claimed'?'invite-pending':activeInvite.status==='approved'?'invite-approved':'invite-closed'}}">{{activeInvite.label}}</text></view>
         <view class="hint">有效期至 {{activeInvite.expires}}</view>
         <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'邀请卡片仅交给球员本人。':'重新生成后，之前未认领的卡片将失效。'}}</view>
-        <view wx:if="{{activeInvite.status==='claimed'}}" class="hint">请联系球员本人核对确认编号，再批准申请。</view>
+        <view wx:if="{{activeInvite.status==='claimed'}}" class="invite-verification-warning">请联系球员本人核对确认编号，再批准申请。</view>
         <view wx:if="{{activeInvite.status==='claimed'}}" class="invite-actions">
           <button size="mini" class="primary ui-button" data-action="approve" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">核对并批准</button>
           <button size="mini" class="ui-button" data-action="reject" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">拒绝申请</button>

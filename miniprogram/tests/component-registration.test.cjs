@@ -6,7 +6,7 @@ const root = path.join(__dirname, '..');
 const read = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const app = read(path.join(root, 'app.json'));
 // 当前项目实际使用的原生标签。新增标签必须明确原生身份或注册为组件。
-const nativeTags = new Set(['block', 'view', 'text', 'button', 'canvas', 'image', 'input', 'label', 'map', 'scroll-view', 'slider', 'switch', 'textarea', 'slot', 'template', 'import', 'include', 'wxs']);
+const nativeTags = new Set(['block', 'view', 'text', 'button', 'canvas', 'image', 'input', 'label', 'map', 'navigator', 'scroll-view', 'slider', 'switch', 'textarea', 'slot', 'template', 'import', 'include', 'wxs']);
 function missingTags(markup, registered) {
   const source = markup.replace(/<!--[\s\S]*?-->/g, '');
   return [...new Set([...source.matchAll(/<([a-z][\w-]*)\b/g)].map(m => m[1]))]

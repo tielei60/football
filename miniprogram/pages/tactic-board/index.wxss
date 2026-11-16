@@ -49,6 +49,13 @@
 .type-expanded .tactic-objective{font-size:var(--type-card,30rpx);font-weight:600;line-height:1.5}
 @media(max-width:375px){.type-expanded .tactic-meta,.type-expanded .hint{font-size:12px}}
 
+/* 查看信息优先于控制区；专注/编辑条件仍由原模板控制。 */
+.type-expanded .board-view-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12rpx;align-items:end;margin:20rpx 0}
+.type-expanded .board-view-controls .editor-field-label{grid-column:1/-1;margin:0}
+.type-expanded .board-stage-controls{margin:0;min-width:0}
+.type-expanded .board-view-controls button.focus-toggle{width:auto;min-width:44px;margin:0;min-height:44px}
+.type-expanded .board-view-controls button.small{grid-column:1/-1;width:100%;margin:0;min-height:44px}
+
 /* UI v3：不改变球场尺寸、触点或专注模式布局。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

@@ -4,19 +4,19 @@
 <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">接受球队邀请</view><view class="club-banner-subtitle">仅限已获邀请的球队成员</view></view>
 <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-claim" aria-hidden="true"></view><view class="capability-title">微信邀请尚未启用</view><view class="capability-caption">请使用球队账号登录。</view></view>
 <block wx:else>
-<view class="card">
-<view class="field-label">邀请码</view>
-<input wx:if="{{showInput}}" class="input" password bindinput="credential" maxlength="64" disabled="{{busy}}" placeholder="粘贴管理员提供的邀请码"/>
-<view class="hint">{{hasCredential?'已收到邀请码。请确认此邀请由球队管理员交付。':'邀请码仅用于本次认领，不保存到本机。'}}</view>
-<button class="primary ui-button ui-block" bindtap="submit" disabled="{{busy||!hasCredential}}" loading="{{busy}}" size="mini">提交或恢复认领</button>
-</view>
 <view wx:if="{{status}}" class="card">
-<view class="section-title claim-status {{status==='claimed'?'is-waiting':status==='approved'?'is-approved':''}}">{{statusLabel}}</view>
+<view class="claim-status-heading"><view class="section-title">申请状态</view><text class="claim-status {{status==='claimed'?'is-waiting':status==='approved'?'is-approved':''}}">{{statusLabel}}</text></view>
 <view wx:if="{{confirmationCode}}" class="confirmation">{{confirmationCode}}</view>
 <view wx:if="{{status==='claimed'}}" class="hint">请通过原有联系渠道把核验编号告知管理员。审核前没有球队访问权限。</view>
 <view wx:if="{{status==='approved'}}" class="hint">审批记录不代表当前绑定仍有效，请重新登录核验。</view>
 <button class="ui-button ui-block" bindtap="status" disabled="{{busy}}" size="mini">刷新申请状态</button>
 <button wx:if="{{status==='approved'}}" class="primary ui-button ui-block" bindtap="login" disabled="{{busy}}" size="mini">微信登录</button>
+</view>
+<view class="card">
+<view class="field-label">邀请码</view>
+<input wx:if="{{showInput}}" class="input" password bindinput="credential" maxlength="64" disabled="{{busy}}" placeholder="粘贴管理员提供的邀请码"/>
+<view class="hint">{{hasCredential?'已收到邀请码。请确认此邀请由球队管理员交付。':'邀请码仅用于本次认领，不保存到本机。'}}</view>
+<button class="primary ui-button ui-block" bindtap="submit" disabled="{{busy||!hasCredential}}" loading="{{busy}}" size="mini">提交或恢复认领</button>
 </view>
 <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
 <view class="hint">离开页面后需重新输入邀请码。</view>

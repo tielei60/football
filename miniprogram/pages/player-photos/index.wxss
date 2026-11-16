@@ -26,3 +26,12 @@
 .photo-caption { flex-basis:50%; }
 .photo-actions-secondary { padding-top:16rpx; border-top:1px solid var(--line); }
 .generated-origin { color:var(--warning); background:var(--warning-soft); }
+
+/* V3：计数与标题分列，说明输入保留常驻标签。 */
+.photos-heading { display:flex; align-items:center; gap:16rpx; margin:36rpx 0 18rpx; }
+.photos-heading .section-title { flex:1; min-width:0; margin:0; }
+.photos-count { flex-shrink:0; font-size:var(--type-meta); color:var(--muted); font-variant-numeric:tabular-nums; }
+.photo-field-label { display:block; margin-top:20rpx; font-size:var(--type-field); line-height:1.55; color:var(--muted); }
+.page button.photo-choose { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12rpx; min-height:44px; padding:28rpx 16rpx; border:1px dashed var(--control-border); background:var(--canvas); color:var(--brand); box-sizing:border-box; }
+.photo-choose-plus { font-size:44rpx; line-height:1; }
+.photo-choose-hint { font-size:var(--type-meta); font-weight:400; line-height:1.5; }

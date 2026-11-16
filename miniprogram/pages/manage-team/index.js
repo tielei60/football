@@ -41,10 +41,31 @@ Page({onHide(){a.hide.call(this);},
     a.choosePicture(this, "crest");
   },
   remove() {
-    if (this.data.busy) return;
-    this._imageEpoch = (this._imageEpoch || 0) + 1;
-    this._imageData = null;
-    this.setData({ crest: "" });
+    if (this.data.loading || this.data.busy || !this.data.authorized || !this.data.crest || this._disposed || this._hidden || this._crestRemoval) return;
+    const attempt = { epoch: this._epoch, view: this._adminView, imageEpoch: this._imageEpoch, crest: this.data.crest, owner: a.s.api.getSession()?.token };
+    this._crestRemoval = attempt;
+    const current = () => this._crestRemoval === attempt && !this._disposed && !this._hidden && !this.data.busy && this.data.authorized && this._epoch === attempt.epoch && this._adminView === attempt.view && this._imageEpoch === attempt.imageEpoch && this.data.crest === attempt.crest && a.s.api.getSession()?.token === attempt.owner;
+    const finish = () => { if (this._crestRemoval === attempt) this._crestRemoval = null; };
+    try {
+      const pending = ui.showModal(this, {
+        title: "移除队徽",
+        content: "确定移除当前队徽？点击保存设置后才会更新球队，取消不会修改。",
+        confirmText: "移除",
+        success: (result) => {
+          if (!result.confirm || !current()) return;
+          this._imageEpoch = (this._imageEpoch || 0) + 1;
+          this._imageData = null;
+          this.setData({ crest: "" });
+        },
+        fail: () => { if (current()) this.setData({ actionError: "未能打开确认，请重试。" }); },
+        complete: finish,
+      });
+      // abort/unavailable只结束Promise，不调用业务回调，也必须释放本地锁。
+      if (pending && typeof pending.finally === "function") return pending.finally(finish);
+    } catch (_) {
+      if (current()) this.setData({ actionError: "未能打开确认，请重试。" });
+      finish();
+    }
   },
   imageError() {
     this.setData({ crest: "" });

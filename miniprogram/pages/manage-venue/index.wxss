@@ -23,3 +23,6 @@ button.location-pick[size="mini"],button.venue-save[size="mini"]{display:flex;ju
 
 .location-actions>button[size="mini"],button.location-pick[size="mini"],button.venue-save[size="mini"] {min-height:44px;}
 .location-clear {color:var(--danger);}
+
+/* 冲突恢复仅复用返回入口，不自动重载当前表单。 */
+.page button.venue-reconcile[size="mini"]{min-height:44px;margin:20rpx 0;white-space:normal}

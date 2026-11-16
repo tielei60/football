@@ -62,3 +62,10 @@
 - 检查对象：本页主要、次要、危险与图片/邀请局部按钮的真实全局+页级样式级联。所选现有控件在 320/375/430 CSS px 均达到 44px 高宽，未发现同类页级覆盖缺陷，本页无需为该项追加样式。
 - 回归证据：`miniprogram/tests/v3-media-touch-layout.test.cjs` 覆盖我的管理入口、出场照、比赛相册、邀请审批/卡片按钮；修复前日志 `/tmp/v3-media-touch-before.log`，修复后 `/tmp/v3-media-touch-after.log`。
 - 验证边界：使用本机隔离 Chromium 合并 WXSS 与等价控件结构，不是微信真实触控、不涉及上传/审批/账号操作；C12/C14 的原生和真机项仍待验证。
+
+## 第五批：品牌与状态图细节
+
+- 已实际查看 ZIP 对应首屏；28/29/31/32 另查看 claimed、enabled/generating、invalid、普通管理员无权限状态图。
+- 修改：补队徽水印；claimed核验本人编号提示为黄色warning，批准/拒绝/撤销原禁用条件不变。
+- 自动契约：`v3-service-states.test.cjs`；仅模板和局部样式，无JS、认证、密钥或数据变更。
+- 原生after截图、真实操作及异常分支仍待验证，不以静态契约代替通过。

@@ -58,3 +58,5 @@
 .capability-caption { margin:24rpx auto 0; max-width:540rpx; font-size:var(--type-body); line-height:1.7; color:var(--muted); overflow-wrap:anywhere; }
  .capability-lock::before { content:""; position:absolute; top:32rpx; width:28rpx; height:32rpx; border:4rpx solid currentColor; border-radius:18rpx 18rpx 0 0; }
 .capability-lock::after { content:""; position:absolute; top:56rpx; width:44rpx; height:34rpx; border:4rpx solid currentColor; border-radius:8rpx; background:#e9e6fb; }
+
+.invite-verification-warning{padding:22rpx 24rpx;margin:24rpx 0;background:var(--warning-soft);border:1px solid #f0d59e;border-radius:20rpx;color:var(--warning);font-size:var(--type-body);line-height:1.65}

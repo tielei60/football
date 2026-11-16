@@ -26,3 +26,8 @@
 .export-source { margin-top: 10rpx; }
 .page > block > .title { font-size: 32rpx; }
 .export-ready { padding: 18rpx; background: var(--success-soft); border-radius: 16rpx; }
+
+/* V3：文件状态与保存入口先于大图，生成不等于保存。 */
+.export-result { margin:24rpx 0; }
+.export-result-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16rpx; }
+.page .export-result-actions > button.ui-button { box-sizing:border-box; width:100%; min-width:0; min-height:44px; margin:0; padding:20rpx 12rpx; line-height:1.5; white-space:normal; }

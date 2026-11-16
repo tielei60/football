@@ -3,8 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.resolve(__dirname,'../pages'),read=(n,e)=>fs.readFileSync(path.join(root,n,'index.'+e),'utf8');
 test('v3 战术列表与导入导出使用独立品牌页头和内容层级',()=>{
  for(const n of ['tactics','tactic-create','tactic-transfer','tactic-export']) {
-  if(n==='tactics') { assert.match(read(n,'wxml'),/tactical-header/); assert.match(read(n,'wxss'),/\.tactical-header/); }
-  else { assert.match(read(n,'wxml'),/club-page-banner/); assert.match(read(n,'wxml'),/club-banner-mark/); }
+  assert.match(read(n,'wxml'),/class="club-page-banner"/); assert.match(read(n,'wxml'),/class="club-banner-mark"/);
   assert.match(read(n,'wxss'),/44px/);
  }
  assert.match(read('tactics','wxml'),/pitch-symbol/);

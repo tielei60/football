@@ -34,6 +34,19 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 .type-expanded .scope-warning{font-size:var(--type-field,26rpx);font-weight:500;color:var(--warning,#805600);line-height:1.65}
 @media(max-width:346px){.type-expanded .card label,.type-expanded .scope-warning{font-size:12px}}
 
+/* V3 表单结构：仅非专注区域重排，画布尺寸和触点仍由原 JS 测量。 */
+.type-expanded .compose-actions,.type-expanded .stage-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16rpx;margin:20rpx 0}
+.type-expanded .compose-actions button,.type-expanded .stage-actions button{width:100%;min-width:0;white-space:normal}
+.type-expanded .stage-settings{margin:28rpx 0;padding:28rpx;background:var(--surface)}
+.type-expanded .stage-selector-row{flex-wrap:wrap}.type-expanded .stage-selector-row business-picker{flex:1 1 100%}
+.type-expanded .stage-selector-row button{margin-left:auto}
+.type-expanded .stage-fields .editor-field-label{margin-top:24rpx}
+.type-expanded .stage-fields button{display:block;width:100%;margin-top:28rpx;min-height:44px}
+.type-expanded .stage-fields business-picker,.type-expanded .properties-card business-picker,.type-expanded .compose-workspace>business-picker{display:block;width:100%}
+.type-expanded .compose-tools{flex-wrap:wrap}.type-expanded .compose-tools business-picker{flex:1 1 180rpx}
+.canvas-focus .workspace-label,.canvas-focus .stage-selector-label,.canvas-focus .stage-actions{display:none}
+.canvas-focus .compose-workspace{display:flex;align-items:center;gap:8rpx}.canvas-focus .compose-workspace>business-picker{flex:1;min-width:0}.canvas-focus .compose-actions{flex:none}
+
 /* UI v3：不改变球场尺寸、触点或专注模式布局。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

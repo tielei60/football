@@ -4,6 +4,7 @@ Page({
   data: {
     loading: true,
     error: "",
+    errorSource: "",
     busy: false,
     currentPassword: "",
     newPassword: "",
@@ -34,7 +35,7 @@ Page({
   async refresh() {
     const owner = api.getSession()?.token,
       turn = (this._turn = (this._turn || 0) + 1);
-    this.setData({ loading: true, error: "", busy: false });
+    this.setData({ loading: true, error: "", errorSource: "", busy: false });
     try {
       const session = await api.ensureSession({ allowPasswordChange: true });
       if (!this.active(owner, turn)) return;
@@ -47,7 +48,7 @@ Page({
       this._owner = owner;
     } catch (e) {
       if (!this._hidden && !this._disposed && turn === this._turn) {
-        this.setData({ error: e.message });
+        this.setData({ error: e.message, errorSource: "load" });
         if (e.status === 401 && !api.getSession())
           wx.reLaunch({ url: "/pages/login/index" });
       }
@@ -79,11 +80,12 @@ Page({
       newPassword !== this.data.confirmation
     ) {
       this.setData({
+        errorSource: "submit",
         error: "请输入当前密码和 10–200 位新密码，两次新密码须一致。",
       });
       return;
     }
-    this.setData({ busy: true, error: "" });
+    this.setData({ busy: true, error: "", errorSource: "" });
     try {
       await api.request("/auth/password", "PUT", {
         currentPassword,
@@ -100,6 +102,7 @@ Page({
     } catch (e) {
       if (this.active(owner, turn))
         this.setData({
+          errorSource: "submit",
           error: e.message || "修改结果未确认，请退出后使用新密码核对。",
         });
       else if (

@@ -1,9 +1,9 @@
 <view class="page">
 <page-state id="page-state" skeleton-type="cards" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
 <block wx:if="{{!loading&&!error}}">
-<view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">出场照片</view><view class="club-banner-subtitle">{{playerName}}{{playerNumber?' · '+playerNumber:''}}</view></view>
+<view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">出场照片</view><view class="club-banner-subtitle">{{playerName}}{{playerNumber?' · '+playerNumber:''}}</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
 <button wx:if="{{admin}}" id="open-player-ai" bindtap="openAi" disabled="{{busy||loading}}" class="ui-button ui-block" size="mini">出场照与头像生成</button>
-<view class="section-title">球员出场照片 · {{admin?photos.length+' / 9':photos.length+' 张'}}</view>
+<view class="photos-heading"><view class="section-title">球员出场照片</view><text class="photos-count">{{admin?photos.length+' / 9':photos.length+' 张'}}</text></view>
 <view class="hint">{{admin?'照片集与头像独立。仅上传已获授权的照片，每张最多 2 MB。':(photos.length?'点击照片查看大图。':'')}}</view>
 <view wx:for="{{photos}}" wx:key="id" class="card">
 <image wx:if="{{item.src}}" class="photo" mode="aspectFill" src="{{item.src}}" data-id="{{item.id}}" bindtap="previewPhoto" binderror="photoError"/>
@@ -16,6 +16,7 @@
 <text class="photo-caption">{{item.caption||'出场照片'}}</text>
 <text wx:if="{{coverPhotoId===item.id}}" class="tag">封面</text>
 </view>
+<view wx:if="{{admin}}" class="photo-field-label">照片说明（可选）</view>
 <input wx:if="{{admin}}" class="input" value="{{item.draft}}" data-id="{{item.id}}" bindinput="captionInput" maxlength="200" disabled="{{busy||conflict||uncertain||recoveryBlocked}}" placeholder="照片说明（可选）"/>
 <view wx:if="{{admin}}" class="photo-actions-main">
 <button data-id="{{item.id}}" bindtap="saveCaption" disabled="{{busy||conflict||uncertain||recoveryBlocked||item.draft===item.caption}}" class="ui-button" size="mini">保存说明</button>
@@ -30,7 +31,8 @@
 <view wx:if="{{!photos.length}}" class="card empty">还没有出场照片</view>
 <view wx:if="{{admin&&(photos.length<9||uncertain)}}" class="card">
 <image wx:if="{{preview}}" class="photo" src="{{preview}}" mode="aspectFit"/>
-<button id="choose-photo" bindtap="choose" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked)}}" class="ui-button ui-block" size="mini">选择照片</button>
+<button id="choose-photo" bindtap="choose" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked)}}" class="ui-button ui-block photo-choose" size="mini"><text class="photo-choose-plus" aria-hidden="true">＋</text><text>选择照片</text><text class="photo-choose-hint">PNG / JPG · 最多 2 MB</text></button>
+<view class="photo-field-label">照片说明（可选）</view>
 <input class="input" value="{{caption}}" data-field="caption" bindinput="input" maxlength="200" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked)}}" placeholder="照片说明（可选）"/>
 <view wx:if="{{uncertain}}" class="hint upload-uncertain">上次上传结果未确认，可安全重试同一张照片。</view>
 <button class="primary ui-button ui-block" id="upload-photo" bindtap="upload" loading="{{busy}}" disabled="{{loading || (!preview||busy||conflict||recoveryBlocked)}}" size="mini">{{uncertain?'核对并重试上传':'上传照片'}}</button>

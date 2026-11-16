@@ -32,3 +32,10 @@
 .capability-caption { margin:24rpx auto 0; max-width:540rpx; font-size:var(--type-body); line-height:1.7; color:var(--muted); overflow-wrap:anywhere; }
  .capability-claim::before { content:""; width:44rpx; height:32rpx; border:4rpx solid currentColor; border-radius:4rpx; }
 .capability-claim::after { content:""; position:absolute; top:40rpx; width:26rpx; height:26rpx; border-right:3rpx solid currentColor; border-bottom:3rpx solid currentColor; transform:rotate(45deg); }
+
+/* V3：已有申请结果优先，不移除原认领与恢复入口。 */
+.claim-status-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16rpx; margin-bottom:24rpx; }
+.claim-status-heading .section-title { margin:0; min-width:0; }
+.claim-status-heading .claim-status { margin:0; padding:10rpx 16rpx; max-width:60%; border:0; border-radius:14rpx; font-size:var(--type-meta); line-height:1.5; background:var(--canvas); color:var(--muted); overflow-wrap:anywhere; }
+.claim-status-heading .claim-status.is-waiting { background:var(--warning-soft); color:var(--warning); }
+.claim-status-heading .claim-status.is-approved { background:var(--success-soft); color:var(--success); }
