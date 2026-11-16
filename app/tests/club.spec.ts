@@ -1,6 +1,51 @@
 import { selectUiOption, expectUiValue } from "./ui-select";
 import { test, expect } from "./fixtures";
 
+test("sharing a match copies saved details and returns a logged-out player to the match", async ({ page, request }) => {
+  const suffix = Date.now().toString();
+  const player = await (await request.post("/api/players", { data: { name: `分享球员${suffix}` } })).json();
+  expect(
+    (
+      await request.post(`/api/players/${player.id}/account`, {
+        data: { username: `share${suffix}`, password: "player-password-123" },
+      })
+    ).ok()
+  ).toBeTruthy();
+  const match = await (
+    await request.post("/api/matches", {
+      data: { opponent: "分享对手", date: "2027-02-03", status: "published", location: "足球场" },
+    })
+  ).json();
+  await page.goto(`/club/matches/${match.id}`);
+  await page.getByRole("button", { name: "分享比赛" }).click();
+  await expect(page.getByLabel("分享比赛")).toContainText("分享对手");
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: (text: string) => {
+          (window as Window & { copied?: string }).copied = text;
+          return Promise.resolve();
+        },
+      },
+      configurable: true,
+    });
+  });
+  await page.getByRole("button", { name: "复制邀请内容" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "邀请内容已复制" })).toBeVisible();
+  const copied = await page.evaluate(() => (window as Window & { copied?: string }).copied);
+  expect(copied).toContain("分享对手");
+  expect(copied).toContain("足球场");
+  expect(copied).toContain(`/club/matches/${match.id}`);
+  await request.post("/api/auth/logout", { data: {} });
+  await page.goto(`/club/matches/${match.id}`);
+  await page.getByLabel("用户名").fill(`share${suffix}`);
+  await page.getByLabel("密码", { exact: true }).fill("player-password-123");
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/club/matches/${match.id}$`));
+  await page.getByRole("button", { name: "参加", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "报名意愿已更新" })).toBeVisible();
+});
+
 test("club admin records unknown statistics separately from zero and creates cross-year seasons", async ({
   page,
   request,

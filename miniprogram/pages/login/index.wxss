@@ -24,7 +24,7 @@
   display: block;
 }
 .brand-fallback {
-  font-size: 20rpx;
+  font-size: 24rpx;
   line-height: 1.3;
   text-align: center;
 }

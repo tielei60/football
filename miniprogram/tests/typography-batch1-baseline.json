@@ -123,7 +123,7 @@
     }
   },
   "statistics": {
-    "markupSha256": "ec12144b56fab9468bf1e9ce4a7c0822af7c66d493d71df32b6c029b595e57b1",
+    "markupSha256": "270b1d790477d71d5cb559458ad6c65512cb2efa674e916adafd6bc12ba7c490",
     "geometry": {
       ".rank-row": {
         "padding": "22rpx 0",
@@ -158,6 +158,27 @@
       },
       ".rank-row .bold": {
         "overflow-wrap": "anywhere"
+      },
+      ".rank-avatar": {
+        "width": "68rpx",
+        "height": "68rpx",
+        "border-radius": "22rpx"
+      },
+      ".ranking-header, .ranking-values": {
+        "display": "flex",
+        "align-items": "center"
+      },
+      ".ranking-header": {
+        "padding": "0 0 10rpx"
+      },
+      ".ranking-header-name": {
+        "flex": "1"
+      },
+      ".ranking-header > text:not(.ranking-header-name), .ranking-values > text": {
+        "width": "62rpx",
+        "flex-shrink": "0",
+        "text-align": "center",
+        "font-variant-numeric": "tabular-nums"
       },
       ".card>.bold": {
         "overflow-wrap": "anywhere",

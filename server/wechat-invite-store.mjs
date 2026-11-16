@@ -209,6 +209,19 @@ export function createWechatInviteStore(
         return view(get(id));
       });
     },
+    verifyCredential(actor, id, credential) {
+      guard();
+      if (!/^[a-f0-9]{64}$/.test(credential || "")) fail(400, "邀请凭据无效。");
+      return tx(() => {
+        const row = get(id);
+        auth(actor, row);
+        expire();
+        const current = get(id);
+        if (current.status !== "pending" || current.token_hash !== hash(credential))
+          fail(409, "邀请无效或已过期，请重新核对。");
+        return view(current);
+      });
+    },
     claim(identity, input) {
       guard();
       const { credential, requestId } = fields(input, [

@@ -35,12 +35,13 @@
 </template>
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import defaultBadge from "@/assets/default-club-badge.svg";
 import { useAuthStore } from "@/stores/authStore";
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 const username = ref("");
 const password = ref("");
 const error = ref("");
@@ -51,7 +52,8 @@ async function login() {
   error.value = "";
   try {
     await auth.login(username.value, password.value);
-    await router.replace("/club");
+    const redirect = route.query.redirect;
+    await router.replace(typeof redirect === "string" && redirect.startsWith("/club/") ? redirect : "/club");
   } catch (e) {
     error.value = (e as Error).message;
   } finally {

@@ -19,3 +19,4 @@ test('venue loaded and chosen markers have explicit pixel sizes; clear removes t
  h.page.clear();assert.equal(h.page.data.markers.length,0);
 });
 test('venue with invalid stored coordinates has no marker',async()=>{const h=setup({venue:{name:'匿名',latitude:null,longitude:120,coordinateSystem:'gcj02'}});h.page.id=1;await h.page.refresh();assert.equal(h.page.data.markers.length,0);});
+test('editing and choosing a map position preserves the field number in the saved venue',async()=>{const venue={name:'球场',fieldNumber:'A',address:'地址',latitude:30,longitude:120,coordinateSystem:'gcj02',revision:1,status:'active'};const h=setup({venue,choice:{name:'球场',address:'新地址',latitude:31,longitude:121,coordinateSystem:'gcj02'}});h.page.id=1;await h.page.refresh();assert.equal(h.page.data.form.fieldNumber,'A');await h.page.choose();await h.page.save();assert.equal(h.calls[1][2].fieldNumber,'A');});

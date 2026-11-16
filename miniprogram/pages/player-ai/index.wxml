@@ -6,7 +6,7 @@
     <view class="ai-intro">先选用途与素材，生成后预览，确认采用才会更新球员资料。</view>
     <view wx:if="{{!enabled}}" class="card ai-disabled">
 <view class="section-title">生成服务尚未启用</view>
-<view class="muted">暂不接收照片。服务端完成处理方、授权及费用策略配置后才能使用。</view>
+<view class="muted">照片生成功能暂不可用，请稍后再试。</view>
 </view>
     <block wx:else>
       <view wx:if="{{mode==='local-simulation'}}" class="ai-warning">本地模拟，不是真实 AI 生成。仅使用内置几何样本，不上传个人照片。</view>

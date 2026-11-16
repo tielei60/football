@@ -16,6 +16,9 @@ test('共享球员投影保持真实头像，失败回退只清展示头像不�
   const p = s.playerView({id:1,name:'𠮷测试',avatar:'https://example.invalid/a.png'});
   assert.equal(p.initial,'𠮷');
   assert.equal(p.avatar,'https://example.invalid/a.png');
+  assert.equal(p.numberDescription,'号码未设置');
+  assert.equal(s.playerView({number:0}).numberDescription,'0 号');
+  assert.equal(s.playerView({number:10}).numberDescription,'10 号');
   let patch;
   s.imageError.call({setData:v=>patch=v},{currentTarget:{dataset:{target:'player'}}});
   assert.deepEqual(JSON.parse(JSON.stringify(patch)),{'player.avatar':''});

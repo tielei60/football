@@ -33,7 +33,7 @@
     ><view class="section"
       ><view class="between"
         ><view class="section-title">下一场，一起踢</view
-        ><text class="link" bindtap="schedule">全部赛程 ›</text></view
+        ><button class="ui-button home-schedule-link" size="mini" bindtap="schedule">全部赛程 ›</button></view
       ><view aria-role="button"
         wx:if="{{next}}"
         class="card next"
@@ -48,11 +48,10 @@
         ><view class="match-time">{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</view
         ><view class="muted match-place">{{next.location || '地点待定'}}</view
         ><view class="divider"></view
-        ><view class="between"
-          ><text class="muted"
-            >{{next.yesCount}} 人参加 · {{next.maybeCount}} 人待定</text
+        ><view class="between signup-summary"
+          ><view class="signup-counts"><text class="signup-count-yes">参加 {{next.signupCountLabel}}</text><text class="signup-count-maybe">{{next.maybeCount}} 人待定</text><text class="signup-count-no">{{next.noCount}} 人请假</text></view
           ><text class="tag">{{next.responseLabel}}</text></view
-        ><button disabled="{{loading}}" class="primary ui-button ui-block" style="margin-top: 24rpx" size="mini">{{roleLabel==='管理端'?'查看比赛':'查看比赛与报名'}}</button></view
+        ></view
       ><view wx:else class="card empty">还没有即将开始的比赛</view></view
     ><view class="section"
       ><view class="section-title">最近赛果</view

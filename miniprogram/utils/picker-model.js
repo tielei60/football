@@ -47,7 +47,9 @@ function decorate(s) {
       selected: h === hour,
       disabled: h * 60 + 59 < s.min || h * 60 > s.max,
     }));
-    out.minutes = Array.from({ length: 60 }, (_, m) => ({
+    const minuteOptions = Array.from({ length: Math.ceil(60 / s.minuteStep) }, (_, i) => i * s.minuteStep);
+    if (minute % s.minuteStep !== 0) minuteOptions.push(minute);
+    out.minutes = minuteOptions.sort((a, b) => a - b).map((m) => ({
       value: "minute:" + pad(m),
       label: pad(m),
       selected: m === minute,
@@ -134,6 +136,8 @@ function create(config = {}, now = new Date()) {
     s.draft =
       Number.isInteger(index) && index >= 0 && index < range.length ? index : 0;
   } else if (mode === "time") {
+    s.minuteStep = Number.isInteger(config.minuteStep) && config.minuteStep >= 1 && config.minuteStep <= 60
+      ? config.minuteStep : 1;
     s.min = config.start ? minutes(config.start) : 0;
     s.max = config.end ? minutes(config.end) : 1439;
     if (s.min === null || s.max === null || s.min > s.max) {
@@ -141,8 +145,7 @@ function create(config = {}, now = new Date()) {
       s.min = 0;
       s.max = -1;
     }
-    const value =
-      minutes(config.value) ?? now.getHours() * 60 + now.getMinutes();
+    const value = minutes(config.value) ?? now.getHours() * 60 + Math.floor(now.getMinutes() / s.minuteStep) * s.minuteStep;
     const selected = Math.max(s.min, Math.min(s.max, value));
     s.draft =
       pad(Math.floor(Math.max(0, selected) / 60)) +
@@ -206,7 +209,7 @@ function select(s, value) {
       if (n * 60 + 59 < s.min || n * 60 > s.max) return s;
       const t = Math.max(s.min, Math.min(s.max, n * 60 + m));
       draft = pad(Math.floor(t / 60)) + ":" + pad(t % 60);
-    } else if (match[1] === "minute" && n <= 59) draft = pad(h) + ":" + pad(n);
+    } else if (match[1] === "minute" && n <= 59 && (n % s.minuteStep === 0 || n === m)) draft = pad(h) + ":" + pad(n);
     else return s;
   } else {
     if (typeof value !== "string" || !parseDate(value)) return s;

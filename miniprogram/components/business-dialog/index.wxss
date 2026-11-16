@@ -59,3 +59,8 @@
 /* 仅确认、取消和普通选择行提高小屏触控下限，不改变日历与时间单元。 */
 @media(max-width:375px){.dialog .buttons>button[size="mini"]{min-height:44px}}
 @media(max-width:392.857px){.dialog.selector-dialog .picker-panel .option-list button.option[size="mini"]{min-height:44px}}
+
+/* Modal actions align with page controls without changing picker geometry. */
+.dialog .buttons>button.cancel{background:#f5eef8;color:#633277;box-shadow:inset 0 0 0 1rpx #e5d7eb}
+.dialog .buttons>button.confirm{box-shadow:0 5rpx 14rpx rgba(99,50,119,.16)}
+.dialog .buttons>button.button-hover{opacity:.72}

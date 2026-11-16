@@ -48,7 +48,8 @@ router.beforeEach(async (to, from) => {
   } catch {
     if (to.name !== "login") return "/login";
   }
-  if (!auth.session && !["login", "about", "changelog"].includes(String(to.name))) return "/login";
+  if (!auth.session && !["login", "about", "changelog"].includes(String(to.name)))
+    return { path: "/login", query: { redirect: to.fullPath } };
   if (auth.session?.user.mustChangePassword && to.name !== "force-password") return "/change-password";
   if (auth.session && !auth.session.user.mustChangePassword && to.name === "force-password") return "/club/account";
   if (to.meta.systemAdmin && !auth.isSystemAdmin) return "/club";

@@ -82,6 +82,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       visible: this.filter(this.data.players, search, this.data.status),
     });
   },
+  clearSearch() {
+    if (this.data.loading) return;
+    this.setData({ search: "", visible: this.filter(this.data.players, "", this.data.status) });
+  },
   position(e) {
     const positionIndex = Number(e.detail.value);
     this.setData({

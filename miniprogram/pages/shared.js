@@ -19,6 +19,7 @@ function dateLabel(date) {
 }
 function matchView(m, playerId, detail = false) {
   const mine = (m.rsvps || []).find((r) => r.playerId === playerId);
+  const yesCount = (m.rsvps || []).filter((r) => r.response === "yes").length;
   return {
     id: m.id,
     date: m.date,
@@ -36,7 +37,9 @@ function matchView(m, playerId, detail = false) {
     scoreLabel: `${value(m.homeScore)} : ${value(m.awayScore)}`,
     response: mine?.response || "",
     responseLabel: mine ? replies[mine.response] : "未回应",
-    yesCount: (m.rsvps || []).filter((r) => r.response === "yes").length,
+    maxParticipants: m.maxParticipants ?? null,
+    signupCountLabel: m.maxParticipants == null ? String(yesCount) : `${yesCount}/${m.maxParticipants}`,
+    yesCount,
     noCount: (m.rsvps || []).filter((r) => r.response === "no").length,
     maybeCount: (m.rsvps || []).filter((r) => r.response === "maybe").length,
   };
@@ -44,8 +47,11 @@ function matchView(m, playerId, detail = false) {
 function fail(page, error) {
   if (page._disposed || error.staleSession === true) return;
   page.setData({ error: error.message || "暂时无法加载，请重试" });
-  if ((error.status || error.statusCode) === 401)
-    wx.redirectTo({ url: "/pages/login/index" });
+  if ((error.status || error.statusCode) === 401) {
+    const id = page.id;
+    const matchId = page.route === "pages/match-detail/index" && /^\d+$/.test(String(id || "")) ? String(id) : "";
+    wx.redirectTo({ url: "/pages/login/index" + (matchId ? "?matchId=" + encodeURIComponent(matchId) : "") });
+  }
 }
 async function load(page, work) {
   const epoch = (page._epoch || 0) + 1;
@@ -149,6 +155,7 @@ function playerView(p) {
     avatarGenerated: p.avatarGenerated === true,
     avatarOriginLabel: p.avatarSimulation === true || p.avatarOriginKind === "local-simulation" ? "模拟图" : p.avatarAiGenerated === true ? "AI 生成" : "生成图",
     numberLabel: value(p.number),
+    numberDescription: p.number == null ? "号码未设置" : `${p.number} 号`,
     positionLabel: (p.positions || []).join(" / ") || "位置未设置",
     initial: playerInitial(p.name),
   };

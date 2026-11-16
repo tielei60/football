@@ -11,3 +11,5 @@
 @media(max-width:360px){.subtitle,.hint{font-size:12px}}
 @media(max-width:346px){.field-label,.error{font-size:12px}}
 @media(max-width:321px){.section-title{font-size:12px}}
+
+.capacity-hint{margin-top:8rpx;color:var(--muted);font-size:24rpx;line-height:1.5}

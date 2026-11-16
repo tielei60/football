@@ -17,41 +17,9 @@ const standard = [
   "待定",
 ];
 Page({
-  async openWechat() {
-    if (
-      this._hidden ||
-      this._disposed ||
-      this.data.loading ||
-      this.data.busy ||
-      !this.id
-    )
-      return;
-    const token = a.s.api.getSession()?.token,
-      epoch = this._epoch;
-    try {
-      const c = await a.s.api.capabilities();
-      if (
-        this._hidden ||
-        this._disposed ||
-        epoch !== this._epoch ||
-        token !== a.s.api.getSession()?.token
-      )
-        return;
-      if (!c.wechat) {
-        ui.showToast(this, { title: "微信邀请尚未启用", icon: "none" });
-        return;
-      }
-      wx.navigateTo({
-        url: "/pages/wechat-invites/index?id=" + encodeURIComponent(this.id),
-      });
-    } catch (e) {
-      if (
-        !this._hidden &&
-        !this._disposed &&
-        token === a.s.api.getSession()?.token
-      )
-        ui.showToast(this, { title: "暂时无法读取微信配置", icon: "none" });
-    }
+  openWechat() {
+    if (this._hidden || this._disposed || this.data.loading || this.data.busy || !this.id) return;
+    return this.selectComponent('#invite-sheet')?.open();
   },
 
   openPhotos() {

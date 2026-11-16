@@ -4,6 +4,7 @@
  <block wx:if="{{!loading && !error}}">
   <view class="card section">
    <view class="field"><text class="field-label">球场名称 *</text><input class="input" value="{{form.name}}" data-field="name" bindinput="input" maxlength="200" disabled="{{loading || (busy)}}" placeholder="球场名称"/></view>
+   <view class="field"><text class="field-label">场地编号</text><input class="input" value="{{form.fieldNumber}}" data-field="fieldNumber" bindinput="input" maxlength="50" disabled="{{loading || (busy)}}" placeholder="如 1号场、A、B（选填）"/></view>
    <view class="field"><text class="field-label">地址</text><input class="input" value="{{form.address}}" data-field="address" bindinput="input" maxlength="300" disabled="{{loading || (busy)}}" placeholder="通过地图选择，或填写地址"/></view>
    <view class="location-section">
     <view class="location-heading"><text class="field-label">球场位置</text><text wx:if="{{markers.length}}" class="location-status">已选点</text></view>

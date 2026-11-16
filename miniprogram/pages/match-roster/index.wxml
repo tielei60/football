@@ -1,30 +1,34 @@
-<view class="page">
-  <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh" />
+<view class="page roster-page">
+  <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
   <block wx:if="{{!loading && !error}}">
-    <view class="title">比赛名单与数据</view><view class="subtitle">对阵 {{opponent}}</view>
-    <view class="hint roster-warning">保存会替换本场完整名单。报名、首发和实际出场互不等同；进球助攻留空表示未知，0 表示确认没有。</view>
-    <view class="card section row" wx:if="{{candidates.length}}">
-      <business-picker title="添加比赛球员" bind:pickeropen="openBusinessPicker" class="grow" range="{{candidates}}" range-key="label" value="{{candidateIndex}}" bindchange="choosePlayer" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{candidates[candidateIndex].label}}</text></view></business-picker>
-      <button class="small primary ui-button ui-compact" bindtap="add" disabled="{{loading || (busy || conflict)}}" size="mini">加入名单</button>
+    <view class="roster-heading"><view class="roster-heading-main"><text class="roster-kicker">比赛名单</text><view class="roster-opponent">对阵 {{opponent}}</view></view><view class="roster-total"><text class="roster-total-number">{{rows.length}}</text><text class="roster-total-label">人已加入</text></view></view>
+    <view class="add-section">
+      <view class="section-heading"><text class="section-title">添加球员</text><text wx:if="{{candidates.length}}" class="section-note">可继续添加 {{candidates.length}} 人</text></view>
+      <view wx:if="{{candidates.length}}" class="add-row">
+        <business-picker title="添加比赛球员" bind:pickeropen="openBusinessPicker" class="grow" range="{{candidates}}" range-key="label" value="{{candidateIndex}}" bindchange="choosePlayer" disabled="{{loading || (busy || conflict)}}"><view class="picker add-picker"><text class="picker-value">{{candidates[candidateIndex].label}}</text></view></business-picker>
+        <button class="primary ui-button add-button" bindtap="add" disabled="{{loading || (busy || conflict)}}" size="mini"><text aria-hidden="true" class="add-symbol">＋</text><text>加入</text></button>
+      </view>
+      <view wx:else class="add-complete">当前没有可添加的球员</view>
     </view>
-    <view wx:if="{{!rows.length}}" class="card empty">名单为空，可选择队员加入。保存空名单会清空已保存的名单。</view>
-    <view class="card section" wx:for="{{rows}}" wx:key="playerId">
-      <view class="between"><text class="bold">{{item.number}} · {{item.name}}</text><button class="small danger ui-button ui-compact" data-id="{{item.playerId}}" bindtap="remove" disabled="{{loading || (busy || conflict)}}" size="mini">移除</button></view>
-      <view class="hint" wx:if="{{item.historical}}">{{item.migration?'迁移时留存身份':'已保存历史身份'}}，不会随当前个人资料改变。</view>
+
+    <view class="list-heading"><text class="section-title">本场名单</text><text class="section-note">{{rows.length}} 人</text></view>
+    <view wx:if="{{!rows.length}}" class="roster-empty"><view class="empty-mark" aria-hidden="true"><view class="empty-mark-head"/><view class="empty-mark-body"/></view><text class="empty-title">还没有球员</text><text class="empty-copy">{{candidates.length?'从上方选择球员，加入本场名单':'暂无可添加的球员'}}</text></view>
+    <view class="roster-card" wx:for="{{rows}}" wx:key="playerId">
+      <view class="player-header"><view class="player-avatar {{!item.avatar?'player-placeholder':''}}"><image wx:if="{{item.avatar}}" src="{{item.avatar}}" mode="aspectFill" data-id="{{item.playerId}}" binderror="avatarError"/><text wx:else>{{item.initial}}</text></view><view class="player-identity"><view class="player-name">{{item.name}}</view><text class="player-number">{{item.number==='—'?'号码未设置':item.number+'号'}}</text></view><button class="ui-button remove-button" data-id="{{item.playerId}}" bindtap="remove" disabled="{{loading || (busy || conflict)}}" size="mini">移除</button></view>
+      <view class="identity-note" wx:if="{{item.historical}}">{{item.migration?'迁移时留存身份':'本场留存身份'}}，不随个人资料改变</view>
       <view class="roster-grid">
         <view><text class="field-label">名单身份</text><business-picker title="名单身份" bind:pickeropen="openBusinessPicker" range="{{selections}}" range-key="label" value="{{item.selectionIndex}}" data-id="{{item.playerId}}" data-field="selectionIndex" bindchange="pick" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{selections[item.selectionIndex].label}}</text></view></business-picker></view>
         <view><text class="field-label">位置</text><business-picker title="球员位置" bind:pickeropen="openBusinessPicker" range="{{item.positionLabels}}" value="{{item.positionIndex}}" data-id="{{item.playerId}}" data-field="positionIndex" bindchange="pick" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{item.positionLabels[item.positionIndex]}}</text></view></business-picker></view>
       </view>
-      <view class="field"><text class="field-label">实际出场</text><business-picker title="实际出场" bind:pickeropen="openBusinessPicker" range="{{appearances}}" range-key="label" value="{{item.appearanceIndex}}" data-id="{{item.playerId}}" data-field="appearanceIndex" bindchange="pick" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{appearances[item.appearanceIndex].label}}</text></view></business-picker></view>
-      <view class="roster-grid" wx:if="{{item.appearanceIndex===1}}">
-        <view><text class="field-label">进球</text><input class="input" type="number" maxlength="6" placeholder="未知" value="{{item.goals}}" data-id="{{item.playerId}}" data-field="goals" bindinput="input" disabled="{{loading || (busy || conflict)}}" /></view>
-        <view><text class="field-label">助攻</text><input class="input" type="number" maxlength="6" placeholder="未知" value="{{item.assists}}" data-id="{{item.playerId}}" data-field="assists" bindinput="input" disabled="{{loading || (busy || conflict)}}" /></view>
-      </view>
+      <view class="appearance-field"><text class="field-label">实际出场</text><business-picker title="实际出场" bind:pickeropen="openBusinessPicker" range="{{appearances}}" range-key="label" value="{{item.appearanceIndex}}" data-id="{{item.playerId}}" data-field="appearanceIndex" bindchange="pick" disabled="{{loading || (busy || conflict)}}"><view class="picker"><text class="picker-value">{{appearances[item.appearanceIndex].label}}</text></view></business-picker></view>
+      <view wx:if="{{item.appearanceIndex===1}}" class="player-stats"><view class="roster-grid stats-grid"><view><label for="goals-{{index}}" class="field-label">进球</label><input id="goals-{{index}}" class="input" type="number" maxlength="6" placeholder="未知" value="{{item.goals}}" data-id="{{item.playerId}}" data-field="goals" bindinput="input" disabled="{{loading || (busy || conflict)}}"/></view><view><label for="assists-{{index}}" class="field-label">助攻</label><input id="assists-{{index}}" class="input" type="number" maxlength="6" placeholder="未知" value="{{item.assists}}" data-id="{{item.playerId}}" data-field="assists" bindinput="input" disabled="{{loading || (busy || conflict)}}"/></view></view><view class="stats-note">留空表示未知，填写 0 表示没有</view></view>
     </view>
-    <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
-    <button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block" size="mini">核对后重新载入</button>
-    <button class="primary section ui-button ui-block" loading="{{busy}}" disabled="{{loading || (busy || conflict)}}" bindtap="save" size="mini">保存完整名单（{{rows.length}}人）</button>
+    <view class="roster-reminder">报名、名单身份与实际出场分别记录。</view>
+    <view wx:if="{{!rows.length && savedRosterCount}}" class="clear-warning">保存空名单将清空已保存的名单。</view>
+    <view wx:if="{{actionError}}" class="error roster-error">{{actionError}}</view>
+    <button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block reload-button" size="mini">核对后重新载入</button>
+    <button class="primary ui-button ui-block roster-save" loading="{{busy}}" disabled="{{loading || (busy || conflict)}}" bindtap="save" size="mini">保存名单 · {{rows.length}} 人</button>
+    <view class="save-note">保存后将替换本场完整名单</view>
   </block>
 </view>
-
 <business-dialog id="business-dialog"/>

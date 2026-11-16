@@ -19,7 +19,7 @@
 <button wx:if="{{status==='approved'}}" class="primary ui-button ui-block" bindtap="login" disabled="{{busy}}" size="mini">微信登录</button>
 </view>
 <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
-<view class="hint">仅限受邀成员，不开放注册。离开页面后需重新输入邀请码；无需提供手机号、头像或昵称。</view>
+<view class="hint">离开页面后需重新输入邀请码。</view>
 </block>
 <button class="ui-button ui-block" bindtap="back" disabled="{{busy}}" size="mini">返回登录</button>
 </block>

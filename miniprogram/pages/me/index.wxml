@@ -20,7 +20,7 @@
           >{{session.user.role==='admin'?'管理员':session.user.role==='player'?'球员':'球队成员'}}</text
         ></view
       ></view
-    ><view wx:if="{{session.user.role==='admin'}}" class="card section"><view class="section-title">球队管理</view><view class="management-grid"><button disabled="{{loading}}" data-page="team" bindtap="manage" class="ui-button" size="mini">球队资料</button><button disabled="{{loading}}" data-page="players" bindtap="manage" class="ui-button" size="mini">球员与账号</button><button disabled="{{loading}}" data-page="seasons" bindtap="manage" class="ui-button" size="mini">赛季管理</button><button disabled="{{loading}}" data-page="venues" bindtap="manage" class="ui-button" size="mini">球场管理</button></view></view><view wx:if="{{registration}}" class="section"
+    ><view wx:if="{{session.user.role==='admin'}}" class="card section"><view class="section-title">球队管理</view><view class="management-grid"><button disabled="{{loading}}" data-page="team" bindtap="manage" class="ui-button" size="mini">球队资料</button><button disabled="{{loading}}" data-page="players" bindtap="manage" class="ui-button" size="mini">球员与账号</button><button disabled="{{loading}}" data-page="seasons" bindtap="manage" class="ui-button" size="mini">赛季管理</button><button disabled="{{loading}}" data-page="venues" bindtap="manage" class="ui-button" size="mini">球场管理</button><button wx:if="{{session.user.systemAdmin}}" disabled="{{loading}}" bindtap="systemAccounts" class="ui-button" size="mini">系统账号</button></view></view><view wx:if="{{registration}}" class="section"
       ><view class="section-title">{{year}} 年，我的报名</view
       ><view class="metrics"
         ><view class="metric"
@@ -67,12 +67,9 @@
           bindtap="changePassword"
          size="mini">保存并重新登录</button></view
       ></view
-    ><button disabled="{{loading}}" bindtap="tactics" class="ui-button ui-block" size="mini">球队战术板</button><view class="hint"
-      >球队资料仅用于本俱乐部管理。</view
-    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
+    ><button disabled="{{loading}}" bindtap="tactics" class="ui-button ui-block" size="mini">球队战术板</button><view wx:if="{{actionError}}" class="error">{{actionError}}</view
     ><button class="danger ui-button ui-block" disabled="{{loading || (busy)}}" bindtap="logout" size="mini">退出 / 切换账号</button></block
   ></view
 >
 
-<view wx:if="{{session.user.systemAdmin&&!loading&&!error}}" class="page"><button size="mini" class="ui-button ui-block" bindtap="systemAccounts">系统账号管理</button></view>
 <business-dialog id="business-dialog"/>

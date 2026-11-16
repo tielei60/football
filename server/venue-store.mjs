@@ -7,6 +7,7 @@ const view = (r) => ({
   id: r.id,
   revision: r.revision,
   name: r.name,
+  fieldNumber: r.field_number,
   address: r.address,
   latitude: r.latitude,
   longitude: r.longitude,
@@ -23,12 +24,15 @@ export function createVenueStore(database) {
   try {
     database.exec(`CREATE TABLE IF NOT EXISTS club_venues (
       id INTEGER PRIMARY KEY, team_id INTEGER NOT NULL REFERENCES club_teams(id),
-      revision INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, address TEXT NOT NULL DEFAULT '',
+      revision INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, field_number TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '',
       latitude REAL, longitude REAL, status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
       CHECK((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL AND latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)),
       UNIQUE(team_id,id)
     ) STRICT;
     CREATE INDEX IF NOT EXISTS club_venues_team ON club_venues(team_id,status,id);`);
+    const venueCols = new Set(database.prepare("PRAGMA table_info(club_venues)").all().map((r) => r.name));
+    if (!venueCols.has("field_number"))
+      database.exec("ALTER TABLE club_venues ADD COLUMN field_number TEXT NOT NULL DEFAULT ''");
     const cols = new Set(
       database
         .prepare("PRAGMA table_info(club_matches)")
@@ -62,6 +66,7 @@ export function createVenueStore(database) {
         ? get(teamId, id)
         : {
             name: "",
+            fieldNumber: "",
             address: "",
             latitude: null,
             longitude: null,
@@ -75,6 +80,9 @@ export function createVenueStore(database) {
       }
       const v = { ...old, ...input };
       v.name = text(v.name, 200, true);
+      if (typeof v.fieldNumber !== "string" || v.fieldNumber.length > 50)
+        fail(400, "场地编号格式不正确。");
+      v.fieldNumber = v.fieldNumber.trim();
       v.address = text(v.address, 300);
       if (!["active", "inactive"].includes(v.status))
         fail(400, "球场状态不正确。");
@@ -100,10 +108,11 @@ export function createVenueStore(database) {
       if (id)
         database
           .prepare(
-            "UPDATE club_venues SET name=?,address=?,latitude=?,longitude=?,status=?,revision=revision+1 WHERE team_id=? AND id=?",
+            "UPDATE club_venues SET name=?,field_number=?,address=?,latitude=?,longitude=?,status=?,revision=revision+1 WHERE team_id=? AND id=?",
           )
           .run(
             v.name,
+            v.fieldNumber,
             v.address,
             v.latitude,
             v.longitude,
@@ -115,9 +124,9 @@ export function createVenueStore(database) {
         id = Number(
           database
             .prepare(
-              "INSERT INTO club_venues(team_id,name,address,latitude,longitude,status) VALUES(?,?,?,?,?,?)",
+              "INSERT INTO club_venues(team_id,name,field_number,address,latitude,longitude,status) VALUES(?,?,?,?,?,?,?)",
             )
-            .run(teamId, v.name, v.address, v.latitude, v.longitude, v.status)
+            .run(teamId, v.name, v.fieldNumber, v.address, v.latitude, v.longitude, v.status)
             .lastInsertRowid,
         );
       const result = get(teamId, id);

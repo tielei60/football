@@ -10,6 +10,7 @@ Component({
     start: { type: String, value: "" },
     end: { type: String, value: "" },
     fields: { type: String, value: "day" },
+    minuteStep: { type: Number, value: 1 },
     disabled: { type: Boolean, value: false },
     title: { type: String, value: "" },
   },

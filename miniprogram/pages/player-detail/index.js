@@ -14,8 +14,9 @@ onHide(){ui.abort(this);return s.hide.apply(this,arguments);},
   onLoad(q) {
     this.id = q.id;
     this._scopeError='';
-    const year=q.year,season=q.seasonId;
-    if(year!==undefined&&season!==undefined)this._scopeError='请选择年份或赛季其中一种统计范围。';
+    const year=q.year,season=q.seasonId,all=q.all;
+    if([year,season,all].filter(v=>v!==undefined).length>1)this._scopeError='请选择一种统计范围。';
+    else if(all!==undefined){if(all!=='1')this._scopeError='统计范围不正确。';else this._scope='all=1';}
     else if(season!==undefined){
       if(!/^[1-9]\d*$/.test(String(season))||!Number.isSafeInteger(Number(season)))this._scopeError='赛季编号不正确。';
       else this._scope='seasonId='+encodeURIComponent(season);

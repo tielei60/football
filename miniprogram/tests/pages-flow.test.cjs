@@ -125,6 +125,7 @@ test("formatting preserves unknown score, weekday and all RSVP counts", () => {
       rsvps: [
         { playerId: "p1", response: "maybe" },
         { playerId: "p2", response: "yes" },
+        { playerId: "p3", response: "no" },
       ],
     }),
     "p1",
@@ -134,6 +135,7 @@ test("formatting preserves unknown score, weekday and all RSVP counts", () => {
   assert.equal(view.responseLabel, "待定");
   assert.equal(view.yesCount, 1);
   assert.equal(view.maybeCount, 1);
+  assert.equal(view.noCount, 1);
 });
 test("assetUrl delegates to the tested native media resolver", () => {
   const { shared, events } = setup("home");
@@ -176,6 +178,20 @@ test("player search, number and position filter combine", () => {
   assert.equal(page.filter(rows, "0", "active")[0].id, "p1");
   assert.equal(page.filter(rows, "8", "active").length, 0);
   assert.equal(page.filter(rows, "", "inactive")[0].id, "p3");
+});
+test("clearing player search preserves the selected status and position", () => {
+  const {page}=setup("players");
+  Object.assign(page.data,{loading:false,status:'active',selectedPosition:'前锋',search:'甲',players:[
+    {id:'a',name:'甲',number:1,positions:['前锋'],status:'active'},
+    {id:'b',name:'乙',number:2,positions:['前锋'],status:'active'},
+    {id:'c',name:'丙',number:3,positions:['门将'],status:'active'},
+    {id:'d',name:'丁',number:4,positions:['前锋'],status:'inactive'},
+  ]});
+  page.clearSearch();
+  assert.equal(page.data.search,'');
+  assert.deepEqual(Array.from(page.data.visible,p=>p.id),['a','b']);
+  assert.equal(page.data.selectedPosition,'前锋');
+  page.data.loading=true;page.data.search='保留';page.clearSearch();assert.equal(page.data.search,'保留');
 });
 test("match details use historical player identity and explicit appearances", async () => {
   const { page } = setup("match-detail", {
@@ -340,6 +356,30 @@ test("statistics ranking keeps null below explicit zero", () => {
   assert.equal(ranked[0].name, "乙");
   assert.equal(ranked[0].value, 0);
   assert.equal(ranked[1].value, "—");
+});
+
+test("statistics defaults to all matches with combined totals, avatars and scope-aware rankings", async () => {
+  const requests=[];
+  const {page}=setup("statistics",{request:async url=>{
+    requests.push(url);
+    if(url==='/seasons')return [{id:9,name:'跨年赛季'}];
+    if(url==='/players')return [{id:'p1',name:'甲',avatar:'data:image/png;base64,AAAA',positions:[]},{id:'p2',name:'乙',positions:[]}];
+    return {filter:{label:'全部比赛'},team:{goalsFor:null,goalsAgainst:null},players:[{playerId:'p1',name:'甲',goals:2,assists:null,appearances:3},{playerId:'p2',name:'乙',goals:1,assists:4,appearances:2}]};
+  }});
+  await page.refresh();
+  assert.ok(requests.includes('/statistics?all=1'));
+  assert.equal(page.data.metric,'overall');
+  assert.equal(page.data.leaders[0].name,'甲');
+  assert.equal(page.data.leaders[0].avatar,'wxfile://test/avatar.png');
+  assert.equal(page.data.leaders[0].assistsLabel,'—');
+  assert.equal(page.data.leaders[1].initial,'乙');
+  page.imageError({currentTarget:{dataset:{id:'p1',index:0}}});
+  page.metric({currentTarget:{dataset:{metric:'assists'}}});
+  assert.equal(page.data.leaders[0].name,'乙');
+  assert.equal(page.data.leaders[1].avatar,'');
+  page.season({detail:{value:2}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(requests.includes('/statistics?seasonId=9'));
 });
 
 test("match reload atomically keeps form and revision from newest response", async () => {
@@ -594,12 +634,12 @@ test("season selection survives option order changes and local year is explicit"
   const { page } = setup("statistics", {
     request: async (url) => {
       requests.push(url);
-      return url === "/seasons" ? seasons : stats;
+      return url === "/seasons" ? seasons : url === "/players" ? [] : stats;
     },
   });
   await page.refresh();
   page.data.selectedSeasonId = 9;
-  page.data.seasonIndex = 2;
+  page.data.seasonIndex = 3;
   seasons = [seasons[1], seasons[0]];
   await page.refresh();
   assert.equal(page.data.seasons[page.data.seasonIndex].id, 9);
@@ -694,8 +734,8 @@ test("shared status component retry is wired on every data page", () => {
 });
 
 test("switching away and back to the original venue restores historical location", async () => {
-  const {page}=setup('match-edit',{ensureSession:async()=>({...session,user:{role:'admin'}}),request:async(url)=>url==='/seasons'?[]:url==='/venues'?[{id:1,name:'A当前',address:'新地址',status:'active'},{id:2,name:'B',address:'B地址',status:'active'}]:match({venueId:1,venueSnapshot:{name:'A历史'},location:'原比赛地址',revision:2})});
-  page.id='1';await page.refresh();page.pick({currentTarget:{dataset:{field:'venueIndex'}},detail:{value:2}});assert.match(page.data.form.location,/B地址/);
+  const {page}=setup('match-edit',{ensureSession:async()=>({...session,user:{role:'admin'}}),request:async(url)=>url==='/seasons'?[]:url==='/venues'?[{id:1,name:'A当前',fieldNumber:'B',address:'新地址',status:'active'},{id:2,name:'B',fieldNumber:'1号场',address:'B地址',status:'active'}]:match({venueId:1,venueSnapshot:{name:'A历史',fieldNumber:'A'},location:'原比赛地址',revision:2})});
+  page.id='1';await page.refresh();assert.equal(page.data.venues[1].displayName,'A历史 · A（本场留存）');assert.equal(page.data.venues[2].displayName,'B · 1号场');page.pick({currentTarget:{dataset:{field:'venueIndex'}},detail:{value:2}});assert.equal(page.data.form.location,'B · 1号场 · B地址');
   page.pick({currentTarget:{dataset:{field:'venueIndex'}},detail:{value:1}});assert.equal(page.data.form.location,'原比赛地址');
 });
 
@@ -784,3 +824,15 @@ for(const status of [409,500])test('编辑隐藏期间'+status+'返回保留冲�
 test('换账号手工确认不泄露旧保存ID',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.finish({id:17});await p;h.changeOwner();h.page._hidden=false;h.page.confirmAbsent();assert.equal(h.page.data.savedId,null);});
 test('已保存结果返回时清除被隐藏中断的loading',async()=>{const h=saveFixture();await h.prepare();const p=h.page.save();h.page.onHide();h.page.data.loading=true;h.finish({id:18});await p;await h.page.onShow();assert.equal(h.page.data.loading,false);assert.equal(h.page.data.savedId,18);});
 test('初次加载中隐藏再返回重新加载，不遗留loading',async()=>{let release,calls=0;const account={token:'A',user:{id:1,teamId:1,role:'admin'},team:{id:1}};const h=setup('match-edit',{getSession:()=>account,ensureSession:()=>{calls++;return calls===1?new Promise(r=>release=r):Promise.resolve(account);},request:async()=>[]});h.page.onLoad({});await h.page.onShow();h.page.onHide();const show=h.page.onShow();release(account);await show;assert.equal(h.page.data.loading,false);assert.equal(h.page.data.error,'');});
+test('报名人数显示上限，编辑时支持留空及有效人数', async () => {
+  const { page, shared } = setup('match-edit', { request: async () => ({ id: 1 }) });
+  const limited = shared.matchView(match({ maxParticipants: 10, rsvps: [{playerId:'p1', response:'yes'}] }), 'p1');
+  assert.equal(limited.signupCountLabel, '1/10');
+  assert.equal(shared.matchView(match(), 'p1').signupCountLabel, '0');
+  assert.equal(shared.matchView(match({rsvps:[{playerId:'p1',response:'yes'}]}), 'p1').signupCountLabel, '1');
+  page.data.seasons = [{ id: null }]; page.data.form.opponent = '对手'; page.data.form.date = '2026-11-15';
+  page.data.form.maxParticipants = '0'; await page.save(); assert.match(page.data.actionError, /报名人数/);
+  let sent; const f = setup('match-edit', { request: async (url, method, body) => { sent = body; return { id: 2 }; } });
+  f.page.data.seasons = [{ id: null }]; f.page.data.form.opponent = '对手'; f.page.data.form.date = '2026-11-15'; f.page.data.form.maxParticipants = '10';
+  await f.page.save(); assert.equal(sent.maxParticipants, 10);
+});

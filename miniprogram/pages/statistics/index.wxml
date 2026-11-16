@@ -8,9 +8,9 @@
       value="{{seasonIndex}}"
       bindchange="season"
       ><view class="picker"
-        ><text class="picker-value">{{seasons[seasonIndex].name || '按自然年'}}</text></view></business-picker
+        ><text class="picker-value">{{seasons[seasonIndex].name || '全部比赛'}}</text></view></business-picker
     ><business-picker title="统计年份" disabled="{{loading}}" bind:pickeropen="openBusinessPicker"
-      wx:if="{{seasonIndex===0}}"
+      wx:if="{{selectedSeasonId===null}}"
       mode="date"
       fields="year"
       value="{{year}}"
@@ -46,6 +46,11 @@
       ></view
     ><view class="tabs"
       ><view aria-role="button"
+        class="tab {{metric==='overall'?'active':''}}"
+        data-metric="overall"
+        bindtap="metric"
+        >总排行</view
+      ><view aria-role="button"
         class="tab {{metric==='goals'?'active':''}}"
         data-metric="goals"
         bindtap="metric"
@@ -61,7 +66,8 @@
         bindtap="metric"
         >出场榜</view
       ></view
-    ><view class="card"
+    ><view class="card ranking-card"
+      ><view wx:if="{{metric==='overall' && leaders.length}}" class="ranking-header"><text class="ranking-header-name">球员</text><text>进球</text><text>助攻</text><text>出场</text></view
       ><view aria-role="button"
         wx:for="{{leaders}}"
         wx:key="playerId"
@@ -69,18 +75,20 @@
         data-id="{{item.playerId}}"
         bindtap="openPlayer"
         ><text class="rank">{{item.rank}}</text
+        ><view class="avatar rank-avatar {{!item.avatar?'player-placeholder':''}}"><image wx:if="{{item.avatar}}" src="{{item.avatar}}" mode="aspectFill" data-id="{{item.playerId}}" data-index="{{index}}" binderror="imageError"/><text wx:else>{{item.initial}}</text></view
         ><view class="grow"
           ><view class="bold">{{item.name}}</view
-          ><view class="muted" wx:if="{{metric!=='appearances'}}"
+          ><view class="muted" wx:if="{{metric!=='overall' && metric!=='appearances'}}"
             >已记录 {{item.coverage}} 场 · 出场 {{item.appearances}} 场</view
-          ><view class="muted" wx:else
+          ><view class="muted" wx:elif="{{metric==='appearances'}}"
             >出场待确认 {{item.unknownAppearances}} 场</view
           ></view
-        ><text class="rank-value">{{item.value}}</text></view
+        ><view wx:if="{{metric==='overall'}}" class="ranking-values"><text>{{item.goalsLabel}}</text><text>{{item.assistsLabel}}</text><text>{{item.appearances}}</text></view
+        ><text wx:else class="rank-value">{{item.value}}</text></view
       ><view wx:if="{{!leaders.length}}" class="empty">暂无球员记录</view></view
     ><view class="hint"
       >未录入名单 {{stats.matchesWithoutRoster}}
-      场。榜单展示已记录的数据，不代表缺失记录为零。</view
+      场。{{metric==='overall'?'总排行按进球、助攻、出场依次排序。':''}}榜单展示已记录的数据，不代表缺失记录为零。</view
     ><view class="section-title">对手交锋</view
     ><view wx:for="{{stats.opponents}}" wx:key="opponent" class="card"
       ><view class="bold opponent-name">{{item.opponent}}</view

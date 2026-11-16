@@ -38,6 +38,17 @@ export function createWechatAuthService({ provider, club, now = Date.now }) {
   };
   return {
     enabled: provider.enabled,
+    async inviteCode(actor, playerId, id, input) {
+      guard();
+      const u = club.authenticate(actor.token, actor.transport);
+      if (u.role !== "admin") fail(403, "此操作需要管理员权限。");
+      limit("admin", u.id, 60);
+      wechatFields(input, ["credential"], ["credential"]);
+      club.wechat.verifyCredential(actor, playerId, id, input.credential);
+      const image = await provider.inviteCode(input.credential);
+      club.wechat.verifyCredential(actor, playerId, id, input.credential);
+      return { image };
+    },
     async preauth(action, input, ip) {
       guard();
       limit("ip", ip || "unknown", 30);

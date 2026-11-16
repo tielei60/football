@@ -1,0 +1,22 @@
+.title{font-size:36rpx;font-weight:650;color:var(--ink);line-height:1.4}
+.invite-subtitle{font-size:28rpx;font-weight:500;color:var(--muted);margin:8rpx 0 24rpx;overflow-wrap:anywhere}
+.invite-heading{font-size:28rpx;font-weight:600;color:var(--ink);line-height:1.5}
+.binding-status{font-size:32rpx;font-weight:600;color:var(--brand);margin:16rpx 0}
+.invite-between{display:flex;justify-content:space-between;align-items:center;gap:16rpx}
+.hint{font-size:25rpx;color:var(--muted);line-height:1.65;margin-top:12rpx;overflow-wrap:anywhere}
+.invite-actions{display:flex;gap:16rpx;margin-top:20rpx}
+.invite-card-canvas{position:fixed;left:-2000px;top:0;width:375px;height:525px;pointer-events:none}
+.invite-modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(32,24,38,.6);display:flex;align-items:center;justify-content:center;padding:32rpx;box-sizing:border-box}
+.invite-modal{width:100%;max-width:600rpx;max-height:90vh;overflow:auto;background:#fff;border-radius:24rpx;padding:28rpx;box-sizing:border-box}
+.invite-modal-heading{font-size:32rpx;font-weight:600;color:var(--ink)}
+.invite-card-preview{display:block;width:100%;max-height:65vh;margin-top:16rpx;border-radius:16rpx}
+.invite-modal-actions{display:flex;gap:16rpx;margin-top:20rpx}.invite-modal-actions button{flex:1;min-width:0}
+.page .invite-actions>button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;margin:0;min-height:44px;padding:16rpx 12rpx;font-size:26rpx;line-height:1.5;white-space:normal}
+.page .card>button.ui-block[size="mini"]{margin-top:20rpx;min-height:44px;font-size:26rpx}
+.history-heading{margin-top:32rpx}.history-row{display:flex;flex-direction:column;gap:4rpx}.history-status{font-size:27rpx;font-weight:500;color:var(--ink)}
+.error{font-size:26rpx;line-height:1.6;overflow-wrap:anywhere}
+
+.page>block button.ui-block[size="mini"],.page button.ui-block[size="mini"]{box-sizing:border-box;min-height:44px;width:100%;max-width:100%;white-space:normal;line-height:1.5}
+
+/* Keep the full invitation visible and actions reachable on short screens. */
+.invite-modal-overlay{padding-bottom:calc(32rpx + env(safe-area-inset-bottom))}.invite-modal{max-height:calc(100vh - 64rpx - env(safe-area-inset-bottom));overscroll-behavior:contain}.invite-card-preview{height:58vh;max-height:840rpx}.invite-modal-actions{align-items:stretch;gap:16rpx}.invite-modal-actions button{width:0;min-width:0;margin:0}

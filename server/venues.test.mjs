@@ -81,6 +81,7 @@ test("venue lifecycle validates coordinates, revisions and native role authoriza
   assert.equal(v.status, 201);
   v = v.body;
   assert.equal(v.coordinateSystem, "gcj02");
+  assert.equal(v.fieldNumber, "");
   assert.equal(v.revision, 1);
   for (const bad of [
     { latitude: 91 },
@@ -90,6 +91,8 @@ test("venue lifecycle validates coordinates, revisions and native role authoriza
     { coordinateSystem: "wgs84" },
     { name: "" },
     { status: "deleted" },
+    { fieldNumber: 1 },
+    { fieldNumber: "a".repeat(51) },
   ])
     assert.equal(
       (
@@ -170,8 +173,9 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
   const f = await fixture(t);
   const token = (await f.login()).body.token;
   const v = (
-    await f.call("/api/venues", { token, method: "POST", body: venue })
+    await f.call("/api/venues", { token, method: "POST", body: { ...venue, fieldNumber: " 1号场 " } })
   ).body;
+  assert.equal(v.fieldNumber, "1号场");
   let m = (
     await f.call("/api/matches", {
       token,
@@ -185,8 +189,10 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
     })
   ).body;
   assert.equal(m.venueSnapshot.name, venue.name);
+  assert.equal(m.venueSnapshot.fieldNumber, "1号场");
   assert.equal(m.venueSnapshot.coordinateSystem, "gcj02");
   assert.match(m.location, /演练足球场/);
+  assert.match(m.location, /1号场/);
   const updated = (
     await f.call("/api/venues/" + v.id, {
       token,
@@ -194,6 +200,7 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
       body: {
         revision: 1,
         name: "新名称",
+        fieldNumber: "A",
         latitude: 30,
         longitude: 120,
         status: "inactive",
@@ -201,6 +208,9 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
     })
   ).body;
   assert.equal(updated.revision, 2);
+  assert.equal(updated.fieldNumber, "A");
+  const preserved = (await f.call("/api/venues/" + v.id, {token, method: "PUT", body: {revision: updated.revision, address: "新地址"}})).body;
+  assert.equal(preserved.fieldNumber, "A");
   m = (
     await f.call("/api/matches/" + m.id, {
       token,
@@ -213,6 +223,7 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
     })
   ).body;
   assert.equal(m.venueSnapshot.name, venue.name);
+  assert.equal(m.venueSnapshot.fieldNumber, "1号场");
   assert.equal(m.venueSnapshot.latitude, 31.2);
   assert.equal(
     (
@@ -256,6 +267,25 @@ test("match venue snapshots remain historical, ignore forged input, and keep leg
   assert.equal(legacy.venueId, null);
   assert.equal(legacy.venueSnapshot, null);
   assert.equal(legacy.location, "旧字段");
+});
+test("existing venues migrate with an empty field number and retain their data", async (t) => {
+  const f = await fixture(t);
+  const token = (await f.login()).body.token;
+  const v = (await f.call("/api/venues", {token, method: "POST", body: venue})).body;
+  const db = new DatabaseSync(f.databasePath);
+  db.exec("ALTER TABLE club_venues DROP COLUMN field_number");
+  db.close();
+  const second = createFootballServer({databasePath: f.databasePath, bootstrapAdmin: null});
+  second.listen(0, "127.0.0.1");
+  await once(second, "listening");
+  t.after(() => new Promise((resolve) => second.close(resolve)));
+  const migrated = new DatabaseSync(f.databasePath);
+  const row = migrated.prepare("SELECT name, address, field_number, revision FROM club_venues WHERE id=?").get(v.id);
+  assert.equal(row.name, venue.name);
+  assert.equal(row.address, venue.address);
+  assert.equal(row.field_number, "");
+  assert.equal(row.revision, v.revision);
+  migrated.close();
 });
 test("venue team isolation and restart persistence use additive migration", async (t) => {
   const f = await fixture(t);

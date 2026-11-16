@@ -78,3 +78,7 @@
 @media (max-width: 321.429px) {
   .section-title, .account-heading { font-size: 12px; }
 }
+
+/* Management shortcuts use the same restrained card treatment as match tools. */
+.page .management-grid>button.ui-button[size="mini"]{min-height:88rpx;border:1rpx solid #e7dfeb;border-radius:18rpx;background:#fff;color:var(--brand-ink);box-shadow:0 4rpx 14rpx rgba(46,32,54,.035);font-weight:600}
+.page .management-grid>button.ui-button[disabled]{background:#eeebf1;color:#8b8191;border-color:transparent;box-shadow:none}

@@ -352,6 +352,8 @@ export function createClubStore(
       database.exec(
         "ALTER TABLE club_matches ADD COLUMN format INTEGER CHECK(format IN (5,6,7,8,9,11))",
       );
+    if (!columns.has("max_participants"))
+      database.exec("ALTER TABLE club_matches ADD COLUMN max_participants INTEGER CHECK(max_participants IS NULL OR max_participants BETWEEN 1 AND 10000)");
     if (!columns.has("side"))
       database.exec(
         "ALTER TABLE club_matches ADD COLUMN side TEXT NOT NULL DEFAULT 'unknown' CHECK(side IN ('home','away','neutral','unknown'))",
@@ -1002,6 +1004,7 @@ export function createClubStore(
       opponent: r.opponent,
       competition: r.competition,
       format: r.format,
+      maxParticipants: r.max_participants,
       side: r.side,
       seasonId: r.season_id,
       date: r.match_date,
@@ -1074,6 +1077,7 @@ export function createClubStore(
             opponent: "",
             competition: "",
             format: null,
+            maxParticipants: null,
             side: "unknown",
             seasonId: null,
             date: "",
@@ -1093,6 +1097,8 @@ export function createClubStore(
     m.opponent = text(m.opponent, 200, true);
     m.competition = text(m.competition, 200);
     if (m.format !== null) oneOf(m.format, [5, 6, 7, 8, 9, 11]);
+    if (m.maxParticipants !== null && (!Number.isSafeInteger(m.maxParticipants) || m.maxParticipants < 1 || m.maxParticipants > 10000))
+      fail(400, "报名人数须为 1 至 10000 的整数，或留空表示不限。");
     oneOf(m.side, ["home", "away", "neutral", "unknown"]);
     if (
       m.seasonId !== null &&
@@ -1127,6 +1133,8 @@ export function createClubStore(
     return tx(() => {
       const previousMatch = id ? getMatch(u, id) : null;
       if (id) checkRevision(input, previousMatch);
+      if (m.maxParticipants !== null && previousMatch && previousMatch.rsvps.filter(r => r.response === "yes").length > m.maxParticipants)
+        fail(409, "报名人数不能小于已参加人数。");
       // Never trust client snapshots. Reusing the same venue retains history;
       // omission preserves older clients, explicit null detaches the venue.
       const changedVenue = m.venueId !== (previousMatch?.venueId ?? null);
@@ -1138,13 +1146,14 @@ export function createClubStore(
           fail(400, "已停用球场不能用于新的比赛关联。");
         venueSnapshot = {
           name: venue.name,
+          fieldNumber: venue.fieldNumber,
           address: venue.address,
           latitude: venue.latitude,
           longitude: venue.longitude,
           coordinateSystem: "gcj02",
         };
         if (input.location === undefined)
-          m.location = [venue.name, venue.address]
+          m.location = [venue.name, venue.fieldNumber, venue.address]
             .filter(Boolean)
             .join(" · ")
             .slice(0, 500);
@@ -1156,7 +1165,7 @@ export function createClubStore(
       }
       if (id)
         q(
-          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,competition=?,format=?,side=?,season_id=?,revision=revision+1 WHERE id=? AND team_id=?",
+          "UPDATE club_matches SET opponent=?,match_date=?,kickoff=?,location=?,status=?,home_score=?,away_score=?,analysis=?,competition=?,format=?,max_participants=?,side=?,season_id=?,revision=revision+1 WHERE id=? AND team_id=?",
         ).run(
           m.opponent,
           m.date,
@@ -1168,6 +1177,7 @@ export function createClubStore(
           m.analysis,
           m.competition,
           m.format,
+          m.maxParticipants,
           m.side,
           m.seasonId,
           id,
@@ -1176,7 +1186,7 @@ export function createClubStore(
       else
         id = Number(
           q(
-            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis,competition,format,side,season_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO club_matches(team_id,opponent,match_date,kickoff,location,status,home_score,away_score,analysis,competition,format,max_participants,side,season_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
           ).run(
             u.team_id,
             m.opponent,
@@ -1189,6 +1199,7 @@ export function createClubStore(
             m.analysis,
             m.competition,
             m.format,
+            m.maxParticipants,
             m.side,
             m.seasonId,
           ).lastInsertRowid,
@@ -1246,14 +1257,19 @@ export function createClubStore(
   }
   function saveRsvp(u, id, input) {
     object(input);
-    const m = getMatch(u, id);
-    if (!u.player_id) fail(403, "管理员账户未绑定球员，不能代替球员报名。");
-    if (m.status !== "published") fail(409, "仅已发布的比赛可以报名。");
-    oneOf(input.response, ["yes", "no", "maybe"]);
-    q(
-      "INSERT INTO club_rsvps(team_id,match_id,player_id,response) VALUES (?,?,?,?) ON CONFLICT(match_id,player_id) DO UPDATE SET response=excluded.response",
-    ).run(u.team_id, id, u.player_id, input.response);
-    return getMatch(u, id);
+    return tx(() => {
+      const m = getMatch(u, id);
+      if (!u.player_id) fail(403, "管理员账户未绑定球员，不能代替球员报名。");
+      if (m.status !== "published") fail(409, "仅已发布的比赛可以报名。");
+      oneOf(input.response, ["yes", "no", "maybe"]);
+      const existing = m.rsvps.find(r => r.playerId === u.player_id);
+      if (input.response === "yes" && existing?.response !== "yes" && m.maxParticipants !== null &&
+          m.rsvps.filter(r => r.response === "yes").length >= m.maxParticipants)
+        fail(409, "报名人数已满，可选择待定或请假。");
+      q("INSERT INTO club_rsvps(team_id,match_id,player_id,response) VALUES (?,?,?,?) ON CONFLICT(match_id,player_id) DO UPDATE SET response=excluded.response")
+        .run(u.team_id, id, u.player_id, input.response);
+      return getMatch(u, id);
+    });
   }
   function saveRoster(u, id, input) {
     object(input);
@@ -1337,9 +1353,15 @@ export function createClubStore(
       endDate,
       label,
       filterSeasonId = null;
-    if (params.has("year") && params.has("seasonId"))
-      fail(400, "请选择赛季或自然年其中一种统计范围。");
-    if (params.has("seasonId")) {
+    if (["year", "seasonId", "all"].filter((key) => params.has(key)).length > 1)
+      fail(400, "请选择全部比赛、赛季或自然年其中一种统计范围。");
+    const allMatches = params.has("all");
+    if (allMatches) {
+      if (params.get("all") !== "1") fail(400, "统计范围不正确。");
+      startDate = null;
+      endDate = null;
+      label = "全部比赛";
+    } else if (params.has("seasonId")) {
       const id = Number(params.get("seasonId"));
       if (!Number.isSafeInteger(id) || id < 1) fail(400, "赛季编号不正确。");
       const s = getSeason(u.team_id, id);
@@ -1357,10 +1379,10 @@ export function createClubStore(
       label = String(year);
     }
     const scope =
-      filterSeasonId === null
+      allMatches ? "1=1" : filterSeasonId === null
         ? "m.match_date BETWEEN ? AND ?"
         : "m.season_id=?";
-    const scopeArgs =
+    const scopeArgs = allMatches ? [] :
       filterSeasonId === null ? [startDate, endDate] : [filterSeasonId];
     const rows = q(
       `SELECT r.* FROM club_roster r JOIN club_matches m ON m.id=r.match_id WHERE m.team_id=? AND m.status='completed' AND ${scope}`,

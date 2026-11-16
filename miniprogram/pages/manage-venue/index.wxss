@@ -1,7 +1,7 @@
 .title{font-size:34rpx}.field-label{font-size:24rpx;margin-bottom:10rpx}
 .location-section{margin-top:30rpx;min-width:0}
 .location-heading{display:flex;align-items:center;justify-content:space-between;gap:16rpx;margin-bottom:16rpx}
-.location-heading .field-label{margin:0}.location-status{font-size:22rpx;color:var(--muted)}
+.location-heading .field-label{margin:0}.location-status{font-size:24rpx;color:var(--muted)}
 button.location-pick[size="mini"],button.venue-save[size="mini"]{display:flex;justify-content:center;align-items:center;width:100%;max-width:100%;min-width:0;min-height:88rpx;box-sizing:border-box;margin:0;padding:20rpx 24rpx;font-size:27rpx;line-height:1.5;white-space:normal}
 .venue-map{display:block;box-sizing:border-box;width:100%;height:460rpx;margin:24rpx 0 0;border-radius:20rpx;border:1rpx solid var(--line);overflow:hidden}
 .location-actions{display:flex;gap:20rpx;min-width:0;margin-top:24rpx}

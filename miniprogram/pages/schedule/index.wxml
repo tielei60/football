@@ -47,11 +47,10 @@
             >{{item.scoreLabel}}</view
           ></view
         ><view class="divider"></view
-        ><view class="between"
-          ><text class="muted grow break">{{item.location || '地点待定'}}</text
-          ><text wx:if="{{item.status==='published'}}" class="link"
-            >{{item.yesCount}}人参加 · {{item.responseLabel}} ›</text
-          ></view
+        ><view class="muted break schedule-location">{{item.location || '地点待定'}}</view
+        ><view wx:if="{{item.status==='published'}}" class="schedule-signup"
+          ><view class="schedule-counts"><text class="signup-count-yes">参加 {{item.signupCountLabel}}</text><text class="signup-count-maybe">{{item.maybeCount}} 人待定</text><text class="signup-count-no">{{item.noCount}} 人请假</text></view
+          ><text class="schedule-response">{{item.responseLabel}} ›</text></view
         ></view
       ></block
     ></block

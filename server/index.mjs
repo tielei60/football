@@ -179,6 +179,7 @@ export function createFootballServer({
     enabled: process.env.FOOTBALL_WECHAT_ENABLED === "true",
     appId: process.env.FOOTBALL_WECHAT_APP_ID,
     appSecret: process.env.FOOTBALL_WECHAT_APP_SECRET,
+    codeEnvironment: process.env.FOOTBALL_WECHAT_CODE_ENV || "release",
   },
   publicOrigin = process.env.FOOTBALL_PUBLIC_ORIGIN,
   trustedProxyAddresses = (process.env.FOOTBALL_TRUSTED_PROXY_ADDRESSES || "")
@@ -611,7 +612,7 @@ export function createFootballServer({
         }
       }
       const invitationRoute =
-        /^\/api\/players\/([^/]+)\/wechat-invites(?:\/([a-f0-9]{32})\/(approve|reject|revoke))?$/.exec(
+        /^\/api\/players\/([^/]+)\/wechat-invites(?:\/([a-f0-9]{32})\/(approve|reject|revoke|code))?$/.exec(
           pathname,
         );
       const bindingRoute =
@@ -646,6 +647,8 @@ export function createFootballServer({
               }),
             );
           }
+          if (id && action === "code" && method === "POST")
+            return send(response, 200, await wechatAuth.inviteCode(actor, playerId, id, body()));
           if (id && method === "POST")
             return send(
               response,

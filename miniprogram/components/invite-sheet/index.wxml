@@ -1,0 +1,50 @@
+<view wx:if="{{sheetOpen && !cardOpen}}" class="invite-modal-overlay" bindtap="closeSheet" aria-role="button" aria-label="关闭微信邀请">
+<view class="invite-modal page" catchtap="stopCardTap">
+  <button size="mini" class="ui-button ui-block" bindtap="closeSheet">关闭</button>
+  <page-state loading="{{loading}}" error="{{error}}" skeleton-type="cards" bind:retry="refresh"/>
+  <block wx:if="{{!loading&&!error&&authorized}}">
+    <view class="title">微信邀请</view>
+    <view wx:if="{{!enabled}}" class="card empty">微信登录尚未启用，原账号密码登录不受影响。</view>
+    <block wx:else>
+      <view class="invite-subtitle">{{playerName}}</view>
+      <view class="card">
+        <view class="invite-heading">当前绑定</view>
+        <view class="binding-status">{{binding.bound?'已绑定微信':'尚未绑定'}}</view>
+        <view wx:if="{{unconfirmed}}" class="hint">球员状态尚未确认，设为在队后即可创建邀请。</view>
+        <view wx:elif="{{archived}}" class="hint">球员已归档，恢复在队后才能创建邀请。</view>
+
+        <button size="mini" wx:if="{{binding.bound}}" class="ui-button ui-block" bindtap="unbind" disabled="{{busy||needsRefresh||loadingMore}}">解除绑定</button>
+        <button id="create-invite-card" size="mini" wx:elif="{{!archived&&!unconfirmed&&(!activeInvite||activeInvite.status!=='claimed')}}" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||needsRefresh||loadingMore}}" loading="{{busy}}">{{activeInvite?'重新生成邀请卡片':'生成邀请卡片'}}</button>
+      </view>
+      <view wx:if="{{activeInvite}}" class="card">
+        <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag">{{activeInvite.label}}</text></view>
+        <view class="hint">有效期至 {{activeInvite.expires}}</view>
+        <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'邀请卡片仅交给球员本人。':'重新生成后，之前未认领的卡片将失效。'}}</view>
+        <view wx:if="{{activeInvite.status==='claimed'}}" class="hint">请联系球员本人核对确认编号，再批准申请。</view>
+        <view wx:if="{{activeInvite.status==='claimed'}}" class="invite-actions">
+          <button size="mini" class="primary ui-button" data-action="approve" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">核对并批准</button>
+          <button size="mini" class="ui-button" data-action="reject" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">拒绝申请</button>
+        </view>
+        <button size="mini" class="ui-button ui-block" data-action="revoke" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">撤销邀请</button>
+      </view>
+      <view wx:if="{{actionError}}" class="error" aria-role="alert">{{actionError}}</view>
+      <button size="mini" class="ui-button ui-block" bindtap="refresh" disabled="{{busy||loadingMore}}">重新载入</button>
+      <view class="invite-heading history-heading">邀请记录</view>
+      <view wx:if="{{!items.length}}" class="card empty">暂无邀请记录</view>
+      <view wx:for="{{items}}" wx:key="id" class="card history-row">
+        <text class="history-status">{{item.label}}</text><text class="hint">有效期至 {{item.expires}}</text>
+      </view>
+      <button size="mini" wx:if="{{hasMore}}" class="ui-button ui-block" bindtap="more" loading="{{loadingMore}}" disabled="{{busy||loadingMore||needsRefresh}}">加载更多</button>
+    </block>
+  </block>
+</view>
+</view>
+<view wx:if="{{sheetOpen && cardOpen && cardPath}}" class="invite-modal-overlay" bindtap="closeCard" aria-role="button" aria-label="关闭邀请卡片">
+  <view class="invite-modal" catchtap="stopCardTap" role="dialog" aria-modal="true" aria-label="邀请卡片">
+    <view class="invite-modal-heading">邀请卡片</view>
+    <image class="invite-card-preview" src="{{cardPath}}" mode="aspectFit"/>
+    <view wx:if="{{actionError}}" class="error" aria-role="alert">{{actionError}}</view>
+    <view class="invite-modal-actions"><button size="mini" class="ui-button" bindtap="closeCard">关闭</button><button size="mini" class="primary ui-button" bindtap="shareCard">转发卡片</button></view>
+  </view>
+</view>
+<canvas id="invite-card-canvas" type="2d" class="invite-card-canvas"/><business-dialog id="business-dialog"/>

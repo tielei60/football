@@ -1,6 +1,14 @@
 const ui = require("../../utils/ui");
 const s = require("../shared");
 Page({
+  onLoad(query) {
+    this._returnMatchId = /^\d+$/.test(String(query?.matchId || "")) ? String(query.matchId) : "";
+  },
+  enterAuthenticated() {
+    if (this._returnMatchId && !s.api.getSession()?.user.mustChangePassword) {
+      wx.redirectTo({ url: "/pages/match-detail/index?id=" + encodeURIComponent(this._returnMatchId) });
+    } else s.api.enterAuthenticated();
+  },
   onShow() {
     this._hidden = false;
     this.loadCapabilities();
@@ -43,7 +51,7 @@ Page({
       await attempt.promise;
       if (active()) {
         this.setData({ password: "" });
-        s.api.enterAuthenticated();
+        this.enterAuthenticated();
       }
     } catch (e) {
       if (active())
@@ -111,7 +119,7 @@ Page({
       if (active()) {
         this._authenticated = true;
         this.setData({ password: "" });
-        s.api.enterAuthenticated();
+        this.enterAuthenticated();
       }
     } catch (e) {
       if (active()) this.setData({ error: e.message || "登录失败，请重试" });

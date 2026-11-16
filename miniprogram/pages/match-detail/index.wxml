@@ -1,109 +1,61 @@
-<view class="page"
-  ><page-state id="page-state" skeleton-type="detail"
-    loading="{{loading}}"
-    error="{{error}}"
-    bind:retry="refresh"
-  /><view wx:if="{{replyPending}}" class="card"><view class="hint">{{busy?'正在提交报名…':reconciling?'正在核对上次报名，请稍候…':'上次报名结果待核对。'}}</view><button wx:if="{{!busy && !reconciling}}" id="reply-reconcile" class="ui-button ui-block" size="mini" bindtap="refresh">核对报名状态</button></view><block wx:if="{{!loading && !error && match}}"
-    ><image wx:if="{{cover}}" class="match-cover" src="{{cover}}" mode="aspectFill" bindtap="media"/><view class="card match-hero"
-      ><view class="between"
-        ><text class="tag {{match.status}}">{{match.statusLabel}}</text
-        ><text class="muted"
-          >{{match.competition || '球队比赛'}}{{match.format?' · '+match.format+'人制':''}}</text
-        ></view
-      ><view class="teams"
-        ><view>{{team.name}}</view
-        ><text class="score"
-          >{{match.status==='completed'?match.scoreLabel:'VS'}}</text
-        ><view>{{match.opponent}}</view></view
-      ><view class="muted"
-        >{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</view
-      ></view
-    ><view class="card match-facts"
-      ><view class="detail-line"
-        ><text class="muted">比赛日期</text
-        ><text>{{match.dateLabel}}</text></view
-      ><view class="detail-line"
-        ><text class="muted">开球时间</text
-        ><text>{{match.kickoff || '待定'}}</text></view
-      ><view class="detail-line"
-        ><text class="muted">比赛地点</text
-        ><text class="break">{{match.location || '待定'}}</text></view
-      ></view
-    ><view class="card venue-location-card"><view class="section-title">球场位置</view><view class="bold venue-location-title">{{venueLocation.title}}</view><view wx:if="{{venueLocation.address}}" class="muted venue-location-address">{{venueLocation.address}}</view><block wx:if="{{venueLocation.valid}}"><map id="match-venue-map" hidden="{{businessUiBlocking}}" class="match-venue-map" latitude="{{venueLocation.latitude}}" longitude="{{venueLocation.longitude}}" markers="{{venueLocation.markers}}" scale="16" show-location="{{false}}" aria-label="比赛球场位置"/><button id="match-open-location" size="mini" class="ui-button ui-block venue-location-open" disabled="{{loading}}" bindtap="openLocation">查看地图与导航</button><view class="venue-location-note">在微信地图中选择导航</view></block><view wx:else class="venue-location-empty">{{venueLocation.message}}</view></view><button disabled="{{loading}}" wx:if="{{admin}}" class="primary ui-button ui-block" bindtap="edit" size="mini">编辑比赛与比分</button><button disabled="{{loading}}" wx:if="{{admin}}" bindtap="rosterEdit" class="ui-button ui-block" size="mini">名单、出场与进球助攻</button><view wx:if="{{notice}}" class="card prewrap"><view class="bold">比赛须知</view>{{notice}}</view><button disabled="{{loading}}" bindtap="media" class="ui-button ui-block" size="mini">比赛须知与相册</button><view class="section"
-      ><view class="section-title">报名情况</view
-      ><view class="metrics"
-        ><view class="metric"
-          ><text class="number">{{match.yesCount}}</text
-          ><text class="label">参加</text></view
-        ><view class="metric"
-          ><text class="number">{{match.noCount}}</text
-          ><text class="label">请假</text></view
-        ><view class="metric"
-          ><text class="number">{{match.maybeCount}}</text
-          ><text class="label">待定</text></view
-        ></view
-      ><view class="card" style="margin-top: 20rpx"
-        ><view wx:for="{{replies}}" wx:key="playerId" class="detail-line"
-          ><text>{{item.name}}</text
-          ><text class="tag">{{item.label}}</text></view
-        ><view wx:if="{{!replies.length}}" class="empty"
-          >还没有报名回应</view
-        ></view
-      ></view
-    ><view class="section"
-      ><view class="section-title">比赛名单与实际表现</view
-      ><view wx:for="{{roster}}" wx:key="playerId" class="card"
-        ><view class="between"
-          ><view class="bold roster-name">{{item.number}} · {{item.name}}</view
-          ><text class="tag">{{item.selectionLabel}}</text></view
-        ><view class="muted roster-meta"
-          >{{item.position || '位置未记录'}} · {{item.appearedLabel}}</view
-        ><view class="roster-stats" style="margin-top: 16rpx"
-          >进球 {{item.goalsLabel}} · 助攻 {{item.assistsLabel}}</view
-        ><text wx:if="{{item.snapshotSource==='migration'}}" class="muted"
-          >身份资料为迁移时留存</text
-        ></view
-      ><view wx:if="{{!roster.length}}" class="card empty"
-        >名单尚未录入</view
-      ></view
-    ><view class="section" wx:if="{{match.analysis}}"
-      ><view class="section-title">赛后复盘</view
-      ><view class="card prewrap">{{match.analysis}}</view></view
-    ><view class="section" wx:if="{{snapshots.length}}"
-      ><view class="section-title">战术留档</view
-      ><view class="card"
-        ><view aria-role="button" wx:for="{{snapshots}}" wx:key="id" class="detail-line" data-id="{{item.id}}" bindtap="tactic"
-          ><text>{{item.name}}</text
-          ><text class="muted">{{item.source}}</text></view
-        ><view class="hint">点击战术查看原生画布及演示步骤。</view></view
-      ></view
-    ><view class="hint">报名不等于实际出场；“—”表示未记录。</view
-    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
-    ><view wx:if="{{canReply}}" class="bottom-space"></view
-    ><view wx:if="{{canReply}}" class="fixed-actions"
-      ><view class="between" style="margin-bottom: 14rpx"
-        ><text class="bold">我的报名</text
-        ><text class="muted">当前：{{match.responseLabel}}</text></view
-      ><view class="actions"
-        ><button
-          class="{{match.response==='yes'?'primary':''}} ui-button"
-          data-response="yes"
-          bindtap="reply"
-          disabled="{{loading || (busy)}}"
-         size="mini">参加</button><button
-          class="{{match.response==='maybe'?'primary':''}} ui-button"
-          data-response="maybe"
-          bindtap="reply"
-          disabled="{{loading || (busy)}}"
-         size="mini">待定</button><button
-          class="{{match.response==='no'?'primary':''}} ui-button"
-          data-response="no"
-          bindtap="reply"
-          disabled="{{loading || (busy)}}"
-         size="mini">请假</button></view
-      ></view
-    ></block
-  ></view
->
+<view class="page match-detail-page">
+  <page-state id="page-state" skeleton-type="detail" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
+  <view wx:if="{{replyPending}}" class="card reply-pending">
+    <view class="hint">{{busy?'正在提交报名…':reconciling?'正在核对上次报名，请稍候…':'上次报名结果待核对。'}}</view>
+    <button wx:if="{{!busy && !reconciling}}" id="reply-reconcile" class="ui-button ui-block" size="mini" bindtap="refresh">核对报名状态</button>
+  </view>
+  <block wx:if="{{!loading && !error && match}}">
+    <image wx:if="{{cover}}" class="match-cover" src="{{cover}}" mode="aspectFill" bindtap="media"/>
+    <view class="match-sheet">
+      <view class="match-topline">
+        <view class="match-context"><text class="match-status {{match.status}}">{{match.statusLabel}}</text><text class="match-competition">{{match.competition || '球队比赛'}}{{match.format ? ' · ' + match.format + '人制' : ''}}</text></view>
+        <view wx:if="{{match.status==='published'}}" class="match-hero-meta">
+          <button wx:if="{{shareReady}}" open-type="share" class="ui-button match-share-button" hover-class="match-control-pressed" size="mini" aria-label="分享比赛给队友"><view class="share-symbol" aria-hidden="true"><view class="share-line share-line-top"/><view class="share-line share-line-bottom"/><view class="share-dot share-dot-left"/><view class="share-dot share-dot-top"/><view class="share-dot share-dot-bottom"/></view></button>
+          <button wx:elif="{{shareError}}" bindtap="prepareShareCard" class="ui-button match-share-button" hover-class="match-control-pressed" size="mini" aria-label="重新生成分享卡片">↻</button>
+          <button wx:else class="ui-button match-share-button share-wait" size="mini" disabled="{{true}}" aria-label="正在准备分享卡片">···</button>
+        </view>
+      </view>
+      <view class="teams">
+        <view class="match-team"><view class="team-crest"><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><view wx:else class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{team.name}}</text></view>
+        <view class="match-result"><text class="score">{{match.status==='completed'?match.scoreLabel:'VS'}}</text><text class="match-side">{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</text></view>
+        <view class="match-team"><view class="team-crest"><view class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{match.opponent}}</text></view>
+      </view>
+      <view class="match-facts">
+        <view class="fact-row"><text class="fact-label">时间</text><view class="fact-content"><text class="fact-primary">{{match.dateLabel}} {{match.kickoff || '时间待定'}}</text></view></view>
+        <view class="fact-row"><text class="fact-label">场地</text><view class="fact-content"><text class="fact-primary">{{venueLocation.valid ? venueLocation.title : (match.location || venueLocation.address || '待定')}}</text><text wx:if="{{venueLocation.valid && venueLocation.address}}" class="fact-subtitle">{{venueLocation.address}}</text><text wx:elif="{{!match.location}}" class="fact-subtitle">{{venueLocation.message}}</text></view><button wx:if="{{venueLocation.valid}}" id="match-open-location" size="mini" class="fact-navigation" disabled="{{loading}}" bindtap="openLocation">导航 ›</button></view>
+        <view wx:if="{{notice}}" class="fact-notice"><text class="fact-label">须知</text><text class="prewrap">{{notice}}</text></view>
+      </view>
+      <view class="match-utilities"><view wx:if="{{admin}}" class="match-management"><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="edit" size="mini">编辑比赛</button><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="rosterEdit" size="mini">管理名单</button></view><button disabled="{{loading}}" bindtap="media" class="ui-button match-media-button" hover-class="match-control-pressed" size="mini">须知与相册 ›</button></view>
+    </view>
 
-<business-dialog id="business-dialog"/>
+    <view class="content-section attendance-section">
+      <view class="section-heading"><text class="section-heading-title">报名情况</text><text wx:if="{{canReply}}" class="section-heading-note">我的报名：{{match.responseLabel}}</text></view>
+      <view class="attendance-summary"><text class="signup-count-yes">参加 {{match.signupCountLabel}}</text><text class="signup-count-maybe">待定 {{match.maybeCount}}</text><text class="signup-count-no">请假 {{match.noCount}}</text></view>
+      <view wx:for="{{replyGroups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="response" class="reply-group">
+        <view class="reply-group-heading">{{group.label}} <text class="reply-group-count">{{group.players.length}}</text></view>
+        <view class="reply-grid"><view wx:for="{{group.players}}" wx:for-item="player" wx:for-index="playerIndex" wx:key="playerId" class="reply-player"><view class="reply-avatar {{!player.avatar?'player-placeholder':''}}"><image wx:if="{{player.avatar}}" class="reply-avatar-image" src="{{player.avatar}}" mode="aspectFill" data-group="{{groupIndex}}" data-index="{{playerIndex}}" binderror="replyImageError"/><text wx:else>{{player.initial}}</text></view><text class="reply-name">{{player.name}}</text></view></view>
+      </view>
+      <view wx:if="{{!replies.length}}" class="section-empty">还没有报名回应</view>
+    </view>
+
+    <view class="content-section roster-section">
+      <view class="section-heading"><text class="section-heading-title">比赛名单</text><text wx:if="{{roster.length}}" class="section-heading-note">实际出场与表现</text></view>
+      <view wx:for="{{roster}}" wx:key="playerId" class="roster-row"><view class="roster-main"><view class="roster-name">{{item.number}} · {{item.name}}</view><view class="roster-meta">{{item.position || '位置未记录'}} · {{item.appearedLabel}}<text wx:if="{{item.snapshotSource==='migration'}}"> · 身份资料为迁移时留存</text></view></view><view class="roster-aside"><text class="roster-selection">{{item.selectionLabel}}</text><text class="roster-stats">进球 {{item.goalsLabel}}　助攻 {{item.assistsLabel}}</text></view></view>
+      <view wx:if="{{!roster.length}}" class="section-empty">名单尚未录入</view>
+      <view wx:if="{{roster.length}}" class="section-footnote">报名不等于实际出场；“—”表示未记录。</view>
+    </view>
+    <view class="content-section" wx:if="{{match.analysis}}"><view class="section-heading"><text class="section-heading-title">赛后复盘</text></view><view class="prewrap section-copy">{{match.analysis}}</view></view>
+    <view class="content-section" wx:if="{{snapshots.length}}"><view class="section-heading"><text class="section-heading-title">战术留档</text></view><view aria-role="button" wx:for="{{snapshots}}" wx:key="id" class="tactic-row" data-id="{{item.id}}" bindtap="tactic"><text>{{item.name}}</text><text class="tactic-source">{{item.source}} ›</text></view></view>
+    <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
+    <view wx:if="{{canReply}}" class="bottom-space"></view>
+    <view wx:if="{{canReply}}" class="fixed-actions">
+      <view class="reply-bar-heading"><text class="reply-bar-title">我的报名</text><text class="reply-bar-status">{{match.response ? '已选择：' + match.responseLabel : '请选择'}}</text></view>
+      <view class="actions reply-options">
+        <button class="{{match.response==='yes'?'primary':''}} ui-button reply-button" hover-class="match-control-pressed" data-response="yes" bindtap="reply" disabled="{{loading || (busy)}}" aria-label="{{match.response==='yes'?'参加，当前状态':'选择参加'}}" size="mini"><text wx:if="{{match.response==='yes'}}" class="reply-check" aria-hidden="true">✓</text><text>参加</text></button>
+        <button class="{{match.response==='maybe'?'primary':''}} ui-button reply-button" hover-class="match-control-pressed" data-response="maybe" bindtap="reply" disabled="{{loading || (busy)}}" aria-label="{{match.response==='maybe'?'待定，当前状态':'选择待定'}}" size="mini"><text wx:if="{{match.response==='maybe'}}" class="reply-check" aria-hidden="true">✓</text><text>待定</text></button>
+        <button class="{{match.response==='no'?'primary':''}} ui-button reply-button" hover-class="match-control-pressed" data-response="no" bindtap="reply" disabled="{{loading || (busy)}}" aria-label="{{match.response==='no'?'请假，当前状态':'选择请假'}}" size="mini"><text wx:if="{{match.response==='no'}}" class="reply-check" aria-hidden="true">✓</text><text>请假</text></button>
+      </view>
+    </view>
+  </block>
+</view>
+<canvas id="match-share-canvas" type="2d" class="share-canvas"/><business-dialog id="business-dialog"/>

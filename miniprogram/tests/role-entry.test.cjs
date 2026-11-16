@@ -50,10 +50,10 @@ test('entry wording explains shared roles without introducing a local role selec
   assert.doesNotMatch(read('login'), /switchRole|roleIndex|bindchange="role"/);
 });
 
-test('read-only tactics and admin match entry do not advertise unavailable editing or registration', () => {
+test('read-only tactics hide editing and the home match card opens details for either role', () => {
   const board = fs.readFileSync(path.join(root, 'pages/tactic-board/index.wxml'), 'utf8');
   const home = fs.readFileSync(path.join(root, 'pages/home/index.wxml'), 'utf8');
   assert.ok(board.includes("canEdit?'可编辑画布、动画与阵型。':'当前为只读，可查看站位与播放已有演示。'"));
-  assert.ok(home.includes("roleLabel==='管理端'?'查看比赛':'查看比赛与报名'"));
+  assert.match(home, /wx:if="{{next}}"[\s\S]*?bindtap="openMatch"/);
   assert.match(board, /wx:if="{{canEdit}}"[^>]*id="edit-positions"/);
 });

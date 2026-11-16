@@ -77,3 +77,5 @@
 @media (max-width: 346.154px) {
   .section-title, .card .muted.match-time { font-size: 12px; }
 }
+
+.schedule-location{line-height:1.6;overflow-wrap:anywhere}.schedule-signup{display:flex;align-items:flex-start;justify-content:space-between;gap:12rpx;margin-top:16rpx}.schedule-counts{display:flex;flex:1;min-width:0;flex-wrap:wrap;gap:6rpx 18rpx;color:var(--muted);font-size:25rpx;line-height:1.6}.schedule-counts text{white-space:nowrap}.schedule-response{flex-shrink:0;color:var(--brand-ink);font-size:25rpx;line-height:1.6;white-space:nowrap}@media(max-width:360px){.schedule-counts,.schedule-response{font-size:12px}}

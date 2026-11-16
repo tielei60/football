@@ -1,1 +1,7 @@
 .subtitle,.hint{line-height:1.6}.account-name{overflow-wrap:anywhere}.account-actions{display:flex;gap:12rpx;margin-top:20rpx;min-width:0}.account-actions button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;min-height:44px;margin:0;padding:14rpx 8rpx;box-sizing:border-box;line-height:1.5}.error{margin-top:20rpx}
+
+/* Keep account cards and their paired actions compact on narrow screens. */
+.page .card.section+.card.section{margin-top:20rpx}.account-actions{gap:16rpx;align-items:stretch}.account-actions button.ui-button[size="mini"]{overflow-wrap:anywhere}.account-name{line-height:1.4;word-break:break-word}.page>.subtitle{margin-top:8rpx}
+.page .card .account-name{margin-bottom:8rpx}
+.page .card .hint{padding:0;margin-top:8rpx;line-height:1.6}
+.page .account-actions{margin-top:20rpx}

@@ -29,6 +29,9 @@ async function fixture(t, { enabled = true } = {}) {
       appSecret: "fictional-test-secret-only",
       fetchImpl: async (url) => {
         calls++;
+        const parsed = new URL(url);
+        if (parsed.pathname === "/cgi-bin/token") return Response.json({ access_token: "fictional-token" });
+        if (parsed.pathname === "/wxa/getwxacode") return new Response(Buffer.from("fictional-image"), { headers: { "content-type": "image/jpeg" } });
         const code = new URL(url).searchParams.get("js_code");
         if (waiter) {
           const w = waiter;
@@ -754,4 +757,20 @@ test("player password capability follows target same-team account across get/lis
   const isolated = (await f.manage(`/players/${plain.id}`)).body;
   assert.equal(isolated.hasAccount, false);
   assert.equal(isolated.passwordEnabled, false);
+});
+
+test('invite card code requires an active matching invitation and administrator', async (t) => {
+  const f = await fixture(t);
+  const p = await f.player();
+  const other = await f.player('另一名虚构球员');
+  const inv = await f.create(p);
+  const path = `/players/${p.id}/wechat-invites/${inv.id}/code`;
+  assert.ok([401, 403].includes((await f.call(path, 'POST', { credential: inv.credential })).status));
+  assert.equal((await f.manage(path, 'POST', { credential: 'a'.repeat(64) })).status, 409);
+  assert.equal((await f.manage(`/players/${other.id}/wechat-invites/${inv.id}/code`, 'POST', { credential: inv.credential })).status, 404);
+  const code = await f.manage(path, 'POST', { credential: inv.credential });
+  assert.equal(code.status, 200);
+  assert.match(code.body.image, /^data:image\/jpeg;base64,/);
+  assert.equal((await f.manage(`/players/${p.id}/wechat-invites/${inv.id}/revoke`, 'POST', { revision: inv.revision })).status, 200);
+  assert.equal((await f.manage(path, 'POST', { credential: inv.credential })).status, 409);
 });

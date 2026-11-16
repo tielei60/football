@@ -1,6 +1,7 @@
 const ui=require('../../utils/ui');
 const s = require("../shared");
 const location = require("../../utils/location");
+const shareCard = require("../../utils/match-share-card");
 // Same-process, same-session serialization. This is not a multi-device CAS.
 const pendingReplies=new Map();
 const replyKey=(token,id)=>JSON.stringify([token,String(id)]);
@@ -10,7 +11,7 @@ function settleReply(entry,error){
   const status=error?.status||error?.statusCode;
   if(((status>=400&&status<500)||s.api.getSession()?.token!==entry.owner)&&pendingReplies.get(entry.key)===entry)pendingReplies.delete(entry.key);
 }
-Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoch||0)+1;this.setData({busy:false});ui.abort(this);},
+Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;this._epoch=(this._epoch||0)+1;this.setData({busy:false,shareReady:false});ui.abort(this);},
   data: {
     loading: true,
     error: "",
@@ -23,13 +24,50 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
     reconciling:false,
     actionError: "",
     replies: [],
+    replyGroups: [],
     roster: [],
     snapshots: [],
     venueLocation: location.matchVenue(null),
     hasLocation:false,
+    shareReady: false,
+    shareError: '',
   },
   onLoad(q) {
     this.id = q.id;
+  },
+  onShareAppMessage() {
+    const match = this.data.match;
+    if (!match || match.status !== "published") return { title: "球队比赛", path: "/pages/home/index" };
+    return {
+      title: `${match.dateLabel.split(' ').pop()} ${match.kickoff || "时间待定"} ⚽ 快来报名吧！`,
+      path: `/pages/match-detail/index?id=${encodeURIComponent(this.id)}`,
+      ...(this._shareImage ? { imageUrl: this._shareImage } : {}),
+    };
+  },
+  prepareShareCard() {
+    const match = this.data.match, owner = s.api.getSession()?.token, epoch = this._epoch;
+    if (!match || match.status !== 'published' || !owner || this._hidden || this._disposed) return;
+    this._shareImage = '';
+    this.setData({ shareReady: false, shareError: '' });
+    const active = () => !this._hidden && !this._disposed && this._epoch === epoch && s.api.getSession()?.token === owner;
+    const fail = () => { if (active()) this.setData({ shareError: '分享卡片生成失败，请重试。' }); };
+    if (typeof wx === 'undefined' || typeof wx.nextTick !== 'function' || typeof wx.createSelectorQuery !== 'function' || typeof wx.canvasToTempFilePath !== 'function') return fail();
+    wx.nextTick(() => {
+      if (!active()) return;
+      wx.createSelectorQuery().in(this).select('#match-share-canvas').fields({ node: true, size: true }).exec(rows => {
+        if (!active()) return;
+        try {
+          const canvas = rows?.[0]?.node;
+          if (!canvas) return fail();
+          shareCard.draw(canvas, match, this.data.replies);
+          wx.canvasToTempFilePath({ canvas, width: 1000, height: 800, destWidth: 1000, destHeight: 800,
+            fileType: 'png', success: result => {
+              if (active() && result.tempFilePath) { this._shareImage = result.tempFilePath; this.setData({ shareReady: true }); }
+              else if (active()) fail();
+            }, fail }, this);
+        } catch (_) { fail(); }
+      });
+    });
   },
   onShow() {
     this._hidden=false;
@@ -41,8 +79,15 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
   },
   onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
   imageError: s.imageError,
+  replyImageError(e) {
+    const group = Number(e.currentTarget.dataset.group), index = Number(e.currentTarget.dataset.index);
+    if (Number.isInteger(group) && Number.isInteger(index) && this.data.replyGroups[group]?.players[index])
+      this.setData({ [`replyGroups[${group}].players[${index}].avatar`]: '' });
+  },
   async refresh() {
     this._replyOwner = null;
+    this._shareImage = '';
+    this.setData({ shareReady: false, shareError: '' });
     let loadedOwner = null;
     const expected=(this._epoch||0)+1;
     const pending=pendingReplies.get(replyKey(s.api.getSession()?.token,this.id));
@@ -63,6 +108,14 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
       if(!active())throw new Error('页面或登录已变化，请重新打开比赛。');
       if(pending&&pending.settled&&pendingReplies.get(pending.key)===pending)pendingReplies.delete(pending.key);
       const byId = new Map(players.map((p) => [p.id, p]));
+      const replies = raw.rsvps.map((r) => {
+        const player = byId.get(r.playerId), name = player?.name || "历史成员";
+        return { playerId: r.playerId, name, label: s.replies[r.response], response: r.response,
+          avatar: s.assetUrl(player?.avatar), initial: Array.from(name)[0] || '球' };
+      });
+      const replyGroups = [['yes', '参加'], ['maybe', '待定'], ['no', '请假']]
+        .map(([response, label]) => ({ response, label, players: replies.filter(r => r.response === response) }))
+        .filter(group => group.players.length);
       const result = {
         match,
         replyPending:false,
@@ -71,17 +124,13 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
         notice:raw.notice||"",
         hasLocation:!!location.point(raw.venueSnapshot),
         venueLocation:location.matchVenue(raw),
-        team: { name: session.team.name },
+        team: { name: session.team.name, crest: s.assetUrl(session.team.crest) },
         admin: session.user.role === "admin",
         canReply:
-          session.user.role === "player" &&
           !!session.user.playerId &&
           match.status === "published",
-        replies: raw.rsvps.map((r) => ({
-          playerId: r.playerId,
-          name: byId.get(r.playerId)?.name || "历史成员",
-          label: s.replies[r.response],
-        })),
+        replies,
+        replyGroups,
         roster: raw.roster.map((r) => ({
           playerId: r.playerId,
           position: r.position,
@@ -113,6 +162,7 @@ Page({onHide(){this._hidden=true;this._replyAttempt=null;this._epoch=(this._epoc
     });
     if (expected === this._epoch && !this._disposed && !this._hidden && !this.data.error &&
         loadedOwner && loadedOwner === s.api.getSession()?.token) this._replyOwner = loadedOwner;
+    if (this._replyOwner) this.prepareShareCard();
     if(expected===this._epoch&&!this._disposed&&!this._hidden)this.setData({reconciling:false});
   },
   media(){wx.navigateTo({url:"/pages/match-media/index?id="+encodeURIComponent(this.id)});},

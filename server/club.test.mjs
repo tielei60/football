@@ -242,6 +242,15 @@ test("complete club workflow, RSVP is not appearance, null metrics, inclusive se
   );
   assert.equal((await admin("/api/statistics?year=2025")).body.matches, 1);
   assert.equal((await admin("/api/statistics?year=2026")).body.matches, 2);
+  const allStats = (await admin("/api/statistics?all=1")).body;
+  assert.equal(allStats.filter.label, "全部比赛");
+  assert.equal(allStats.matches, 3);
+  const allPlayer = allStats.players.find((p) => p.playerId === player.id);
+  assert.equal(allPlayer.appearances, 2);
+  assert.equal(allPlayer.goals, 2);
+  assert.equal(allPlayer.assists, 1);
+  assert.equal((await admin("/api/statistics?all=1&year=2026")).status, 400);
+  assert.equal((await admin("/api/statistics?all=0")).status, 400);
   assert.equal(
     (await admin(`/api/statistics?year=2026&seasonId=${season.id}`)).status,
     400,
@@ -2248,4 +2257,32 @@ test("closed match RSVP matrix rejects all responses without changing replies or
       }
     } finally { db.close(); }
   }
+});
+
+test("报名人数限制参加名额，待定和请假不占名额", async (t) => {
+  const f = await fixture(t), adminCookie = await f.login();
+  const admin = (route, method = "GET", body) => f.request(route, { method, body, cookie: adminCookie });
+  const a = (await admin('/api/players', 'POST', { name: '报名甲' })).body;
+  const b = (await admin('/api/players', 'POST', { name: '报名乙' })).body;
+  await admin(`/api/players/${a.id}/account`, 'POST', { username: 'capacity-a', password: 'capacity-password-a' });
+  await admin(`/api/players/${b.id}/account`, 'POST', { username: 'capacity-b', password: 'capacity-password-b' });
+  const ca = await f.login({ username: 'capacity-a', password: 'capacity-password-a' });
+  const cb = await f.login({ username: 'capacity-b', password: 'capacity-password-b' });
+  const created = await admin('/api/matches', 'POST', { opponent: '测试队', date: '2026-11-20', status: 'published' });
+  assert.equal(created.body.maxParticipants, null);
+  const id = created.body.id;
+  assert.equal((await admin(`/api/matches/${id}`, 'PUT', { maxParticipants: 0 })).status, 400);
+  assert.equal((await admin(`/api/matches/${id}`, 'PUT', { maxParticipants: 1 })).body.maxParticipants, 1);
+  const reply = (cookie, response) => f.request(`/api/matches/${id}/rsvp`, { method: 'PUT', cookie, body: { response } });
+  assert.equal((await reply(ca, 'yes')).status, 200);
+  assert.equal((await reply(ca, 'yes')).status, 200);
+  assert.equal((await reply(cb, 'maybe')).status, 200);
+  assert.equal((await reply(cb, 'yes')).status, 409);
+  assert.equal((await reply(ca, 'no')).status, 200);
+  assert.equal((await reply(cb, 'yes')).status, 200);
+  assert.equal((await admin(`/api/matches/${id}`, 'PUT', { maxParticipants: null })).body.maxParticipants, null);
+  assert.equal((await reply(ca, 'yes')).status, 200);
+  assert.equal((await admin(`/api/matches/${id}`, 'PUT', { maxParticipants: 1 })).status, 409);
+  const listed = await admin('/api/matches');
+  assert.equal(listed.body.find(m => m.id === id).maxParticipants, null);
 });

@@ -95,3 +95,9 @@
 @media (max-width: 321.429px) {
   .match-time, .section-title { font-size: 12px; }
 }
+
+/* Schedule link keeps a full tap area while looking like a light navigation action. */
+.page .between>button.home-schedule-link[size="mini"]{min-height:44px;padding:0 12rpx;margin:0 -12rpx 0 0;border:0;background:transparent;color:var(--brand-ink);font-size:24rpx;font-weight:600;line-height:1.4;box-shadow:none;white-space:nowrap}
+.page .between>button.home-schedule-link[size="mini"]::after{border:0}
+
+.signup-summary{align-items:flex-start;gap:12rpx}.signup-counts{display:flex;flex:1;min-width:0;flex-wrap:wrap;gap:6rpx 18rpx;color:var(--muted);font-size:25rpx;line-height:1.6}.signup-counts text{white-space:nowrap}.signup-summary>.tag{flex-shrink:0}@media(max-width:360px){.signup-counts{font-size:12px}}

@@ -211,6 +211,14 @@ export function createWechatIdentityStore(
         appId,
       });
     },
+    verifyCredential(actor, playerId, id, credential) {
+      guard();
+      const u = admin(actor, playerId);
+      const target = invites.verifyCredential(actor, id, credential);
+      if (target.playerId !== playerId || target.teamId !== u.team_id || target.appId !== appId)
+        fail(404, "邀请不存在。");
+      return target;
+    },
     decide(actor, playerId, id, input, action) {
       guard();
       const u = admin(actor, playerId);

@@ -42,6 +42,29 @@
 .rank-row .bold {
   overflow-wrap: anywhere;
 }
+.rank-avatar {
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 22rpx;
+  font-size: 27rpx;
+}
+.ranking-header, .ranking-values {
+  display: flex;
+  align-items: center;
+}
+.ranking-header {
+  padding: 0 0 10rpx;
+  color: var(--muted);
+  font-size: 24rpx;
+}
+.ranking-header-name { flex: 1; }
+.ranking-header > text:not(.ranking-header-name), .ranking-values > text {
+  width: 62rpx;
+  flex-shrink: 0;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ranking-values { color: var(--brand-ink); font-size: 28rpx; font-weight: 600; }
 .card>.bold {
   overflow-wrap: anywhere;
   line-height: 1.5;

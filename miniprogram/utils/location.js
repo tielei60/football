@@ -35,7 +35,7 @@ function open(value) {
   if (!point(value)) return Promise.reject(new Error('此球场尚未设置地图位置。'));
   if (typeof wx.openLocation !== 'function') return Promise.reject(new Error('当前微信暂不支持查看位置，请在手机微信中重试。'));
   return new Promise((resolve, reject) => wx.openLocation({latitude:value.latitude, longitude:value.longitude,
-    name:value.name || '', address:value.address || '', scale:16, success:resolve,
+    name:[value.name,value.fieldNumber].filter(Boolean).join(' · '), address:value.address || '', scale:16, success:resolve,
     fail: error => /cancel/i.test(error.errMsg || '') ? resolve() : reject(new Error('暂时无法打开微信地图，请稍后重试。'))}));
 }
 // Use the match's captured venue only. Current venue edits/archival must not move history.
@@ -43,7 +43,7 @@ function matchVenue(match) {
   const snapshot = match && match.venueSnapshot;
   const text = value => typeof value === 'string' ? value : '';
   const valid = !!point(snapshot);
-  const title = text(snapshot?.name) || '比赛球场';
+  const title = [text(snapshot?.name), text(snapshot?.fieldNumber)].filter(Boolean).join(' · ') || '比赛球场';
   const address = text(snapshot?.address) || text(match?.location);
   return {valid, title, address, latitude:valid?snapshot.latitude:null, longitude:valid?snapshot.longitude:null,
     markers:markers(snapshot, title),

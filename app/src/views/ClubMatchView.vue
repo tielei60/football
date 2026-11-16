@@ -21,6 +21,49 @@
         {{ unknown(match.homeScore) }} : {{ unknown(match.awayScore) }}
       </span>
     </div>
+    <section class="club-card match-share" aria-label="分享比赛">
+      <div class="club-heading">
+        <div>
+          <h2>邀请队友</h2>
+          <p class="club-muted">分享比赛信息和当前报名情况，邀请队友查看或报名。</p>
+        </div>
+        <button type="button" @click="shareOpen = !shareOpen" :aria-expanded="shareOpen">
+          {{ shareOpen ? "收起分享" : "分享比赛" }}
+        </button>
+      </div>
+      <div v-if="shareOpen" class="match-share-content">
+        <div class="match-share-preview">
+          <strong>{{ auth.session?.team.name }} vs {{ match.opponent }}</strong>
+          <div class="match-share-details">
+            <div>时间 · {{ match.date }} {{ match.kickoff || "时间待定" }}</div>
+            <div>地点 · {{ match.location || "地点待定" }}</div>
+            <div>赛事 · {{ match.competition || "比赛" }}</div>
+          </div>
+          <p v-for="(label, response) in rsvpLabels" :key="response">
+            {{ label }}（{{ match.rsvps.filter((r) => r.response === response).length }}）：{{
+              match.rsvps
+                .filter((r) => r.response === response)
+                .map((r) => playerName(r.playerId))
+                .join("、") || "暂无"
+            }}
+          </p>
+        </div>
+        <p class="club-muted">报名名单为分享时的快照；链接需球队账号登录后查看最新信息。</p>
+        <div class="club-actions">
+          <button v-if="canShare" type="button" class="primary" @click="shareMatch">分享到…</button>
+          <button type="button" @click="copyShare">复制邀请内容</button>
+        </div>
+        <p role="status" class="club-muted">{{ shareFeedback }}</p>
+        <textarea
+          v-if="copyFailed"
+          :value="shareText"
+          readonly
+          aria-label="手动复制邀请内容"
+          rows="8"
+          @focus="($event.target as HTMLTextAreaElement).select()"
+        />
+      </div>
+    </section>
     <nav class="club-section-nav" aria-label="比赛详情分区">
       <a v-if="auth.isAdmin" href="#match-information">信息与分析</a>
       <a href="#match-registration">报名情况</a>
@@ -171,7 +214,8 @@
             <UiSelect v-model="addPlayerId">
               <option value="">选择球员</option>
               <option v-for="p in availablePlayers" :key="p.id" :value="p.id">
-                {{ p.name }}{{ p.membershipConfirmed === false ? "（状态未确认）" : p.status === "inactive" ? "（已归档）" : "" }}
+                {{ p.name
+                }}{{ p.membershipConfirmed === false ? "（状态未确认）" : p.status === "inactive" ? "（已归档）" : "" }}
               </option>
             </UiSelect>
           </label>
@@ -318,6 +362,10 @@ const loading = ref(true);
 const busy = ref(false);
 const error = ref("");
 const success = ref("");
+const shareOpen = ref(false);
+const shareFeedback = ref("");
+const copyFailed = ref(false);
+const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 const sideLabels = { home: "主场", away: "客场", neutral: "中立场", unknown: "主客场未知" };
 const rsvpLabels = { yes: "参加", no: "不参加", maybe: "待定" };
 const ownRsvp = computed(() => match.value?.rsvps.find((r) => r.playerId === auth.session?.user.playerId)?.response);
@@ -338,6 +386,41 @@ const hasMigratedSnapshots = computed(
     roster.value.some((r) => r.snapshotSource === "migration")
 );
 const playerName = (id: string) => players.value.find((p) => p.id === id)?.name || id;
+const shareText = computed(() => {
+  const m = match.value;
+  if (!m) return "";
+  const lines = [
+    `⚽ ${auth.session?.team.name || "球队"} vs ${m.opponent}`,
+    `时间：${m.date} ${m.kickoff || "时间待定"}`,
+    `地点：${m.location || "地点待定"}`,
+    `赛事：${m.competition || "比赛"}`,
+    ...Object.entries(rsvpLabels).map(([response, label]) => {
+      const names = m.rsvps.filter((r) => r.response === response).map((r) => playerName(r.playerId));
+      return `${label}（${names.length}）：${names.join("、") || "暂无"}`;
+    }),
+    `查看比赛并报名：${window.location.origin}${route.path}`,
+    "请使用球队账号登录查看最新信息。",
+  ];
+  return lines.join("\n");
+});
+async function copyShare() {
+  try {
+    await navigator.clipboard.writeText(shareText.value);
+    copyFailed.value = false;
+    shareFeedback.value = "邀请内容已复制";
+  } catch {
+    copyFailed.value = true;
+    shareFeedback.value = "复制失败，请手动选择下方内容复制。";
+  }
+}
+async function shareMatch() {
+  try {
+    await navigator.share({ title: "比赛邀请", text: shareText.value });
+    shareFeedback.value = "";
+  } catch (e) {
+    if ((e as Error).name !== "AbortError") shareFeedback.value = "分享失败，请尝试复制邀请内容。";
+  }
+}
 const rosterName = (r: Appearance) => r.playerSnapshot?.name || playerName(r.playerId);
 const informationFields = [
   "competition",
@@ -522,3 +605,34 @@ async function load() {
 }
 onMounted(load);
 </script>
+<style scoped>
+.match-share-content {
+  margin-top: 18px;
+  max-width: 560px;
+}
+.match-share-preview {
+  overflow: hidden;
+  border: 1px solid #e4e5e0;
+  border-radius: 12px;
+  background: #fff;
+}
+.match-share-preview > strong {
+  display: block;
+  padding: 16px;
+  font-size: 1.1rem;
+}
+.match-share-details {
+  padding: 14px 16px;
+  background: #e76f40;
+  color: #fff;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.match-share-preview p {
+  margin: 10px 16px;
+  overflow-wrap: anywhere;
+}
+.match-share-content textarea {
+  width: 100%;
+}
+</style>

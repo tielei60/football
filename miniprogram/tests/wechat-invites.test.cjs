@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '../pages/wechat-invites/index.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '../pages/wechat-invites/logic.js'), 'utf8').replace('module.exports = {', 'Page({').replace(/};\s*$/, '});');
 function setup(options = {}) {
   let session = { token: 'fictional-admin', user: { id: 1, role: 'admin' }, team: {id:1} }, definition;
   const requests = [], modals = [], clipboard = [];
@@ -40,18 +40,15 @@ test('未启用与非管理员禁止邀请请求', async () => {
   const player = setup(); player.setSession({ token: 'player', user: { role: 'player' } });
   await player.page.onShow(); assert.match(player.page.data.error, /管理员/); assert.equal(player.requests.length, 0);
 });
-test('创建仅确认后执行，秘密不进入page.data或自动剪贴板', async () => {
-  const f = setup(); await f.page.onShow(); f.page.create();
-  assert.equal(f.requests.filter(r => r.method === 'POST').length, 0);
-  await f.modals[0].success({ confirm: false }); assert.equal(f.page._credential, null);
-  f.page.create(); await f.modals[1].success({ confirm: true });
-  assert.equal(f.page.data.canCopy, true); assert.equal(JSON.stringify(f.page.data).includes('b'.repeat(64)), false); assert.equal(f.clipboard.length, 0);
-  f.page.copy(); await f.modals[2].success({ confirm: true }); assert.deepEqual(f.clipboard, ['b'.repeat(64)]);
-  f.page.onHide(); assert.equal(f.page._credential, null); assert.equal(f.page.data.canCopy, false);
+test('点击直接创建，凭据不进入页面数据或剪贴板', async () => {
+  const f = setup(); await f.page.onShow(); await f.page.create();
+  assert.equal(f.requests.filter(r => r.method === 'POST' && r.url.endsWith('invites')).length, 1);
+  assert.equal(f.page.data.canCopy, true); assert.equal(JSON.stringify(f.page.data).includes('b'.repeat(64)), false);
+  assert.equal(f.clipboard.length, 0); f.page.onHide(); assert.equal(f.page._credential, null);
 });
-test('隐藏后旧复制确认和旧写操作不会执行', async () => {
-  const f = setup(); await f.page.onShow(); f.page.create(); await f.modals[0].success({ confirm: true });
-  f.page.copy(); f.page.onHide(); await f.modals[1].success({ confirm: true }); assert.equal(f.clipboard.length, 0);
+test('隐藏后旧复制确认不得执行', async () => {
+  const f = setup(); await f.page.onShow(); await f.page.create();
+  f.page.copy(); f.page.onHide(); await f.modals[0].success({ confirm: true }); assert.equal(f.clipboard.length, 0);
   await f.page.onShow(); assert.equal(f.page.data.canCopy, false);
 });
 test('批准必须人工输入编号，不预填服务端核对码', async () => {
@@ -67,16 +64,17 @@ test('换身份后旧批准/解绑对话框不得发送请求', async () => {
   await f.page.onShow(); f.page.decide(action('approve')); f.setSession({ token: 'new-admin', user: { role: 'admin' } });
   await f.modals[0].success({ confirm: true, content: 'ABCDEF12' }); assert.equal(f.requests.some(r => r.method === 'POST'), false);
 });
-test('未知创建结果锁定操作，重新载入后重放原请求ID而非新建', async () => {
+test('未知创建结果要求刷新，未查到邀请时重放原请求编号', async () => {
   const f = setup(); await f.page.onShow(); const original = f.api.request;
   let attempt = 0; f.api.request = async (url, method, body) => {
-    if (method === 'POST') { f.requests.push({url, method, body}); if (++attempt === 1) throw Error('网络中断'); return { ...f.active, credentialUnavailable: true }; }
+    if (method === 'POST' && url.endsWith('invites')) { f.requests.push({url, method, body}); if (++attempt === 1) throw Error('网络中断'); return { ...f.active, credentialUnavailable: true }; }
     return original(url, method, body);
   };
-  f.page.create(); await f.modals[0].success({ confirm: true }); assert.equal(f.page.data.needsRefresh, true);
-  const id = f.page._createId; f.page.create(); assert.equal(f.modals.length, 1);
-  await f.page.refresh(); f.page.create(); await f.modals[1].success({ confirm: true });
-  assert.equal(f.requests.filter(r => r.method === 'POST')[1].body.requestId, id); assert.equal(f.page.data.canCopy, false);
+  await f.page.create(); assert.equal(f.page.data.needsRefresh, true);
+  const id = f.page._createId; await f.page.create(); assert.equal(attempt, 1);
+  await f.page.refresh(); await f.page.create();
+  assert.equal(f.requests.filter(r => r.method === 'POST')[1].body.requestId, id);
+  assert.equal(f.page.data.canCopy, false);
 });
 test('分页去重且activeInvite独立显示，加载中不允许写', async () => {
   const f = setup(); f.setList({ items: [f.active], activeInvite: f.active, nextCursor: 'cursor' }); await f.page.onShow();
@@ -102,7 +100,7 @@ test('归档球员只读绑定，不读取邀请或创建', async () => {
 });
 test('迟到创建响应不写入已隐藏页面或保留凭据', async () => {
   const f=setup(); await f.page.onShow(); let release; f.api.request=()=>new Promise(resolve=>{release=resolve;});
-  f.page.create(); const pending=f.modals[0].success({confirm:true}); f.page.onHide(); release({...f.active,credential:'d'.repeat(64)}); await pending;
+  const pending=f.page.create(); f.page.onHide(); release({...f.active,credential:'d'.repeat(64)}); await pending;
   assert.equal(f.page._credential,null); assert.equal(f.page.data.canCopy,false); assert.equal(f.page.data.authorized,false);
 });
 test('版本冲突要求刷新核对，不能再次直接操作', async () => {
@@ -113,34 +111,16 @@ test('版本冲突要求刷新核对，不能再次直接操作', async () => {
 test('共享弹层阻断时不得排队创建或复制', async () => {
   const f=setup(); await f.page.onShow(); f.page.setData({businessUiBlocking:true}); f.page.create(); assert.equal(f.modals.length,0);
 });
-for (const resolved of ['revoke', 'reject', 'unbind']) test('未知创建经' + resolved + '明确成功后再次创建使用新请求编号', async () => {
-  const f = setup(); await f.page.onShow();
-  let stage = 'initial', oldId, newId;
-  const original = f.api.request;
-  f.api.request = async (url, method, body) => {
-    if (method === 'POST' && url.endsWith('/wechat-invites')) {
-      if (stage === 'initial') { oldId = body.requestId; stage = resolved === 'unbind' ? 'bound' : 'pending'; throw Error('响应丢失'); }
-      newId = body.requestId; stage = 'new'; return {...f.active,credential:'e'.repeat(64)};
-    }
-    if (method === 'POST' && (url.endsWith('/revoke') || url.endsWith('/reject'))) { stage='resolved'; return {status:'revoked',revision:2}; }
-    if (url.endsWith('/wechat-binding')) return {bound:stage==='bound',revision:2,passwordEnabled:false};
-    if (url.endsWith('/wechat-invites')) return {items:[],activeInvite:stage==='pending'?{...f.active,status:resolved==='reject'?'claimed':'pending'}:null,nextCursor:null};
+test('重新进入后重新生成先撤销待认领邀请，已有申请不被撤销', async () => {
+  const f=setup(); f.setList({items:[],activeInvite:f.active,nextCursor:null}); await f.page.onShow();
+  const writes=[]; const original=f.api.request;
+  f.api.request=async(url,method,body)=>{
+    if(method==='POST') { writes.push({url,body}); if(url.endsWith('/revoke')) return {}; if(url.endsWith('/wechat-invites')) return {...f.active,id:'c'.repeat(32),credential:'e'.repeat(64)}; }
     return original(url,method,body);
   };
-  f.page.create(); await f.modals[0].success({confirm:true}); assert.equal(f.page._createId,oldId);
-  await f.page.refresh();
-  if (resolved==='unbind') f.page.unbind(); else f.page.decide(action(resolved));
-  await f.modals[1].success({confirm:true}); assert.equal(f.page._createId,null);
-  f.page.create(); await f.modals[2].success({confirm:true}); assert.ok(newId); assert.notEqual(newId,oldId);
-});
-test('终态旧请求重放明确提示未新建，不自动创建第二次', async () => {
-  const f=setup(); await f.page.onShow(); let posts=0;
-  const original=f.api.request; f.api.request=async(url,method,body)=>{
-    if(method==='POST'){posts++;return {...f.active,status:'expired',credentialUnavailable:true};}
-    return original(url,method,body);
-  };
-  f.page._createId='previous-request'; f.page.create(); await f.modals[0].success({confirm:true});
-  assert.equal(posts,1); assert.match(f.page.data.actionError,/本次未新建/); assert.match(f.page.data.actionError,/再次主动创建/); assert.equal(f.page._createId,null); assert.equal(f.page.data.canCopy,false);
+  await f.page.create(); assert.equal(writes.length,2); assert.match(writes[0].url,/revoke$/); assert.match(writes[1].url,/wechat-invites$/);
+  const claimed=setup(); claimed.setList({items:[],activeInvite:{...claimed.active,status:'claimed'},nextCursor:null}); await claimed.page.onShow(); await claimed.page.create();
+  assert.equal(claimed.requests.some(r=>r.method==='POST'),false);
 });
 test('撤销失败不能清除未知创建请求编号', async()=>{
   const f=setup(); f.setList({items:[],activeInvite:f.active,nextCursor:null});await f.page.onShow();f.page._createId='uncertain-request';

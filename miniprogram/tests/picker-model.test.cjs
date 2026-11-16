@@ -81,6 +81,16 @@ test("time minute limits and hour clamping never permit out of range commits", (
   );
   assert.equal(m.result(m.create({ mode: "date", start: "2024-02-30" })), null);
 });
+test("kickoff picker offers five-minute steps while preserving existing off-step times", () => {
+  let s = m.create({ mode: "time", minuteStep: 5 }, new Date(2026, 0, 1, 20, 16));
+  assert.equal(m.result(s), "20:15");
+  assert.deepEqual(s.minutes.map((option) => option.label), ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"]);
+  assert.equal(m.result(m.select(s, "minute:16")), "20:15");
+  s = m.create({ mode: "time", minuteStep: 5, value: "20:16" });
+  assert.equal(m.result(s), "20:16");
+  assert.equal(s.minutes.find((option) => option.label === "16").selected, true);
+  assert.equal(m.result(m.select(s, "minute:20")), "20:20");
+});
 function triggerHarness() {
   let definition,
     resolve,

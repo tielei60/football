@@ -7,10 +7,11 @@ const nullable = value => value == null ? '' : String(value);
 function rowView(row, player, preview) {
   const identity = row.playerSnapshot || preview || player;
   const positionValues = [...new Set([...standardPositions, ...(player?.positions || []), row.position || ''])];
-  return { playerId: row.playerId, name: identity?.name || '历史成员', number: identity?.number ?? '—', historical: !!row.playerSnapshot, migration: row.snapshotSource === 'migration', selectionIndex: Math.max(0, selections.findIndex(x => x.value === row.selection)), appearanceIndex: row.appeared === true ? 1 : row.appeared === false ? 2 : 0, positionValues, positionLabels: positionValues.map(x => x || '未设置'), positionIndex: positionValues.indexOf(row.position || ''), goals: nullable(row.goals), assists: nullable(row.assists) };
+  const name = identity?.name || '历史成员';
+  return { playerId: row.playerId, name, initial: Array.from(name.trim())[0] || '球', avatar: player?.avatar || '', number: identity?.number ?? '—', historical: !!row.playerSnapshot, migration: row.snapshotSource === 'migration', selectionIndex: Math.max(0, selections.findIndex(x => x.value === row.selection)), appearanceIndex: row.appeared === true ? 1 : row.appeared === false ? 2 : 0, positionValues, positionLabels: positionValues.map(x => x || '未设置'), positionIndex: positionValues.indexOf(row.position || ''), goals: nullable(row.goals), assists: nullable(row.assists) };
 }
 Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
-  data: { loading: true, error: '', busy: false, conflict: false, actionError: '', opponent: '', revision: null, rows: [], candidates: [], candidateIndex: 0, selections, appearances },
+  data: { loading: true, error: '', busy: false, conflict: false, actionError: '', opponent: '', revision: null, rows: [], savedRosterCount: 0, candidates: [], candidateIndex: 0, selections, appearances },
   onLoad(query) { this.id = query.id; this._hidden = false; this._firstShow = true; this.refresh(); },
   onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
   onHide() {ui.abort(this); this._hidden = true; this._epoch = (this._epoch || 0) + 1; this.setData({ loading: true }); },
@@ -44,15 +45,21 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       const seasonal = match.seasonId == null ? null : await s.api.request('/seasons/' + encodeURIComponent(match.seasonId) + '/roster');
       check();
       const preview = new Map((seasonal?.roster || []).map(p => [p.playerId, p]));
-      const currentPlayers = players.map(p => ({ id: p.id, name: p.name, number: p.number, status: p.status, positions: p.positions }));
+      const currentPlayers = players.map(p => ({ id: p.id, name: p.name, number: p.number, status: p.status, positions: p.positions, avatar: s.assetUrl(p.avatar) || '' }));
       const originalRows = new Map(match.roster.map(row => [row.playerId, row]));
       const rows = match.roster.map(row => rowView(row, currentPlayers.find(p => p.id === row.playerId), preview.get(row.playerId)));
       this._players = currentPlayers; this._previewIdentity = preview;
       this._owner = owner; this._originalRows = originalRows;
-      return { rows, candidates: this.candidates(rows), candidateIndex: 0, opponent: match.opponent, revision: match.revision, actionError: '', conflict: false };
+      return { rows, savedRosterCount: rows.length, candidates: this.candidates(rows), candidateIndex: 0, opponent: match.opponent, revision: match.revision, actionError: '', conflict: false };
     }).then(() => { this._loaded = this.data.revision !== null; });
   },
-  candidates(rows) { const ids = new Set(rows.map(r => r.playerId)); return (this._players || []).filter(p => p.status === 'active' && !ids.has(p.id)).map(p => { const identity = this._originalRows?.get(p.id)?.playerSnapshot || this._previewIdentity?.get(p.id) || p; return { id: p.id, label: `${identity.number ?? '—'} · ${identity.name}` }; }); },
+  candidates(rows) { const ids = new Set(rows.map(r => r.playerId)); return (this._players || []).filter(p => p.status === 'active' && !ids.has(p.id)).map(p => { const identity = this._originalRows?.get(p.id)?.playerSnapshot || this._previewIdentity?.get(p.id) || p; return { id: p.id, label: `${identity.name}${identity.number == null ? '' : ' · ' + identity.number + '号'}` }; }); },
+  avatarError(e) {
+    const id=e.currentTarget.dataset.id, index=this.data.rows.findIndex(row=>row.playerId===id);
+    if(index<0)return;
+    const player=(this._players||[]).find(p=>p.id===id);if(player)player.avatar='';
+    this.setData({[`rows[${index}].avatar`]:''});
+  },
   editable() { return !this.data.busy && !this.data.loading && !this.data.error && !this.data.conflict && !this._disposed && !this._hidden && this._owner === s.api.getSession()?.token; },
   choosePlayer(e) { if (this.editable()) this.setData({ candidateIndex: Number(e.detail.value) }); },
   add() {
@@ -113,7 +120,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       if (epoch !== this._epoch) { this.setData({ busy: false }); return this.refresh(); }
       this._originalRows = new Map(match.roster.map(row => [row.playerId, row]));
       const rows = match.roster.map(row => rowView(row, this._players.find(p => p.id === row.playerId), this._previewIdentity?.get(row.playerId)));
-      s.safeSetData(this, { rows, candidates: this.candidates(rows), candidateIndex: 0, revision: match.revision });
+      s.safeSetData(this, { rows, savedRosterCount: rows.length, candidates: this.candidates(rows), candidateIndex: 0, revision: match.revision });
       ui.showToast(this,{ title: '名单已保存', icon: 'success' });
     } catch (error) {
       if (!this._disposed && !this._hidden && this._saveAttempt === attempt &&

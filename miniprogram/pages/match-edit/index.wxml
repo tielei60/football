@@ -41,6 +41,7 @@
           ><text class="field-label">开球时间</text
           ><business-picker title="开球时间" bind:pickeropen="openBusinessPicker"
             mode="time"
+            minute-step="{{5}}"
             value="{{form.kickoff}}"
             bindchange="time"
             disabled="{{loading || (busy)}}"
@@ -52,7 +53,7 @@
         class="small ghost ui-button ui-compact"
         bindtap="clearTime"
         disabled="{{loading || (busy)}}"
-       size="mini">清除开球时间</button><view class="field"><text class="field-label">选择球场</text><business-picker title="比赛球场" bind:pickeropen="openBusinessPicker" range="{{venues}}" range-key="name" value="{{venueIndex}}" data-field="venueIndex" bindchange="pick" disabled="{{loading || (busy)}}"><view class="picker"><text class="picker-value">{{venues[venueIndex].name}}</text></view></business-picker></view><view class="field"
+       size="mini">清除开球时间</button><view class="field"><text class="field-label">选择球场</text><business-picker title="比赛球场" bind:pickeropen="openBusinessPicker" range="{{venues}}" range-key="displayName" value="{{venueIndex}}" data-field="venueIndex" bindchange="pick" disabled="{{loading || (busy)}}"><view class="picker"><text class="picker-value">{{venues[venueIndex].displayName}}</text></view></business-picker></view><view class="field"
         ><text class="field-label">地点</text
         ><input
           class="input"
@@ -86,6 +87,7 @@
             ><view class="picker"><text class="picker-value">{{sides[sideIndex].label}}</text></view></business-picker
           ></view
         ></view
+      ><view class="field"><text class="field-label">报名人数</text><input class="input" type="number" value="{{form.maxParticipants}}" data-field="maxParticipants" bindinput="input" maxlength="5" placeholder="不限（留空）" disabled="{{loading || (busy)}}"/><view class="capacity-hint">仅“参加”计入人数，留空表示不限。</view></view
       ><view class="field"
         ><text class="field-label">所属赛季</text
         ><business-picker title="所属赛季" bind:pickeropen="openBusinessPicker"

@@ -28,7 +28,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     if(this._hidden||this._disposed||(this._view||0)!==view||s.api.getSession()?.token!==owner)return;
     if(this._formToken&&this._formToken!==owner){
       this._saveAttempt=null;
-      this.setData({form:{opponent:'',competition:'',date:'',kickoff:'',location:'',homeScore:'',awayScore:'',analysis:''},savedId:null,busy:false,uncertain:false,conflict:false});
+      this.setData({form:{opponent:'',competition:'',date:'',kickoff:'',location:'',maxParticipants:'',homeScore:'',awayScore:'',analysis:''},savedId:null,busy:false,uncertain:false,conflict:false});
       return this.refresh();
     }
     const saved=(!this.id&&pendingCreateDraft?.token===owner?pendingCreateDraft.savedId:null)||(op?.owner===owner?op.savedId:null);
@@ -59,6 +59,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     form: {
       opponent: "",
       competition: "",
+      maxParticipants: "",
       date: "",
       kickoff: "",
       location: "",
@@ -106,9 +107,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         : null;
       const venueId=m?.venueId??draft?.venueId??null;
       const allVenues=await s.api.request('/venues');
-      const venues=[{id:null,name:'不关联球场 / 手填地点'},...allVenues.filter(v=>v.status==='active'||v.id===venueId)];
-      if(m?.venueId){const index=venues.findIndex(v=>v.id===m.venueId);if(index>0)venues[index]={...venues[index],name:(m.venueSnapshot?.name||venues[index].name)+'（本场留存）',locationLabel:m.location};}
-      if(venueId && !venues.some(v=>v.id===venueId))venues.push({id:venueId,name:m?.venueSnapshot?.name||'历史球场',locationLabel:m?.location});
+      const label=v=>[v.name,v.fieldNumber].filter(Boolean).join(' · ');
+      const venues=[{id:null,displayName:'不关联球场 / 手填地点'},...allVenues.filter(v=>v.status==='active'||v.id===venueId).map(v=>({...v,displayName:label(v)}))];
+      if(m?.venueId){const index=venues.findIndex(v=>v.id===m.venueId);if(index>0)venues[index]={...venues[index],displayName:label(m.venueSnapshot||venues[index])+'（本场留存）',locationLabel:m.location};}
+      if(venueId && !venues.some(v=>v.id===venueId))venues.push({id:venueId,displayName:label(m?.venueSnapshot||{name:'历史球场'})+'（本场留存）',locationLabel:m?.location});
       return {
         venues,
         venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),
@@ -126,6 +128,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           ? {
               opponent: m.opponent,
               competition: m.competition,
+              maxParticipants: m.maxParticipants == null ? "" : String(m.maxParticipants),
               date: m.date,
               kickoff: m.kickoff,
               location: m.location,
@@ -166,7 +169,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     if (this.data.busy) return;
     const key=e.currentTarget.dataset.field;const index=Number(e.detail.value);
     this.setData({ [key]: index });
-    if(key==='venueIndex'&&this.data.venues[index]?.id){const v=this.data.venues[index];this.setData({'form.location':v.locationLabel??[v.name,v.address].filter(Boolean).join(' · ').slice(0,500)});}
+    if(key==='venueIndex'&&this.data.venues[index]?.id){const v=this.data.venues[index];this.setData({'form.location':v.locationLabel??[v.name,v.fieldNumber,v.address].filter(Boolean).join(' · ').slice(0,500)});}
   },
   date(e) {
     this.setData({
@@ -229,8 +232,14 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         this.setData({ actionError: "比分请填写非负整数，未知时留空" });
         return;
       }
+    const capacity = String(f.maxParticipants ?? "").trim();
+    if (capacity && (!/^\d+$/.test(capacity) || Number(capacity) < 1 || Number(capacity) > 10000)) {
+      this.setData({ actionError: "报名人数请填写 1 至 10000 的整数，留空表示不限" });
+      return;
+    }
     const payload = {
       ...f,
+      maxParticipants: capacity ? Number(capacity) : null,
       opponent: f.opponent.trim(),
       homeScore: f.homeScore === "" ? null : Number(f.homeScore),
       awayScore: f.awayScore === "" ? null : Number(f.awayScore),

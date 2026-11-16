@@ -8,15 +8,16 @@
       <view class="card">
         <view class="invite-heading">当前绑定</view>
         <view class="binding-status">{{binding.bound?'已绑定微信':'尚未绑定'}}</view>
-        <view wx:if="{{archived}}" class="hint">球员已归档，恢复在队后才能创建邀请。</view>
+        <view wx:if="{{unconfirmed}}" class="hint">球员状态尚未确认，设为在队后即可创建邀请。</view>
+        <view wx:elif="{{archived}}" class="hint">球员已归档，恢复在队后才能创建邀请。</view>
+        <button size="mini" wx:if="{{unconfirmed||archived}}" class="ui-button ui-block" bindtap="editPlayer" disabled="{{busy||loadingMore}}">确认球员状态</button>
         <button size="mini" wx:if="{{binding.bound}}" class="ui-button ui-block" bindtap="unbind" disabled="{{busy||needsRefresh||loadingMore}}">解除绑定</button>
-        <button size="mini" wx:elif="{{!activeInvite&&!archived}}" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||needsRefresh||loadingMore}}" loading="{{busy}}">创建邀请</button>
+        <button id="create-invite-card" size="mini" wx:elif="{{!archived&&!unconfirmed&&(!activeInvite||activeInvite.status!=='claimed')}}" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||needsRefresh||loadingMore}}" loading="{{busy}}">{{activeInvite?'重新生成邀请卡片':'生成邀请卡片'}}</button>
       </view>
       <view wx:if="{{activeInvite}}" class="card">
         <view class="invite-between"><view class="invite-heading">当前邀请</view><text class="tag">{{activeInvite.label}}</text></view>
         <view class="hint">有效期至 {{activeInvite.expires}}</view>
-        <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'复制凭据后，仅交给这名球员本人。':'邀请凭据无法再次显示。若未交付，可撤销后重新创建。'}}</view>
-        <button size="mini" wx:if="{{canCopy}}" class="primary ui-button ui-block" bindtap="copy" disabled="{{busy||needsRefresh||loadingMore}}">复制邀请凭据</button>
+        <view wx:if="{{activeInvite.status==='pending'}}" class="hint">{{canCopy?'邀请卡片仅交给球员本人。':'重新生成后，之前未认领的卡片将失效。'}}</view>
         <view wx:if="{{activeInvite.status==='claimed'}}" class="hint">请联系球员本人核对确认编号，再批准申请。</view>
         <view wx:if="{{activeInvite.status==='claimed'}}" class="invite-actions">
           <button size="mini" class="primary ui-button" data-action="approve" bindtap="decide" disabled="{{busy||needsRefresh||loadingMore}}">核对并批准</button>
@@ -35,4 +36,11 @@
     </block>
   </block>
 </view>
-<business-dialog id="business-dialog"/>
+<view wx:if="{{cardOpen && cardPath}}" class="invite-modal-overlay" bindtap="closeCard" aria-role="button" aria-label="关闭邀请卡片">
+  <view class="invite-modal" catchtap="stopCardTap" role="dialog" aria-modal="true" aria-label="邀请卡片">
+    <view class="invite-modal-heading">邀请卡片</view>
+    <image class="invite-card-preview" src="{{cardPath}}" mode="aspectFit"/>
+    <view class="invite-modal-actions"><button size="mini" class="ui-button" bindtap="closeCard">关闭</button><button size="mini" class="primary ui-button" bindtap="shareCard">转发卡片</button></view>
+  </view>
+</view>
+<canvas id="invite-card-canvas" type="2d" class="invite-card-canvas"/><business-dialog id="business-dialog"/>
