@@ -26,11 +26,18 @@ test('主题文字及语义状态在实际浅底满足4.5对比，完赛不强�
   assert.doesNotMatch(app,/\.tag\.completed\s*\{[^}]*success/);
 });
 test('首页主题、下场时间与赛程对阵、排名、个人身份分别采用内容层级',()=>{
-  const expected={home:['.hero .title','.match-title','.match-time'],schedule:['.page>.between .title','.card .match-name','.card .muted.match-time'],players:['.players-title','.player-name','.list-heading-title'],statistics:['.page>.title','.section-title'],me:['.card.row .title','.section-title, .account-heading']};
+  const expected={home:['.hero .title','.match-title','.match-time'],schedule:['.card .match-name','.card .fixture-details .match-time'],players:['.players-title','.player-name','.list-heading-title'],statistics:['.page>.title','.section-title'],me:['.card.row .title','.section-title, .account-heading']};
   for(const [page,selectors] of Object.entries(expected))for(const selector of selectors){
     const escaped=selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     assert.match(read(`pages/${page}/index.wxss`),new RegExp(escaped+'\\s*\\{[^}]*font-size:\\s*var\\(--type-'));
   }
+  // 赛程依照 ZIP 以焦点赛事开场，不保留已删除的重复页面标题。
+  const schedule=read('pages/schedule/index.wxss'),scheduleTemplate=read('pages/schedule/index.wxml');
+  assert.match(scheduleTemplate,/^<view class="page schedule-page"><view[^>]*class="fixture-focus"/);
+  assert.match(schedule,/\.focus-teams>view\{[^}]*font-size:28rpx;[^}]*font-weight:600/);
+  assert.match(schedule,/\.focus-context\{[^}]*font-size:24rpx/);
+  assert.match(schedule,/\.card \.fixture-details \.match-time\{[^}]*font-weight:400;[^}]*color:var\(--muted\)/);
+  assert.match(schedule,/\.card \.match-name\s*\{[^}]*color:\s*var\(--ink\);[^}]*font-weight:\s*600/);
   const app=read('app.wxss');
   assert.match(app,/--space-1: 8rpx/);
   assert.match(app,/--type-body:14px/);

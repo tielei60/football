@@ -38,3 +38,12 @@
 
 /* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
 .page button.photo-link[size="mini"]{min-height:44px}
+
+/* ZIP 08：身份区水印与独立白色照片入口；不新增身份或照片数据。 */
+.profile-sheet { overflow:hidden; }
+.profile-watermark { position:absolute; top:26rpx; right:-12rpx; width:240rpx; height:280rpx; opacity:.12; pointer-events:none; }
+.profile-main,.profile-details { position:relative; }
+.page button.photo-link[size="mini"] { margin:0 0 30rpx; padding:24rpx 28rpx; min-height:44px; background:var(--surface); border:1rpx solid var(--line); border-radius:30rpx; color:var(--ink); box-shadow:0 6rpx 18rpx #6a00680c; }
+.photo-link-title { display:flex; align-items:center; gap:20rpx; min-width:0; }
+.photo-link-icon { width:40rpx; height:40rpx; flex:none; }
+.photo-arrow { color:var(--brand); }
