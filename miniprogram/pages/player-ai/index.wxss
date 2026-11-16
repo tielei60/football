@@ -5,3 +5,13 @@
 .ai-status{font-size:30rpx;font-weight:600;color:var(--ink);margin:24rpx 0 16rpx}
 .ai-actions{display:flex;gap:16rpx}
 .ai-actions>button.ui-button[size=mini]{flex:1;width:0;min-width:0;margin:0;min-height:44px;box-sizing:border-box;white-space:normal}
+
+/* 本页说明层级，不改变全局组件、原图比例或业务动作。 */
+.ai-intro,.ai-help{font-size:26rpx;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.ai-intro{margin-top:16rpx;margin-bottom:24rpx}
+.ai-help{margin:12rpx 0}
+.ai-disclosure{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.ai-complete{margin-top:16rpx;font-size:26rpx;line-height:1.6;color:var(--brand-ink)}
+.ai-adopted{border-left:6rpx solid var(--brand)}
+.ai-disabled .muted{line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:346.154px){.ai-intro,.ai-help,.ai-complete{font-size:12px}}

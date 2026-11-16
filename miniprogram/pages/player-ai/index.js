@@ -31,13 +31,16 @@ Page({
     playerName: "",
     busy: false,
     actionError: "",
+    successMessage: "",
     styles: [],
     samples: [],
     purposes: ["头像", "出场封面"],
     purposeIndex: 0,
     styleIndex: 0,
+    preparedStyleLabel: "",
     sampleIndex: 0,
     preview: "",
+    hasSelectedImage: false,
     sourceReady: false,
     hasSource: false,
     setupLocked: false,
@@ -113,7 +116,7 @@ Page({
     this._view = (this._view || 0) + 1;
     const view = this._view,
       token = s.api.getSession()?.token;
-    this.setData({ loading: true, error: "", enabled: false, admin: false });
+    this.setData({ loading: true, error: "", successMessage: "", enabled: false, admin: false });
     try {
       const session = await s.api.ensureSession();
       if (
@@ -190,6 +193,7 @@ Page({
         uploadMode: cap.uploadMode,
         playerName: cap.player?.name || "球员照片",
         styles: cap.styles || [],
+        preparedStyleLabel: (cap.styles || []).find(x => x.id === this._record.styleId)?.label || "原风格已不可用",
         samples: cap.samples || [],
         purposeIndex: this._record.purpose === "portrait" ? 1 : 0,
         styleIndex: Math.max(
@@ -200,6 +204,7 @@ Page({
           0,
           (cap.samples || []).findIndex((x) => x.id === this._record.sampleId),
         ),
+        hasSelectedImage: !!this._image,
         preview: this._record.sourceConsentId ? this.data.preview : "",
         sourceReady:
           !!this._record.source && this._record.source.status !== "failed",
@@ -313,7 +318,7 @@ Page({
               return;
             }
             this._image = "data:image/" + mime + ";base64," + r.data;
-            this.setData({ preview: file.tempFilePath, actionError: "" });
+            this.setData({ preview: file.tempFilePath, hasSelectedImage: true, actionError: "", successMessage: "" });
           },
           fail: () => {
             if (valid())
@@ -419,7 +424,7 @@ Page({
   async perform(work) {
     if (!this.ready()) return;
     const t = this.stamp();
-    this.setData({ busy: true, actionError: "" });
+    this.setData({ busy: true, actionError: "", successMessage: "" });
     try {
       await s.api.ensureSession();
       if (!this.current(t)) return;
@@ -435,6 +440,7 @@ Page({
       if (this.current(t))
         this.setData({
           busy: false,
+          hasSelectedImage: !!this._image,
           pending: !!this._record.pending,
           sourceReady:
             !!this._record.source && this._record.source.status !== "failed",
@@ -489,7 +495,7 @@ Page({
           });
           if (this.current(active)) {
             this._image = null;
-            this.setData({ preview: "", sourceReady: true });
+            this.setData({ preview: "", hasSelectedImage: false, sourceReady: true, preparedStyleLabel: style.label });
           }
         });
       },
@@ -593,6 +599,7 @@ Page({
               id: candidate.id,
               revision: image.revision,
               src,
+              imageEpoch: serial,
               label:
                 image.simulation || image.originKind === "local-simulation"
                   ? "本地模拟图，非真实 AI 生成"
@@ -625,7 +632,7 @@ Page({
       this.setData({ actionError: "操作仍在处理中，请稍后核对" });
       return;
     }
-    this.setData({ busy: true, actionError: "" });
+    this.setData({ busy: true, actionError: "", successMessage: "" });
     try {
       const part = {
         sourceConsent: "consents",
@@ -662,6 +669,7 @@ Page({
       this.persist(this.accept(pending.kind, result, { ...this._record }));
       this.setData({
         pending: false,
+        hasSelectedImage: !!this._image,
         preview: "",
         actionError:
           result.status === "failed"
@@ -751,7 +759,7 @@ Page({
       confirmText: "重试原请求",
       success: async (r) => {
         if (!r.confirm || !this.current(t) || this.data.busy) return;
-        this.setData({ busy: true, actionError: "" });
+        this.setData({ busy: true, actionError: "", successMessage: "" });
         try {
           await s.api.ensureSession();
           if (!this.current(t)) return;
@@ -819,7 +827,8 @@ Page({
             candidates: [],
             adopted: "",
             preview: "",
-            actionError: "私有素材已删除，已采用资料保持不变",
+            actionError: "",
+            successMessage: "私有素材已删除，已采用资料保持不变",
           });
         });
       },
@@ -829,13 +838,16 @@ Page({
     const candidate = this.data.candidates.find(
       (x) => x.id === e.currentTarget.dataset.id,
     );
-    if (!this.ready() || !candidate || this._record.adoption) return;
+    if (!this.ready() || !candidate || candidate.imageError || this._record.adoption) return;
     const t = this.stamp(),
       target = candidate.target,
       targetRevision =
         target === "avatar"
           ? this._cap.player.revision
           : this._cap.albumRevision;
+    const candidateCurrent = () => this.data.candidates.some(x =>
+      x.id === candidate.id && x.revision === candidate.revision && x.src === candidate.src &&
+      x.imageEpoch === candidate.imageEpoch && !x.imageError);
     ui.showModal(this, {
       title: target === "avatar" ? "采用为头像" : "采用为出场封面",
       content:
@@ -846,9 +858,9 @@ Page({
           : "新增一张至照片集并替换出场封面；旧照片保留，头像不变。"),
       confirmText: "确认采用",
       success: (r) => {
-        if (!r.confirm || !this.current(t) || this._record.adoption) return;
+        if (!r.confirm || !this.current(t) || this._record.adoption || !candidateCurrent()) return;
         return this.perform(async (active) => {
-          if (!this.current(active)) return;
+          if (!this.current(active) || !candidateCurrent()) return;
           await this.write("adoption", "/adoptions", {
             candidateId: candidate.id,
             candidateRevision: candidate.revision,
@@ -884,11 +896,22 @@ Page({
       },
     });
   },
+  candidateError(e) {
+    if (this._disposed || this._hidden || this.data.loading || this.data.error ||
+        this._owner !== s.api.getSession()?.token) return;
+    const { id, revision, src, epoch } = e.currentTarget.dataset;
+    if (epoch !== this._picturesEpoch) return;
+    const candidate = this.data.candidates.find(x => x.id === id && x.revision === revision &&
+      x.src === src && x.imageEpoch === epoch);
+    if (!candidate || candidate.imageError) return;
+    this.setData({ candidates: this.data.candidates.map(x => x === candidate
+      ? { ...x, imageError: true } : x) });
+  },
   preview(e) {
     const c = this.data.candidates.find(
       (x) => x.id === e.currentTarget.dataset.id,
     );
-    if (c?.src && this.ready())
+    if (c?.src && !c.imageError && this.ready())
       wx.previewImage({ current: c.src, urls: [c.src] });
   },
 });
