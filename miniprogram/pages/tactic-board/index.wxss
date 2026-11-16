@@ -1,3 +1,5 @@
+/* 持久字段标签：输入后仍可识别内容，不改变画布尺寸或触点。 */
+.editor-field-label { display:block; margin:8rpx 0; color:var(--muted); font-size:var(--type-field); line-height:1.5; }
 .board-wrap{width:100%;margin-top:20rpx;border-radius:20rpx;background:#e8eff1}.row{gap:16rpx}.tag{margin-top:12rpx}canvas{display:block}.title{font-size:34rpx;line-height:1.4}.edit-actions{display:flex;gap:16rpx;margin-top:16rpx}.edit-action{flex:1;text-align:center;padding:18rpx 0;border-radius:16rpx;background:var(--brand-soft);color:var(--brand-ink);font-weight:600;font-size:28rpx;line-height:40rpx}.edit-save{background:var(--brand);color:#fff}.edit-disabled{opacity:.45}
 
 .board-wrap canvas{margin-left:auto;margin-right:auto}
