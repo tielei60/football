@@ -87,3 +87,7 @@
 
 /* 320px 下 56rpx 略小于两个 12px 汉字，标签保持横排。 */
 .fact-label{min-width:2em;white-space:nowrap}
+
+/* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
+.page button.match-management-button[size="mini"],.page button.match-media-button[size="mini"],.page button.fact-navigation[size="mini"],.page .fixed-actions .actions>button.reply-button[size="mini"]{min-height:44px}
+.page button.match-share-button[size="mini"]{min-width:44px;min-height:44px}

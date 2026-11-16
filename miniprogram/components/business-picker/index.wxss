@@ -20,16 +20,19 @@
 .trigger::after {
   border: 0;
 }
-.trigger[disabled] {
+.trigger.control-disabled {
   opacity: 1;
   color: inherit;
 }
 
-button.trigger{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;line-height:inherit;padding:0;margin:0}
-button.trigger:focus-visible{outline:3rpx solid var(--focus,#760b88);outline-offset:3rpx;border-radius:12rpx}
+.trigger{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;line-height:inherit;padding:0;margin:0}
+.trigger:focus-visible{outline:3rpx solid var(--focus,#760b88);outline-offset:3rpx;border-radius:12rpx}
 
-button.trigger[size="mini"]{width:100%;min-width:0;max-width:100%;padding:0;margin:0;border-radius:12rpx;overflow:visible;line-height:inherit;font-size:inherit;box-sizing:border-box}
-button.trigger.trigger-pressed{box-shadow:inset 0 0 0 2rpx #d7c4e1}
-button.trigger[disabled]{opacity:1;color:var(--muted,#6e617a);background:var(--canvas,#f5f3ff)!important}
+.trigger{width:100%;min-width:0;max-width:100%;padding:0;margin:0;border-radius:12rpx;overflow:visible;line-height:inherit;font-size:inherit;box-sizing:border-box}
+.trigger.trigger-pressed{box-shadow:inset 0 0 0 2rpx #d7c4e1}
+.trigger.control-disabled{opacity:1;color:var(--muted,#6e617a);background:var(--canvas,#f5f3ff)!important}
 
 /* 边框仅由 slot 内的 picker 绘制；触发按钮不裁剪其圆角或焦点轮廓。 */
+
+/* 微信隔离组件只使用类选择器；尺寸下限以 CSS px 计算。 */
+.trigger{min-height:44px}

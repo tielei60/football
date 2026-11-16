@@ -13,3 +13,7 @@
 .muted { font-size:24rpx; margin-top:6rpx; }
 .card .tag { flex-shrink:0; max-width:150rpx; white-space:normal; font-size:24rpx; }
 @media(max-width:340px) { .card.row { flex-wrap:wrap; } .card .grow { min-width:160rpx; } }
+
+/* 对齐 V3 管理列表：新增操作独立成行，保留权限与禁用条件。 */
+.admin-create-action { margin:24rpx 0 32rpx; }
+.admin-create-action .ui-button { width:100%; min-height:44px; margin:0; box-sizing:border-box; }

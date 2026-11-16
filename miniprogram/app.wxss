@@ -439,3 +439,9 @@ button.primary,button.ui-button.primary,button.primary:not(.ui-button){backgroun
 .club-banner-title{position:relative;z-index:1;font-size:44rpx;line-height:1.4;font-weight:700;color:#fff;margin:8rpx 0 10rpx;max-width:82%;overflow-wrap:anywhere}
 .club-banner-subtitle{position:relative;z-index:1;font-size:24rpx;color:#eddbf6;line-height:1.6;max-width:85%;overflow-wrap:anywhere}
 .club-banner-mark{position:absolute;right:24rpx;top:32rpx;width:152rpx;height:152rpx;opacity:.13;pointer-events:none}
+
+/* V3 全量验收：原生输入保留单行光标几何，实际点击区不随窄屏缩小。 */
+input.input{min-height:44px}
+.picker,.filter-row .picker{min-height:44px}
+
+.club-card-pressed{opacity:.78}

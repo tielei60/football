@@ -59,3 +59,8 @@
 .type-expanded .tag { margin-bottom: 12rpx; }
 
  .type-expanded .picker,.type-expanded button.small,.type-expanded button.focus-toggle,.type-expanded .edit-actions>button.edit-action{min-height:44px;box-sizing:border-box}
+
+/* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
+.page.canvas-focus .edit-actions>button.edit-action,.page.canvas-focus button.focus-toggle,.page.canvas-focus .editor-tools button.small,.page.canvas-focus .editor-tools .picker,.page.canvas-focus .picker,.page.canvas-focus .playback-controls button.small,.page .properties input{min-height:44px;box-sizing:border-box}
+.page.canvas-focus .editor-tools{grid-template-columns:minmax(0,1fr) 44px 44px 44px}
+.page .board-shortcuts .shortcut{min-height:44px}

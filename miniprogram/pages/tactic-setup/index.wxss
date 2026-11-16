@@ -43,3 +43,8 @@
 .type-expanded .formation-impact { padding: 20rpx; background: var(--warning-soft); border-left: 4rpx solid var(--warning); border-radius: 12rpx; }
 
  .type-expanded .picker,.type-expanded button.small,.type-expanded button.focus-toggle,.type-expanded .edit-actions>button.edit-action{min-height:44px;box-sizing:border-box}
+
+.type-expanded button.preview-toggle,.type-expanded input.input{min-height:44px}
+
+/* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
+.page input,.page button.preview-toggle{min-height:44px;box-sizing:border-box}

@@ -1,5 +1,6 @@
 const ui=require('../../utils/ui');
 const s = require("../shared");
+const resultView = require("../../utils/match-result-view");
 Page({
   data: {
     shortcuts: [
@@ -57,7 +58,7 @@ Page({
           .filter((m) => m.status === "completed")
           .sort((a, b) => b.date.localeCompare(a.date))
           .slice(0, 3)
-          .map((m) => s.matchView(m, session.user.playerId)),
+          .map((m) => ({ ...s.matchView(m, session.user.playerId), ...resultView(m) })),
       };
     });
   },

@@ -8,9 +8,9 @@ const read = p => fs.readFileSync(path.join(root,p),'utf8');
 const cases = [
  ['app.wxss','button.ui-button:not(.ui-compact)[size="mini"]',84,392.857],
  ['app.wxss','button.ui-button.primary.ui-compact[size="mini"]',72,458.333],
- ['components/business-dialog/index.wxss','.dialog .buttons>button[size="mini"]',88,375],
- ['components/business-dialog/index.wxss','.dialog.selector-dialog .picker-panel .option-list button.option[size="mini"]',84,392.857],
- ['components/page-state/index.wxss','.state button.retry',80,412.5],
+ ['components/business-dialog/index.wxss','.dialog .buttons>.dialog-control',88,375],
+ ['components/business-dialog/index.wxss','.dialog.selector-dialog .picker-panel .option-list .option',84,392.857],
+ ['components/page-state/index.wxss','.state .retry',80,412.5],
 ];
 test('静态：主要动作分媒体高度下限，不以规则测试冒充实际触控测量',()=>{
  for (const [file,selector,rpx,limit] of cases) {
@@ -25,12 +25,13 @@ test('静态：主要动作分媒体高度下限，不以规则测试冒充实�
   }
  }
 });
-test('静态：保留输入光标、日历单元与普通紧凑工具的原尺寸',()=>{
+test('静态：保留原生输入行高与日历横向几何，日期高度提高到44px',()=>{
  const app=read('app.wxss'), dialog=read('components/business-dialog/index.wxss');
  assert.match(app,/input\.input\{height:88rpx;min-height:88rpx;padding:0 24rpx;line-height:42rpx\}/);
  assert.match(app,/button\.ui-button\.ui-compact\[size="mini"\]\{min-height:72rpx;/);
  assert.match(dialog,/height:92rpx;padding:0 22rpx/);
- assert.match(dialog,/button\.day\[size="mini"\]\{[^}]*height:64rpx;[^}]*padding:0;line-height:64rpx/);
+ assert.match(dialog,/\.day\{[^}]*height:64rpx;[^}]*padding:0;line-height:64rpx/);
+ assert.match(dialog,/\.calendar-grid \.day\{height:44px;min-height:44px;max-height:44px;line-height:44px\}/);
  const added=app.slice(app.indexOf('/* 仅主要动作'),app.indexOf('/* Shared button finish'))+dialog.slice(dialog.indexOf('/* 仅确认'),dialog.indexOf('/* v3 组件'));
  assert.doesNotMatch(added,/(?:font-size|padding|line-height|\.day|input|\.nav-step):?/);
 });

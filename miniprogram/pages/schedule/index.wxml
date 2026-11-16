@@ -4,7 +4,7 @@
       ><view class="title">每一场，都在这里</view
       ><view class="subtitle">赛程 · 报名 · 赛果</view></view
     ><button disabled="{{loading}}" wx:if="{{admin}}" class="small primary no-wrap ui-button ui-compact" bindtap="create" size="mini">创建比赛</button></view
-  ><view wx:if="{{!loading && !error && tab==='upcoming' && visible.length}}" class="fixture-focus" aria-role="button" data-id="{{visible[0].id}}" bindtap="openMatch"><image class="focus-image" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="focus-shade"/><view class="focus-content"><view class="focus-context"><text class="focus-label">焦点赛事</text><text>{{visible[0].competition || '球队比赛'}}{{visible[0].format ? ' · '+visible[0].format+'人制' : ''}}</text></view><view class="focus-teams"><view><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="focus-fallback">足</text><text>{{team.name}}</text></view><text class="focus-vs">VS</text><view><view class="focus-fallback" aria-hidden="true"><view class="opponent-ball"/></view><text>{{visible[0].opponent}}</text></view></view><view class="focus-meta">{{visible[0].dateLabel}} · {{visible[0].kickoff || '时间待定'}}</view><view class="focus-meta">{{visible[0].location || '地点待定'}}</view><view class="focus-link">查看比赛 · 去报名 ›</view></view></view><view class="tabs"
+  ><view wx:if="{{!loading && !error && tab==='upcoming' && visible.length}}" class="fixture-focus" aria-role="button" data-id="{{visible[0].id}}" bindtap="openMatch" hover-class="club-card-pressed"><image class="focus-image" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="focus-shade"/><view class="focus-content"><view class="focus-context"><text class="focus-label">焦点赛事</text><text>{{visible[0].competition || '球队比赛'}}{{visible[0].format ? ' · '+visible[0].format+'人制' : ''}}</text></view><view class="focus-teams"><view><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="focus-fallback">足</text><text>{{team.name}}</text></view><text class="focus-vs">VS</text><view><view class="focus-fallback" aria-hidden="true"><view class="opponent-ball"/></view><text>{{visible[0].opponent}}</text></view></view><view class="focus-meta">{{visible[0].dateLabel}} · {{visible[0].kickoff || '时间待定'}}</view><view class="focus-meta">{{visible[0].location || '地点待定'}}</view><view class="focus-link">查看比赛 · 去报名 ›</view></view></view><view class="tabs"
     ><view aria-role="button"
       class="tab {{tab==='upcoming'?'active':''}}"
       data-tab="upcoming"
@@ -32,7 +32,7 @@
       ><view wx:if="{{item.monthHeading}}" class="section-title"
         >{{item.monthHeading}}</view
       ><view aria-role="button" class="card" data-id="{{item.id}}" bindtap="openMatch"
-        ><view class="between"
+         hover-class="club-card-pressed"><view class="between"
           ><text class="muted match-time"
             >{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</text
           ><text class="tag {{item.status}}">{{item.statusLabel}}</text></view

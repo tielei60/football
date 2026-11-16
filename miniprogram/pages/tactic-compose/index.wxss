@@ -41,3 +41,8 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 .type-expanded .card label { margin: 28rpx 0; }
 
  .type-expanded .picker,.type-expanded button.small,.type-expanded button.focus-toggle,.type-expanded .edit-actions>button.edit-action{min-height:44px;box-sizing:border-box}
+
+.type-expanded input.input{min-height:44px}
+
+/* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
+.page.canvas-focus .picker,.page.canvas-focus button.small,.page input{min-height:44px;box-sizing:border-box}

@@ -35,3 +35,10 @@
 
 /* 全局已提供标题左边线，避免重复装饰叠成双线。 */
 .section-title::before{display:none}
+
+/* 对齐 V3 关闭态：明确能力状态，不展示尚不可用的操作引导。 */
+.card.capability-disabled { padding:40rpx 28rpx 48rpx; text-align:center; background:linear-gradient(135deg,#fff,var(--canvas)); }
+.capability-symbol { position:relative; display:flex; align-items:center; justify-content:center; width:120rpx; height:120rpx; margin:0 auto 32rpx; border:1px solid var(--line); border-radius:34rpx; background:linear-gradient(135deg,var(--brand-soft),#e4f2ff); color:var(--brand); box-sizing:border-box; }
+.capability-title { font-size:var(--type-page); font-weight:700; line-height:1.4; color:var(--ink); overflow-wrap:anywhere; }
+.capability-caption { margin:24rpx auto 0; max-width:540rpx; font-size:var(--type-body); line-height:1.7; color:var(--muted); overflow-wrap:anywhere; }
+ .capability-spark { font-size:64rpx; line-height:1; }

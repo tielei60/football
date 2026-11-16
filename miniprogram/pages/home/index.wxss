@@ -118,3 +118,9 @@
 
 /* 横向赛果保留全部记录，窄屏滑动查看，不推断未知比分胜负。 */
 .result-strip{width:100%;white-space:nowrap}.result-tickets{display:flex;gap:16rpx;padding:4rpx 0 12rpx}.result-ticket{display:flex;flex:0 0 calc((100% - 32rpx)/3);min-width:196rpx;flex-direction:column;gap:14rpx;padding:22rpx 14rpx;box-sizing:border-box;border:1rpx solid var(--line);border-radius:24rpx;background:#fff;white-space:normal;overflow-wrap:anywhere;text-align:center}.result-date{font-size:12px;color:var(--muted);line-height:1.5}.result-score{font-size:38rpx;font-weight:700;color:var(--brand-ink);line-height:1.3}.result-opponent{font-size:var(--type-field);font-weight:500;line-height:1.5}
+
+/* 赛果标记遵循已有我方/对方比分口径，未知不推断胜负。 */
+.result-outcome{display:block;font-size:24rpx;line-height:1.5;color:var(--muted)}
+.result-outcome.win{color:var(--success)}
+.result-outcome.loss{color:var(--danger)}
+.result-outcome.draw{color:var(--brand-ink)}

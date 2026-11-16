@@ -23,6 +23,6 @@ test('contrast-only changes retain native input geometry and existing compact co
  assert.match(app,/input\.input\{height:88rpx;min-height:88rpx;padding:0 24rpx;line-height:42rpx\}/);
  const dialog=read('components/business-dialog/index.wxss');
  assert.match(dialog,/\.dialog-input\{[^}]*height:92rpx;padding:0 22rpx/);
- assert.match(dialog,/button\.day\[size="mini"\]\{[^}]*height:64rpx;min-height:64rpx;max-height:64rpx/);
+ assert.match(dialog,/\.day\{[^}]*height:64rpx;min-height:64rpx;max-height:64rpx/);
  assert.match(app,/button\.ui-button\[size="mini"\]\{[^}]*min-height:84rpx/);
 });

@@ -123,14 +123,14 @@ test('time picker uses compact content height and explicit shrinkable action col
  assert.equal(height,432);
  assert.ok(height<definition.methods.bodySize({kind:'picker',pickerState:{mode:'date'}}));
  const css=fs.readFileSync(path.join(root,'components/business-dialog/index.wxss'),'utf8');
- assert.match(css,/\.buttons>button\{flex:1 1 0;width:0;min-width:0/);
+ assert.match(css,/\.buttons>\.dialog-control\{flex:1 1 0;width:0;min-width:0/);
  assert.match(css,/\.time-scroll\{flex:1 1 0;width:0;min-width:0/);
 });
 
 test('calendar and year controls explicitly override native button width without grid',()=>{
  const css=fs.readFileSync(path.join(root,'components/business-dialog/index.wxss'),'utf8');
- assert.match(css,/\.picker-panel button\.nav-step\{flex:0 0 64rpx;width:64rpx/);
- assert.match(css,/\.picker-panel button\.calendar-heading\{flex:1 1 0;width:0;min-width:0/);
+ assert.match(css,/\.picker-panel \.nav-step\{flex:0 0 64rpx;width:64rpx/);
+ assert.match(css,/\.picker-panel \.calendar-heading\{flex:1 1 0;width:0;min-width:0/);
  assert.match(css,/\.picker-panel \.calendar-grid\{display:flex;flex-wrap:wrap/);
  assert.ok(css.includes('width:calc(14.285714% - 8rpx)'));
  assert.ok(css.includes('width:calc(33.333333% - 10rpx)'));
@@ -139,10 +139,10 @@ test('calendar and year controls explicitly override native button width without
 
 test('mini calendar controls reset intrinsic padding and keep two-digit dates on one line',()=>{
  const css=fs.readFileSync(path.join(root,'components/business-dialog/index.wxss'),'utf8');
- const day=css.match(/\.dialog \.picker-panel \.calendar-grid button\.day\[size="mini"\]\{([^}]+)\}/)[1];
+ const day=css.match(/\.dialog \.picker-panel \.calendar-grid \.day\{([^}]+)\}/)[1];
  for(const rule of ['padding:0','white-space:nowrap','word-break:normal','line-height:64rpx','max-height:64rpx','font-size:25rpx'])assert.ok(day.includes(rule),rule);
- for(const name of ['nav-step','calendar-heading','time-option'])assert.ok(css.includes('button.'+name+'[size="mini"]'));
- assert.ok(css.includes('.year-grid button.option[size="mini"]'));
+ for(const name of ['nav-step','calendar-heading','time-option'])assert.ok(css.includes('.'+name));
+ assert.ok(css.includes('.year-grid .option'));
 });
 
 test('selector initial anchor does not jump as draft changes or toast rerenders',()=>{

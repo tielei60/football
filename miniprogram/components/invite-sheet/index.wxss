@@ -10,16 +10,16 @@
 .invite-modal{width:100%;max-width:600rpx;max-height:90vh;overflow:auto;background:#fff;border-radius:24rpx;padding:28rpx;box-sizing:border-box}
 .invite-modal-heading{font-size:32rpx;font-weight:600;color:var(--ink)}
 .invite-card-preview{display:block;width:100%;max-height:65vh;margin-top:16rpx;border-radius:16rpx}
-.invite-modal-actions{display:flex;gap:16rpx;margin-top:20rpx}.invite-modal-actions button{flex:1;min-width:0}
-.page .invite-actions>button.ui-button[size="mini"]{flex:1 1 0;width:0;min-width:0;margin:0;min-height:44px;padding:16rpx 12rpx;font-size:26rpx;line-height:1.5;white-space:normal}
-.page .card>button.ui-block[size="mini"]{margin-top:20rpx;min-height:44px;font-size:26rpx}
+.invite-modal-actions{display:flex;gap:16rpx;margin-top:20rpx}.invite-modal-actions .invite-button{flex:1;min-width:0}
+.page .invite-actions>.ui-button{flex:1 1 0;width:0;min-width:0;margin:0;min-height:44px;padding:16rpx 12rpx;font-size:26rpx;line-height:1.5;white-space:normal}
+.page .card>.ui-block{margin-top:20rpx;min-height:44px;font-size:26rpx}
 .history-heading{margin-top:32rpx}.history-row{display:flex;flex-direction:column;gap:4rpx}.history-status{font-size:27rpx;font-weight:500;color:var(--ink)}
 .error{font-size:26rpx;line-height:1.6;overflow-wrap:anywhere}
 
-.page>block button.ui-block[size="mini"],.page button.ui-block[size="mini"]{box-sizing:border-box;min-height:44px;width:100%;max-width:100%;white-space:normal;line-height:1.5}
+.page .ui-block,.page .ui-block{box-sizing:border-box;min-height:44px;width:100%;max-width:100%;white-space:normal;line-height:1.5}
 
 /* Keep the full invitation visible and actions reachable on short screens. */
-.invite-modal-overlay{padding-bottom:calc(32rpx + env(safe-area-inset-bottom))}.invite-modal{max-height:calc(100vh - 64rpx - env(safe-area-inset-bottom));overscroll-behavior:contain}.invite-card-preview{height:58vh;max-height:840rpx}.invite-modal-actions{align-items:stretch;gap:16rpx}.invite-modal-actions button{width:0;min-width:0;margin:0}
+.invite-modal-overlay{padding-bottom:calc(32rpx + env(safe-area-inset-bottom))}.invite-modal{max-height:calc(100vh - 64rpx - env(safe-area-inset-bottom));overscroll-behavior:contain}.invite-card-preview{height:58vh;max-height:840rpx}.invite-modal-actions{align-items:stretch;gap:16rpx}.invite-modal-actions .invite-button{width:0;min-width:0;margin:0}
 
 /* 邀请管理：球员、绑定、申请与历史分层；独立组件提供主题回退值。 */
 .title { font-size:var(--type-page,38rpx); line-height:1.35; font-weight:600; }
@@ -34,12 +34,15 @@
 .tag.invite-closed { color:var(--muted,#6e617a); background:var(--canvas,#f5f3ff); }
 .history-row { gap:8rpx; }
 .history-status { font-size:var(--type-body,28rpx); font-weight:500; }
-.page button.invite-danger[size="mini"]:not([disabled]) { color:var(--danger,#b33951); background:var(--danger-soft,#fff0f3); }
+.page .invite-danger:not(.control-disabled) { color:var(--danger,#b33951); background:var(--danger-soft,#fff0f3); }
 .invite-modal-heading { font-size:var(--type-section,32rpx); line-height:1.4; }
 .invite-modal { padding:24rpx; }
 .invite-modal-actions { margin-top:24rpx; }
-.invite-modal-actions button.ui-button[size="mini"] { min-height:44px; white-space:normal; line-height:1.5; font-size:var(--type-field,26rpx); }
+.invite-modal-actions .ui-button { min-height:44px; white-space:normal; line-height:1.5; font-size:var(--type-field,26rpx); }
 .error { font-size:var(--type-field,26rpx); }
 
 /* v3 组件表面与页面主题一致，交互仍由原组件管理。 */
-.invite-modal{border:1rpx solid #e5d7f3;border-radius:34rpx;box-shadow:0 24rpx 80rpx rgba(74,7,95,.2)}.invite-modal-heading{color:#30143e}.invite-modal-actions button{min-height:44px}
+.invite-modal{border:1rpx solid #e5d7f3;border-radius:34rpx;box-shadow:0 24rpx 80rpx rgba(74,7,95,.2)}.invite-modal-heading{color:#30143e}.invite-modal-actions .invite-button{min-height:44px}
+
+/* apply-shared 保留页面主题继承；本组件自身只用微信支持的类选择器。 */
+.invite-button.control-disabled{opacity:.48;box-shadow:none}

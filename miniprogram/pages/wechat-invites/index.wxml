@@ -2,7 +2,7 @@
   <page-state loading="{{loading}}" error="{{error}}" skeleton-type="cards" bind:retry="refresh"/>
   <block wx:if="{{!loading&&!error&&authorized}}">
     <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">微信邀请管理</view><view class="club-banner-subtitle">邀请、核验与绑定</view></view>
-    <view wx:if="{{!enabled}}" class="card empty">微信登录尚未启用，原账号密码登录不受影响。</view>
+    <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-lock" aria-hidden="true"></view><view class="capability-title">微信登录尚未启用</view><view class="capability-caption">原账号密码登录不受影响。</view></view>
     <block wx:else>
       <view class="invite-subtitle">{{playerName}}</view>
       <view class="card">

@@ -44,6 +44,7 @@ test('邀请组件样式隔离与小屏操作保留', () => {
 });
 
 test('危险色仅对可操作的按钮生效，禁用态沿用共享样式',()=>{
- for(const folder of ['pages/wechat-invites','components/invite-sheet'])assert.match(fs.readFileSync(path.join(root,folder,'index.wxss'),'utf8'),/\.page button\.invite-danger\[size="mini"\]:not\(\[disabled\]\)/);
+ assert.match(fs.readFileSync(path.join(root,'pages/wechat-invites/index.wxss'),'utf8'),/\.page button\.invite-danger\[size="mini"\]:not\(\[disabled\]\)/);
+ assert.match(fs.readFileSync(path.join(root,'components/invite-sheet/index.wxss'),'utf8'),/\.page \.invite-danger:not\(\.control-disabled\)/);
  assert.match(fs.readFileSync(path.join(root,'pages/system-accounts/index.wxss'),'utf8'),/\.account-actions button\.account-danger:not\(\[disabled\]\)/);
 });

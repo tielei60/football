@@ -15,7 +15,7 @@
         class="card next"
         data-id="{{next.id}}"
         bindtap="openMatch"
-        ><view class="between"
+         hover-class="club-card-pressed"><view class="between"
           ><text class="tag">{{next.competition || '球队比赛'}}</text
           ><text class="muted"
             >{{next.format ? next.format + '人制' : '赛制待定'}}</text
@@ -31,7 +31,7 @@
       ><view wx:else class="card empty">还没有即将开始的比赛</view></view
     ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
       ><view class="section-title">最近赛果</view
-      ><scroll-view wx:if="{{recent.length}}" class="result-strip" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}"><view class="result-tickets"><view aria-role="button" wx:for="{{recent}}" wx:key="id" class="result-ticket" data-id="{{item.id}}" bindtap="openMatch"><text class="result-date">{{item.dateLabel}}</text><text class="result-score">{{item.scoreLabel}}</text><text class="result-opponent">{{item.opponent}}</text></view></view></scroll-view
+      ><scroll-view wx:if="{{recent.length}}" class="result-strip" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}"><view class="result-tickets"><view aria-role="button" wx:for="{{recent}}" wx:key="id" class="result-ticket" data-id="{{item.id}}" bindtap="openMatch" hover-class="club-card-pressed"><text class="result-date">{{item.dateLabel}}</text><text class="result-outcome {{item.resultTone}}">{{item.resultLabel}}</text><text class="result-score">{{item.scoreLabel}}</text><text class="result-opponent">{{item.opponent}}</text></view></view></scroll-view
       ><view wx:if="{{!recent.length}}" class="card empty"
         >赛后记录会出现在这里</view
       ></view

@@ -1,3 +1,3 @@
 <loading-skeleton wx:if="{{loading}}" type="{{skeletonType}}"/>
 <view wx:elif="{{error}}" class="state error-state" aria-role="alert"><view class="state-symbol" aria-hidden="true">!</view><text class="state-title">暂时未能加载</text><text class="state-message">{{error}}</text><button size="mini" class="retry" bindtap="retry" aria-label="重新加载">重新加载</button></view>
-<view wx:elif="{{empty}}" class="state empty-state"><view class="empty-mark" aria-hidden="true"><view/><view/></view><text class="state-title">暂时没有记录</text></view>
+<view wx:elif="{{empty}}" class="state empty-state"><view class="empty-mark" aria-hidden="true"><view class="empty-line"/><view class="empty-line empty-line-short"/></view><text class="state-title">暂时没有记录</text></view>
