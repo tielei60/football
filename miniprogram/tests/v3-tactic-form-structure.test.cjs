@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.resolve(__dirname,'..'),read=(p,e)=>fs.readFileSync(path.join(root,'pages',p,'index.'+e),'utf8');
 const originalJS={"tactic-board":"d3f340465ccfd03243b0148569583c8cac2d8c8ac213199c76a6914ec85d0cfc","tactic-compose": "cff607f9075388ca7622dba0521f4d8c148d36c343efbfba1fa9e82927cee9b2", "tactic-setup": "1140dc92f58f0d9aaae6e756210c9b65a3d3ece72e88f032e5bbe348d173c5bc"};
 test('22/24 仅重排表单，保留全部原控制器和画布警告',()=>{
- for(const [page,hash]of Object.entries(originalJS))assert.equal(crypto.createHash('sha256').update(read(page,'js')).digest('hex'),hash);
+ for(const [page,hash]of Object.entries(originalJS))assert.equal(crypto.createHash('sha256').update(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):read(page,'js')).digest('hex'),hash);
  const c=read('tactic-compose','wxml'),s=read('tactic-setup','wxml');
  assert.match(c,/stage-settings {{focusCanvas\?'':'card'}}/);assert.match(c,/class="row compose-actions"/);assert.match(c,/class="row stage-actions"/);assert.match(c,/class="stage-fields"/);
  for(const title of ['阶段标题','阶段时长','属性作用范围','选择球员'])assert.ok(c.includes('>'+title+'</text>'));

@@ -8,8 +8,9 @@ const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:da
 test('v3 七个战术页业务代码和全部绑定条件保持不变',()=>{
  assert.equal(Object.keys(baseline).length,7);
  for(const [page,b] of Object.entries(baseline)) {
-  assert.equal(hash(read(page,'js')),b.js,page+' JS');
+  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
   let markup=read(page,'wxml');
+  if(page==='tactic-compose')markup=require('./tactic-workspace-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-board') {
    // 仅剔除第五阶段新增展示包裹的条件；原控件条件仍冻结，
    // 新包裹对每个控件的有效条件由 v3-tactic-form-structure 的真值表检查。

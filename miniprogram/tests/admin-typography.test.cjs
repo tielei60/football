@@ -9,6 +9,8 @@ const root = path.resolve(__dirname, '..');
 const hash = s => crypto.createHash('sha256').update(s).digest('hex');
 // UI v3 允许展示容器重排；逐元素冻结事件、状态、权限、输入约束和数据定位，基线来自原始提交而非改后结果。
 function markup(source) {
+  // 仅新增账号列表展示外框，原循环/角色操作条件仍按基线冻结。
+  source=source.replace('<view wx:if="{{accounts.length}}" class="card account-list">','<view>');
   // 唯一新增无权限展示卡；精确移除全文，导航/门禁另有专项契约，原账号业务基线不变。
   source=source.replace("<view wx:if=\"{{!loading && error==='仅系统管理员可以管理账号。'}}\" class=\"card access-denied\"><view class=\"access-denied-title\">无权访问此功能</view><view class=\"access-denied-description\">当前身份没有系统管理权限，实际权限仍由服务端校验。</view><navigator class=\"access-denied-return\" open-type=\"switchTab\" url=\"/pages/me/index\" hover-class=\"club-card-pressed\">返回我的</navigator></view>",'');
   // 仅新增错误展示区，原表单可见条件/事件保持冻结。

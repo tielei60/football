@@ -47,6 +47,15 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 .canvas-focus .workspace-label,.canvas-focus .stage-selector-label,.canvas-focus .stage-actions{display:none}
 .canvas-focus .compose-workspace{display:flex;align-items:center;gap:8rpx}.canvas-focus .compose-workspace>business-picker{flex:1;min-width:0}.canvas-focus .compose-actions{flex:none}
 
+/* 工作区采用现有 tabs 的分段展示，确认及切换仍走原 select。 */
+.page .workspace-segments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8rpx;padding:8rpx;border:1rpx solid var(--line);border-radius:24rpx;background:var(--brand-soft);box-sizing:border-box;min-width:0;width:100%}
+.page .workspace-segments button.workspace-segment{display:flex;align-items:center;justify-content:center;min-height:44px;min-width:0;width:100%;margin:0;padding:10rpx 8rpx;border:0;border-radius:18rpx;background:transparent;color:var(--muted);font-size:var(--type-field);font-weight:600;line-height:1.5;white-space:normal;box-sizing:border-box}
+.page .workspace-segments button.workspace-segment::after{border:0}
+.page .workspace-segments button.workspace-segment.is-active{background:var(--club-gradient);color:#fff}
+.page .workspace-segments button.workspace-segment[disabled]{opacity:.5}
+.page.canvas-focus .compose-workspace{display:block}.page.canvas-focus .compose-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8rpx}
+.page.canvas-focus .compose-actions button{width:100%;min-width:0}
+
 /* UI v3：不改变球场尺寸、触点或专注模式布局。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

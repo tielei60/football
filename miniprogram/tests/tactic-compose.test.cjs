@@ -75,3 +75,25 @@ for (const cancelFirst of [false,true]) test('服务端已写但响应丢失，'
   await f.p.save();
   assert.equal(writes,1);assert.equal(f.calls.filter(c=>c[1]==='PUT').length,1);
 });
+
+// V3 工作区分段是原 select 的入口；使用真实控制器/匿名夹具，不访问用户数据。
+test('工作区分段双向切换沿用原select，同一分段与无效索引不触发切换',async()=>{
+ const f=fixture();await f.p.onShow();let delegated=0;const original=f.p.select;f.p.select=function(e){delegated++;return original.call(this,e)};
+ for(const index of [undefined,null,true,false,'', ' ', '1x', '1.0', -1,2,1.5,NaN,Infinity,{},[]])f.p.chooseWorkspace({currentTarget:{dataset:{index}}});
+ assert.equal(delegated,0);assert.equal(f.p.data.tab,0);
+ f.p.chooseWorkspace({currentTarget:{dataset:{index:0}}});assert.equal(delegated,0);
+ f.p.chooseWorkspace({currentTarget:{dataset:{index:'1'}}});assert.equal(delegated,1);assert.equal(f.p.data.tab,1);
+ f.p.chooseWorkspace({currentTarget:{dataset:{index:0}}});assert.equal(delegated,2);assert.equal(f.p.data.tab,0);assert.equal(f.p._commands.length,0);
+});
+test('工作区分段未应用输入取消保留草稿，确认才交给原performSelect',async()=>{
+ let confirm=false,asked=0;const f=fixture(undefined,'admin',()=>{asked++;return {confirm}});await f.p.onShow();
+ f.p.input({currentTarget:{dataset:{key:'stageTitle'}},detail:{value:'未应用标题'}});
+ f.p.chooseWorkspace({currentTarget:{dataset:{index:1}}});assert.equal(asked,1);assert.equal(f.p.data.tab,0);assert.equal(f.p.data.stageTitle,'未应用标题');
+ confirm=true;f.p.chooseWorkspace({currentTarget:{dataset:{index:1}}});assert.equal(asked,2);assert.equal(f.p.data.tab,1);assert.equal(f.p._commands.length,0);
+});
+for(const guard of ['busy','conflict','loading','error','businessUiBlocking'])test('工作区分段不绕过原allowed：'+guard,async()=>{
+ const f=fixture();await f.p.onShow();f.p.setData({[guard]:guard==='error'?'失败':true});f.p.chooseWorkspace({currentTarget:{dataset:{index:1}}});assert.equal(f.p.data.tab,0);assert.equal(f.p._commands.length,0);
+});
+test('分段确认回调中权限变化仍不可切换',async()=>{
+ let f;f=fixture(undefined,'admin',()=>{f.setToken('other-owner');return {confirm:true}});await f.p.onShow();f.p.setData({stageTitle:'未应用'});f.p.chooseWorkspace({currentTarget:{dataset:{index:1}}});assert.equal(f.p.data.tab,0);assert.equal(f.p._commands.length,0);
+});

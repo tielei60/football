@@ -12,3 +12,8 @@
 /* 对齐 V3 管理列表：新增操作独立成行，保留权限与禁用条件。 */
 .admin-create-action { margin:24rpx 0 32rpx; }
 .admin-create-action .ui-button { width:100%; min-height:44px; margin:0; box-sizing:border-box; }
+
+/* V3：跨年规则信息区；尾端箭头不挤占日期内容。 */
+.season-rule{padding:24rpx;margin:24rpx 0;background:#e8f5ff;border:1px solid #cde6fb;border-radius:22rpx;color:#305e70}
+.card.season-card{display:flex;align-items:flex-start;gap:24rpx;min-height:44px;border-left:1px solid var(--line);box-sizing:border-box}
+.season-copy{flex:1;min-width:0;overflow-wrap:anywhere}.season-chevron{flex:none;font-size:40rpx;line-height:1.1;color:var(--ink)}

@@ -30,3 +30,7 @@
 .account-actions { padding-top:22rpx; border-top:1px solid var(--line); }
 
 .access-denied.card{padding:56rpx 28rpx;text-align:center;background:linear-gradient(135deg,#fff,var(--canvas))}.access-denied-title{font-size:var(--type-page);font-weight:700;color:var(--ink);line-height:1.4}.access-denied-description{margin:28rpx 0 40rpx;color:var(--muted);font-size:var(--type-body);line-height:1.7}.access-denied-return{display:flex;align-items:center;justify-content:center;min-height:44px;padding:24rpx;box-sizing:border-box;border-radius:24rpx;background:var(--brand);color:#fff;font-size:var(--type-card);font-weight:600}
+
+/* V3：账号统一白卡，条目分隔而非重复卡片。 */
+.card.account-list{padding:0 32rpx}.account-row{padding:32rpx 0;min-width:0;overflow-wrap:anywhere}.account-row+.account-row{border-top:1px solid var(--line)}
+.account-row .account-actions{border-top:0;padding-top:0}

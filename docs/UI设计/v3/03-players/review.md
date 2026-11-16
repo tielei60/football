@@ -56,3 +56,9 @@
 - 本页已改文件：`miniprogram/pages/players/index.wxml`、`miniprogram/pages/players/index.wxss`。
 - 自动检查：第一阶段合并工作树707/707通过、0跳过；140官方模板渲染通过。此结果只作代码证据，不作真实点击/权限或三宽原生通过。
 - 原生after截图：待用户当前真实预览结束后，在匿名隔离窗口重新逐页采集。
+
+## 第六批：按图补静态图标
+
+- 已查看 ZIP03球员图及05管理员图，只读提取 prototype/app.js 的 people/trophy/shield/calendar/pin/lock 纯SVG几何，未执行原型脚本。生成脚本与6张64px PNG合计约7.6KB，无人物或外部素材。
+- 03统计图标与05管理员双列入口对应设计，原计数/文字/角色门禁/事件保持；05无球员的身份卡不再宣称按钮，原profile处理不变。
+- `v3-roster-management-icons.test.cjs` 覆盖资产、数据/权限/语义和320/375/430合并样式；原生点击与截图仍待验证。

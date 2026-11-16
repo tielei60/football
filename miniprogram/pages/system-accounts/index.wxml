@@ -13,7 +13,8 @@
     <button wx:if="{{canRelease}}" size="mini" class="ui-button ui-block" bindtap="release" disabled="{{busy}}">已核对，确认未创建</button>
     <button size="mini" class="ui-button ui-block section" bindtap="refresh" disabled="{{busy}}">重新载入核对</button>
     <view wx:if="{{accounts.length}}" class="section-title accounts-heading">球队账号</view>
-    <view wx:for="{{accounts}}" wx:key="id" class="card section">
+    <view wx:if="{{accounts.length}}" class="card account-list">
+    <view wx:for="{{accounts}}" wx:key="id" class="account-row">
       <view class="section-title account-name">{{item.username}}</view>
       <view class="hint"><text class="account-role">{{item.systemAdmin?'系统管理员':item.role==='admin'?'普通管理员':'球员'}}</text> · <text class="account-state {{item.enabled?'is-enabled':'is-disabled'}}">{{item.enabled?'已启用':'已停用'}}</text>{{item.mustChangePassword?' · 首次登录须改密':''}}</view>
       <view wx:if="{{authorized&&!item.systemAdmin}}" class="account-actions">
@@ -21,6 +22,7 @@
         <button size="mini" class="ui-button {{item.enabled?'account-danger':''}}" data-id="{{item.id}}" data-kind="enabled" bindtap="update" disabled="{{busy||uncertain}}">{{item.enabled?'停用账号':'启用账号'}}</button>
       </view>
       <view wx:elif="{{item.systemAdmin}}" class="hint">系统管理员账号在此只读。</view>
+    </view>
     </view>
     <view wx:if="{{!accounts.length&&authorized}}" class="empty">暂无账号</view>
   </block>
