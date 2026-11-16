@@ -68,3 +68,7 @@
 .roster-heading {padding:8rpx 0 30rpx;}
 .roster-card,.add-section {box-shadow:0 8rpx 20rpx rgba(110,43,131,.06);}
 .page button.add-button[size="mini"],.page button.roster-save[size="mini"] {background:var(--club-gradient);border-radius:24rpx;}
+
+/* V3 管理表单：持久标签与实际命中区，不改输入事件。 */
+.roster-grid input.input{min-height:44px;box-sizing:border-box}
+.add-section .candidate-label{margin-top:20rpx;margin-bottom:0}.add-section .add-row{margin-top:12rpx}

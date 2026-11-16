@@ -62,3 +62,9 @@
 - 检查对象：本页主要、次要、危险与图片/邀请局部按钮的真实全局+页级样式级联。所选现有控件在 320/375/430 CSS px 均达到 44px 高宽，未发现同类页级覆盖缺陷，本页无需为该项追加样式。
 - 回归证据：`miniprogram/tests/v3-media-touch-layout.test.cjs` 覆盖我的管理入口、出场照、比赛相册、邀请审批/卡片按钮；修复前日志 `/tmp/v3-media-touch-before.log`，修复后 `/tmp/v3-media-touch-after.log`。
 - 验证边界：使用本机隔离 Chromium 合并 WXSS 与等价控件结构，不是微信真实触控、不涉及上传/审批/账号操作；C12/C14 的原生和真机项仍待验证。
+
+## 管理表单持久标签与触点补核
+
+- 管理员须知增加集合与装备提醒持久label，上传照片说明增加照片说明（可选）label，关联现有输入id；原球员只读wx:else、上传未知核对、图片动作均保留。
+- `v3-admin-form-touch.test.cjs`使用真实app+页WXSS和等价HTML控件，在320/375/430检查实际高宽；新增持久标签、原字段/事件/条件契约。修前日志`/tmp/v3-admin-form-touch-before.log`，修后`/tmp/v3-admin-form-touch-after.log`。140官方模板编译通过。
+- 未操作用户窗口、上传、数据库或凭据；仅静态与Chromium证据。本轮微信原生输入、点击、键盘及完整页面三宽仍待验，不能标为页面完成。

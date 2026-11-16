@@ -18,3 +18,6 @@
 .tag.status-pending { color:var(--warning); background:var(--warning-soft); }
 .tag.status-active { color:var(--success); background:var(--success-soft); }
 .tag.status-inactive { color:var(--muted); background:var(--canvas); }
+
+/* V3 管理表单：持久标签与实际命中区，不改输入事件。 */
+.page .portrait-editor .stack button.ui-button.ui-compact[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}

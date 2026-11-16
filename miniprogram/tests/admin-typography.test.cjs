@@ -11,13 +11,25 @@ const hash = s => crypto.createHash('sha256').update(s).digest('hex');
 function markup(source) {
   // 新增纯展示分组标题，不涉及账号权限或操作分支。
   source=source.replace('<view wx:if="{{accounts.length}}" class="section-title accounts-heading">球队账号</view>','');
+  // 持久展示标签仅重复相邻控件已有可见条件；控件本身仍严格冻结。
+  for(const label of [
+    '<view wx:if="{{searchHasText}}" class="empty-hint">请尝试其他姓名或号码</view>',
+    '<label wx:if="{{!hasAccount}}" class="field-label" for="player-account-name">登录账号</label>',
+    '<view wx:if="{{candidates.length}}" class="field-label candidate-label">可添加球员</view>',
+    '<text wx:if="{{candidates.length}}" class="field-label candidate-label">添加赛季球员</text>'
+  ]) source=source.replace(label,'');
   return JSON.stringify((s=>[...s.matchAll(/<[\w-]+\b[^>]*>/g)].map(m=>{const attrs=[...m[0].matchAll(/\b((?:bind|catch)(?::)?\w+|wx:(?:if|elif|else|for|for-item|for-index|key)|disabled|value|checked|maxlength|type|password|data-[\w-]+)\s*=\s*"([^"]*)"/g)].map(a=>[a[1],a[2]]).sort((a,b)=>a[0].localeCompare(b[0]));return attrs.length?[m[0].match(/^<([\w-]+)/)[1],attrs]:null}).filter(Boolean).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))(source));
 }
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
-    assert.equal(hash(read('js')),expected.js,'禁止修改业务JS');
+    let businessSource=read('js');
+    if(item==='pages/manage-players') {
+      // 仅允许新增查询是否有效的展示投影；原输入、筛选及权限逻辑仍按旧基线冻结。
+      businessSource=businessSource.replace('    searchHasText: false,\n','').replace('search: e.detail.value, searchHasText: e.detail.value.trim().length > 0','search: e.detail.value');
+    }
+    assert.equal(hash(businessSource),expected.js,'原业务JS必须保持，新增展示投影由专项控制器测试验证');
     const css = read('wxss');
     assert.match(css,/var\(--(?:type-|brand|muted|line)/,'每页接入共同设计令牌');
     assert.doesNotMatch(css,/text-overflow:\s*ellipsis/,'本次不能截断必要信息');

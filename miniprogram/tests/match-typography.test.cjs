@@ -19,7 +19,9 @@ test(`match typography ${page}: structure, existing geometry and scope unchanged
 test('match typography preserves role branches, unknown semantics and narrower content targeting',()=>{
  const detail=read('match-detail','wxml'),media=read('match-media','wxml');
  assert.match(detail,/class="match-sheet"/);assert.match(detail,/class="match-facts"/);assert.doesNotMatch(detail,/<map\b/);
- assert.match(media,/<textarea wx:if="\{\{admin\}\}" class="input notice"/);
+ assert.match(media,/<label wx:if="{{admin}}" class="field-label" for="match-notice">集合与装备提醒<\/label>/);
+ const notice=media.match(/<textarea\b[^>]*id="match-notice"[^>]*>/)?.[0];assert.ok(notice,'须知标签关联现有编辑框');
+ for(const attr of ['wx:if="{{admin}}"','class="input notice"','value="{{notice}}"','data-field="notice"','bindinput="input"','maxlength="10000"','disabled="{{loading || (busy||uncertain)}}"'])assert.ok(notice.includes(attr),attr);
  assert.match(media,/<text wx:else class="prewrap"/);
  assert.match(media,/class="hint upload-uncertain"/);
  assert.match(read('match-roster','wxml'),/保存后将替换本场完整名单/);

@@ -8,6 +8,7 @@ Page({onHide(){a.hide.call(this);},
     players: [],
     visible: [],
     search: "",
+    searchHasText: false,
     status: "active",
     statusInitialized: false,
   },
@@ -41,7 +42,7 @@ Page({onHide(){a.hide.call(this);},
     );
   },
   search(e) {
-    this.setData({ search: e.detail.value });
+    this.setData({ search: e.detail.value, searchHasText: e.detail.value.trim().length > 0 });
     this.setData({ visible: this.filter(this.data.players) });
   },
   status(e) {

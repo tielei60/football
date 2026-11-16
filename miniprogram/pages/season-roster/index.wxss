@@ -32,3 +32,7 @@
 .member {padding:28rpx 30rpx;}
 .heading .title {font-size:32rpx;color:var(--brand-ink);}
 .read-number {font-size:44rpx;}
+
+/* V3 管理表单：持久标签与实际命中区，不改输入事件。 */
+.page .picker-row button.ui-button.ui-compact[size="mini"],.page .member button.ui-button.ui-compact[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}
+.picker-row{flex-wrap:wrap}.picker-row .candidate-label{flex:0 0 100%;margin-bottom:0}

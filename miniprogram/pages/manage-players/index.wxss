@@ -17,3 +17,9 @@
 /* 对齐 V3 管理列表：新增操作独立成行，保留权限与禁用条件。 */
 .admin-create-action { margin:24rpx 0 32rpx; }
 .admin-create-action .ui-button { width:100%; min-height:44px; margin:0; box-sizing:border-box; }
+
+/* 账号是否开通与成员是否确认分别表达，不混用同一业务状态。 */
+.account-status.account-ready{color:var(--success);background:var(--success-soft)}
+.account-status.account-pending{color:var(--muted);background:var(--brand-soft)}
+.empty-title{font-size:var(--type-body);color:var(--ink);font-weight:500}
+.empty-hint{font-size:var(--type-meta);color:var(--muted);margin-top:12rpx;line-height:1.6}

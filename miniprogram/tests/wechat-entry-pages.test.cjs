@@ -207,7 +207,7 @@ test("new entry markup is narrowly capability-gated and password ability is chec
   assert.match(login, /wx:if="{{wechatEnabled}}" class="page wechat-entry"/);
   assert.match(
     me,
-    /wx:if="{{session.user.passwordEnabled!==false}}" class="card section"/,
+    /<view wx:if="{{session.user.passwordEnabled!==false}}" class="account-password"/,
   );
   assert.equal((manage.match(/bindtap="openWechat"/g) || []).length, 1);
   assert.match(manage, /<button wx:if="{{id}}" bindtap="openWechat" disabled="{{busy}}"[^>]*>微信邀请与绑定<\/button>/);

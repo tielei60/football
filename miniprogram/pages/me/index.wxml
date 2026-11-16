@@ -5,7 +5,7 @@
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error && session}}"
     ><view aria-role="button" class="card row membership-hero" bindtap="profile"
-      ><view class="avatar large {{!player.avatar?'player-placeholder':''}}"
+      ><image class="membership-watermark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/><view class="avatar large {{!player.avatar?'player-placeholder':''}}"
         ><image
           wx:if="{{player.avatar}}"
           src="{{player.avatar}}"
@@ -37,13 +37,13 @@
           ><text class="label">未回应</text></view
         ></view
       ><view class="hint">报名状态不等于实际出场。</view></view
-    ><view wx:if="{{session.user.passwordEnabled!==false}}" class="card section"
-      ><view aria-role="button" class="between" bindtap="togglePassword"
+    ><view class="section account-section"><view class="section-title">球队与账号</view><view class="card account-menu"><button disabled="{{loading}}" bindtap="tactics" class="ui-button account-row" size="mini"><image class="account-icon" src="/assets/tactics-shortcut.png"/><text class="account-row-title">球队战术板</text><text class="account-chevron">›</text></button><view wx:if="{{session.user.passwordEnabled!==false}}" class="account-password"
+      ><view aria-role="button" class="between account-row account-password-toggle" bindtap="togglePassword"
         ><text class="bold account-heading">修改密码</text
         ><text class="link">{{passwordOpen?'收起':'修改 ›'}}</text></view
-      ><view wx:if="{{passwordOpen}}" style="margin-top: 24rpx"
+      ><view wx:if="{{passwordOpen}}" class="account-password-form" style="margin-top: 24rpx"
         ><view class="field"
-          ><input
+          ><text class="field-label">当前密码</text><input
             class="input"
             password
             placeholder="当前密码"
@@ -52,7 +52,7 @@
             bindinput="input"
             maxlength="256" /></view
         ><view class="field"
-          ><input
+          ><text class="field-label">新密码</text><input
             class="input"
             password
             placeholder="新密码，至少10个字符"
@@ -66,9 +66,8 @@
           disabled="{{loading || (busy)}}"
           bindtap="changePassword"
          size="mini">保存并重新登录</button></view
-      ></view
-    ><button disabled="{{loading}}" bindtap="tactics" class="ui-button ui-block" size="mini">球队战术板</button><view wx:if="{{actionError}}" class="error">{{actionError}}</view
-    ><button class="danger ui-button ui-block" disabled="{{loading || (busy)}}" bindtap="logout" size="mini">退出 / 切换账号</button></block
+      ></view></view><view wx:if="{{actionError}}" class="error">{{actionError}}</view></view
+    ><button class="danger ui-button ui-block account-logout" disabled="{{loading || (busy)}}" bindtap="logout" size="mini">退出 / 切换账号</button></block
   ></view
 >
 
