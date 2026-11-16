@@ -57,3 +57,5 @@
 .type-expanded .board-shortcuts .shortcut { border-radius: 20rpx; min-height: 44px; border: 1rpx solid var(--line); }
 .type-expanded .focus-toggle { background: #fff; border: 1rpx solid var(--control-border); border-radius: 20rpx; }
 .type-expanded .tag { margin-bottom: 12rpx; }
+
+ .type-expanded .picker,.type-expanded button.small,.type-expanded button.focus-toggle,.type-expanded .edit-actions>button.edit-action{min-height:44px;box-sizing:border-box}

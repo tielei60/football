@@ -5,7 +5,6 @@
     <button wx:if="{{!busy && !reconciling}}" id="reply-reconcile" class="ui-button ui-block" size="mini" bindtap="refresh">核对报名状态</button>
   </view>
   <block wx:if="{{!loading && !error && match}}">
-    <image wx:if="{{cover}}" class="match-cover" src="{{cover}}" mode="aspectFill" bindtap="media"/>
     <view class="match-sheet"><view class="match-brand-hero"><image class="match-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="match-brand-shade"/>
       <view class="match-topline">
         <view class="match-context"><text class="match-status {{match.status}}">{{match.statusLabel}}</text><text class="match-competition">{{match.competition || '球队比赛'}}{{match.format ? ' · ' + match.format + '人制' : ''}}</text></view>
@@ -25,6 +24,7 @@
         <view class="fact-row"><text class="fact-label">场地</text><view class="fact-content"><text class="fact-primary">{{venueLocation.valid ? venueLocation.title : (match.location || venueLocation.address || '待定')}}</text><text wx:if="{{venueLocation.valid && venueLocation.address}}" class="fact-subtitle">{{venueLocation.address}}</text><text wx:elif="{{!match.location}}" class="fact-subtitle">{{venueLocation.message}}</text></view><button wx:if="{{venueLocation.valid}}" id="match-open-location" size="mini" class="fact-navigation" disabled="{{loading}}" bindtap="openLocation">导航 ›</button></view>
         <view wx:if="{{notice}}" class="fact-notice"><text class="fact-label">须知</text><text class="prewrap">{{notice}}</text></view>
       </view>
+    <image wx:if="{{cover}}" class="match-cover" src="{{cover}}" mode="aspectFill" bindtap="media"/>
       <view class="match-utilities"><view wx:if="{{admin}}" class="match-management"><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="edit" size="mini">编辑比赛</button><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="rosterEdit" size="mini">管理名单</button></view><button disabled="{{loading}}" bindtap="media" class="ui-button match-media-button" hover-class="match-control-pressed" size="mini">须知与相册 ›</button></view>
     </view>
 

@@ -5,7 +5,7 @@
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error}}"
     ><view class="hero club-home-hero"><image class="hero-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="hero-shade"/><view class="hero-content"><view class="hero-brand"><image wx:if="{{team.crest}}" src="{{team.crest}}" data-target="team" binderror="imageError" mode="aspectFit"/><text wx:else class="hero-badge-fallback">足</text><text>{{team.name}}</text></view><view class="hero-tagline">足球 · 伙伴 · 花园</view><view class="hero-headline">一起踢球，<text>
-</text>更好的我们。</view><view class="hero-caption">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view></view></view><view class="hero-metrics"><view><text class="hero-number">{{playerCount}}</text><text>位在队队员</text></view><view><text class="hero-number">{{stats.team.matches}}</text><text>本年完赛</text></view><view><text class="hero-number">{{stats.team.wins}}</text><text>胜场</text></view></view><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view>
+</text>更好的我们。</view><view class="hero-caption">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view></view></view>
 <view class="section"
       ><view class="between"
         ><view class="section-title">下一场，一起踢</view
@@ -31,19 +31,11 @@
       ><view wx:else class="card empty">还没有即将开始的比赛</view></view
     ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
       ><view class="section-title">最近赛果</view
-      ><view aria-role="button"
-        wx:for="{{recent}}"
-        wx:key="id"
-        class="card between"
-        data-id="{{item.id}}"
-        bindtap="openMatch"
-        ><view class="grow"
-          ><view class="bold break recent-name">{{item.opponent}}</view
-          ><view class="muted">{{item.dateLabel}}</view></view
-        ><view class="score">{{item.scoreLabel}}</view></view
+      ><scroll-view wx:if="{{recent.length}}" class="result-strip" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}"><view class="result-tickets"><view aria-role="button" wx:for="{{recent}}" wx:key="id" class="result-ticket" data-id="{{item.id}}" bindtap="openMatch"><text class="result-date">{{item.dateLabel}}</text><text class="result-score">{{item.scoreLabel}}</text><text class="result-opponent">{{item.opponent}}</text></view></view></scroll-view
       ><view wx:if="{{!recent.length}}" class="card empty"
         >赛后记录会出现在这里</view
       ></view
+    ><view class="section annual-record"><view class="section-title">球队这一年</view><view class="hero-metrics"><view><text class="hero-number">{{playerCount}}</text><text>位在队队员</text></view><view><text class="hero-number">{{stats.team.matches}}</text><text>本年完赛</text></view><view><text class="hero-number">{{stats.team.wins}}</text><text>胜场</text></view></view><view wx:if="{{unconfirmedCount}}" class="hint">另有 {{unconfirmedCount}} 位成员状态未确认</view></view
     ></block
   ></view
 >

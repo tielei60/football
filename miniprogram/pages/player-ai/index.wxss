@@ -32,3 +32,6 @@
 .ai-complete { padding:18rpx 22rpx; background:var(--success-soft); border-radius:20rpx; }
 .ai-warning { border-radius:20rpx; }
 .ai-adopted { border-left-width:4rpx; }
+
+/* 全局已提供标题左边线，避免重复装饰叠成双线。 */
+.section-title::before{display:none}
