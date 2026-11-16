@@ -6,7 +6,7 @@
   /><block wx:if="{{!loading && !error && player}}"
     ><view class="card"
       ><view class="row"
-        ><view class="avatar large"
+        ><view class="avatar large {{!player.avatar?'player-placeholder':''}}"
           ><image
             wx:if="{{player.avatar}}"
             src="{{player.avatar}}"

@@ -1,3 +1,4 @@
+const { playerInitial } = require("../../utils/player-initial");
 const ui = require("../../utils/ui");
 const a = require("../manage-team/admin");
 const standard = [
@@ -88,6 +89,7 @@ Page({
     hasAccount: false,
     passwordEnabled: true,
     avatar: "",
+    initial: "球",
     form: {
       name: "",
       number: "",
@@ -169,6 +171,7 @@ Page({
         passwordEnabled: p?.passwordEnabled !== false,
         accountOpen: false,
         avatar: a.s.assetUrl(p?.avatar),
+        initial: playerInitial(p?.name),
         form: {
           name: p?.name || "",
           number: p?.number == null ? "" : String(p.number),
@@ -189,7 +192,11 @@ Page({
       };
     });
   },
-  input: a.input,
+  input(e) {
+    a.input.call(this, e);
+    if (!this.data.busy && e.currentTarget.dataset.field === "name")
+      this.setData({ initial: playerInitial(this.data.form.name) });
+  },
   reload() {
     a.reload(this);
   },

@@ -5,7 +5,7 @@
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error && session}}"
     ><view aria-role="button" class="card row" bindtap="profile"
-      ><view class="avatar large"
+      ><view class="avatar large {{!player.avatar?'player-placeholder':''}}"
         ><image
           wx:if="{{player.avatar}}"
           src="{{player.avatar}}"

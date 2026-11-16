@@ -497,7 +497,7 @@ test("头像来源投影只用服务器生成标记，模拟不误标真实AI", 
   const m = { exports: {} };
   vm.runInNewContext(
     fs.readFileSync(path.join(root, "pages/shared.js"), "utf8"),
-    { module: m, require: () => ({ imageSource: () => "" }) },
+    { module: m, require: id => id.includes("player-initial") ? require("../utils/player-initial") : ({ imageSource: () => "" }) },
   );
   const normal = m.exports.playerView({ id: "p", name: "匿名" });
   assert.equal(normal.avatarGenerated, false);

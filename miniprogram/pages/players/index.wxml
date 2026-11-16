@@ -38,7 +38,7 @@
       class="card row"
       data-id="{{item.id}}"
       bindtap="openPlayer"
-      ><view class="avatar"
+      ><view class="avatar {{!item.avatar?'player-placeholder':''}}"
         ><image
           wx:if="{{item.avatar}}"
           src="{{item.avatar}}"

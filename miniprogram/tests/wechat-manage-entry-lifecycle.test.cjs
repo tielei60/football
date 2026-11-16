@@ -15,7 +15,7 @@ function setup() {
   const ui={abort(){}}; const wx={stopPullDownRefresh(){}};
   const module={exports:{}};
   vm.runInNewContext(fs.readFileSync(path.join(root,'pages/manage-team/admin.js'),'utf8'),{module,require:id=>id.includes('/ui')?ui:s,wx});
-  vm.runInNewContext(fs.readFileSync(path.join(root,'pages/manage-player/index.js'),'utf8'),{Page:d=>definition=d,require:id=>id.includes('/ui')?ui:module.exports,wx});
+  vm.runInNewContext(fs.readFileSync(path.join(root,'pages/manage-player/index.js'),'utf8'),{Page:d=>definition=d,require:id=>id.includes('player-initial')?require('../utils/player-initial'):id.includes('/ui')?ui:module.exports,wx});
   const p={...definition,data:structuredClone(definition.data),setData(v){Object.assign(this.data,structuredClone(v));}};
   return {p,api,records,capability, count:()=>count,setOwner:v=>owner=v,setRole:v=>role=v,player:{id:'p1',name:'匿名球员',status:'active',revision:1}};
 }

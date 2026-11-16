@@ -1,3 +1,4 @@
+const { playerInitial } = require("../utils/player-initial");
 const api = require("../utils/api");
 const { imageSource } = require("../utils/media");
 const statuses = {
@@ -149,7 +150,7 @@ function playerView(p) {
     avatarOriginLabel: p.avatarSimulation === true || p.avatarOriginKind === "local-simulation" ? "模拟图" : p.avatarAiGenerated === true ? "AI 生成" : "生成图",
     numberLabel: value(p.number),
     positionLabel: (p.positions || []).join(" / ") || "位置未设置",
-    initial: p.name?.slice(0, 1) || "球",
+    initial: playerInitial(p.name),
   };
 }
 module.exports = {
