@@ -64,6 +64,25 @@ test("归档展示归一化拒绝映射篡改、重复或移出方法，保留�
   const extra = "\n// 其它源码不得被归一化删除\n";
   assert.equal(normalizePlayerArchive(source + extra), normalizePlayerArchive(source) + extra);
 });
+
+function normalizePlayerAccountAndTitle(source) {
+  const changes = [["      (p) => {\n        const created = !this.id;\n        this.id = p.id;\n        this._imageData = undefined;\n        this.setData({\n          id: p.id,\n          revision: p.revision,\n          hasAccount: p.hasAccount,\n          passwordEnabled: p.passwordEnabled !== false,\n        });\n        if (created) wx.setNavigationBarTitle?.({ title: \"编辑球员\" });\n        ui.showToast(this, { title: \"球员已保存\" });\n      },\n", "      (p) => {\n        this.id = p.id;\n        this._imageData = undefined;\n        this.setData({\n          id: p.id,\n          revision: p.revision,\n          hasAccount: p.hasAccount,\n          passwordEnabled: p.passwordEnabled !== false,\n        });\n        ui.showToast(this, { title: \"球员已保存\" });\n      },\n", "  save() {", "  membership(e) {"], ["          (result) => {\n            this.setData({\n              password: \"\",\n              username: \"\",\n              hasAccount: true,\n              passwordEnabled: existing ? this.data.passwordEnabled : result?.passwordEnabled !== false,\n              accountOpen: false,\n            });\n            ui.showToast(this, {\n              title: existing ? \"密码已重置\" : \"账号已开通\",\n            });\n          },\n", "          () => {\n            this.setData({\n              password: \"\",\n              username: \"\",\n              hasAccount: true,\n              accountOpen: false,\n            });\n            ui.showToast(this, {\n              title: existing ? \"密码已重置\" : \"账号已开通\",\n            });\n          },\n", "  account() {", "  backToList() {"]];
+  for (const [current, previous, begin, end] of changes) {
+    assert.equal(source.split(current).length - 1, 1, "账号能力与新建标题完整获准片段必须唯一");
+    const start = source.indexOf(begin), stop = source.indexOf(end, start), at = source.indexOf(current);
+    assert.ok(start >= 0 && stop > start && at > start && at + current.length < stop);
+    source = source.replace(current, previous);
+  }
+  return source;
+}
+test("账号能力与标题归一化拒绝篡改重复片段且不吞其它逻辑", () => {
+  const source = fs.readFileSync(path.join(root, "pages/manage-player/index.js"), "utf8");
+  assert.throws(() => normalizePlayerAccountAndTitle(source.replace("passwordEnabled: existing ? this.data.passwordEnabled : result?.passwordEnabled !== false", "passwordEnabled: true")));
+  assert.throws(() => normalizePlayerAccountAndTitle(source + source));
+  assert.throws(() => normalizePlayerAccountAndTitle(source.replace("const created = !this.id;", "const created = true;")));
+  const extra = "\n// 未获准源码仍进入原SHA\n";
+  assert.equal(normalizePlayerAccountAndTitle(source + extra), normalizePlayerAccountAndTitle(source) + extra);
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
@@ -74,7 +93,7 @@ for (const [item, expected] of Object.entries(baseline)) {
       const subject=item==='pages/manage-player'?'球员':'赛季';
       businessSource=businessSource.replace(`    wx.setNavigationBarTitle?.({ title: this.id ? "编辑${subject}" : "新增${subject}" });\n`,'');
     }
-    if(item==='pages/manage-player') businessSource=normalizePlayerArchive(businessSource);
+    if(item==='pages/manage-player') businessSource=normalizePlayerAccountAndTitle(normalizePlayerArchive(businessSource));
     if(item==='pages/manage-players') {
       // 仅允许新增查询是否有效的展示投影；原输入、筛选及权限逻辑仍按旧基线冻结。
       businessSource=businessSource.replace('    searchHasText: false,\n','').replace('search: e.detail.value, searchHasText: e.detail.value.trim().length > 0','search: e.detail.value');

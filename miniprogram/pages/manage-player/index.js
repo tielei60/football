@@ -240,6 +240,7 @@ Page({
               payload,
             ),
       (p) => {
+        const created = !this.id;
         this.id = p.id;
         this._imageData = undefined;
         this.setData({
@@ -248,6 +249,7 @@ Page({
           hasAccount: p.hasAccount,
           passwordEnabled: p.passwordEnabled !== false,
         });
+        if (created) wx.setNavigationBarTitle?.({ title: "编辑球员" });
         ui.showToast(this, { title: "球员已保存" });
       },
       !this.id,
@@ -340,11 +342,12 @@ Page({
               existing ? "PUT" : "POST",
               body,
             ),
-          () => {
+          (result) => {
             this.setData({
               password: "",
               username: "",
               hasAccount: true,
+              passwordEnabled: existing ? this.data.passwordEnabled : result?.passwordEnabled !== false,
               accountOpen: false,
             });
             ui.showToast(this, {
