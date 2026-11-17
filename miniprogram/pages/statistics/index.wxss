@@ -156,3 +156,6 @@
 /* 单项表头复用辅助文字尺度，与右侧数值同向对齐。 */
 .statistics-page .ranking-header-single{padding:12rpx 0 24rpx;border-bottom:1rpx solid var(--line)}
 .statistics-page .ranking-header-single>text:not(.ranking-header-name){width:auto;min-width:30px;text-align:right}
+
+/* 确认出场为已核实记录数；四字表头与对应数值同宽，不压缩为未知值。 */
+.statistics-page .ranking-header>text.confirmed-appearances,.statistics-page .ranking-values>text.confirmed-appearances{width:104rpx;min-width:56px}
