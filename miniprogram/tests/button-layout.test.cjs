@@ -10,10 +10,10 @@ test('match management actions retain handlers, permissions and bounded touch ta
  assert.match(css,/match-management-button\[size="mini"\],[^}]*match-media-button\[size="mini"\]\{[^}]*min-height:88rpx/);
  assert.match(css,/fact-navigation\[size="mini"\]\{[^}]*min-height:88rpx/);
 });
-test('schedule create is admin-only after tabs, full-width with at least 44px touch height',()=>{
+test('schedule create is admin-only before tabs per V3, full-width with at least 44px touch height',()=>{
  const w=read('pages/schedule/index.wxml'),css=read('pages/schedule/index.wxss');
  assert.match(w,/<view wx:if="{{admin}}" class="schedule-admin-action"><button disabled="{{loading}}" class="ui-button ui-block schedule-create" bindtap="create" size="mini">/);
- const tabs=w.indexOf('class="tabs"'),create=w.indexOf('class="schedule-admin-action"');assert.ok(tabs>=0&&create>tabs);
+ const tabs=w.indexOf('class="tabs"'),create=w.indexOf('class="schedule-admin-action"');assert.ok(create>=0&&tabs>create);
  assert.match(css,/button\.schedule-create\[size="mini"\]\{min-height:44px;width:100%;margin:0/);
 });
 test('all ordinary page buttons use explicit sizing while tactical and map controls retain scoped sizing',()=>{

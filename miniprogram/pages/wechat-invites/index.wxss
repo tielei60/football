@@ -65,3 +65,8 @@
 .binding-status{display:inline-block;font-size:var(--type-meta);line-height:1.5;padding:6rpx 14rpx;border-radius:12rpx}
 .page button.ui-button:not(.primary):not(.invite-danger):not([disabled]){background:var(--surface);border-color:var(--control-border);color:var(--brand-ink)}
 .history-status{align-self:flex-end;max-width:100%;padding:6rpx 14rpx;background:var(--canvas);border-radius:12rpx;font-size:var(--type-meta);color:var(--muted)}
+
+/* 历史记录保留状态与有效期，补齐设计中的左侧标题。 */
+.history-row-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12rpx;min-width:0}
+.history-row-title{font-size:var(--type-section,32rpx);font-weight:650;line-height:1.4;color:var(--ink)}
+.history-row-heading .history-status{align-self:center;flex:none}

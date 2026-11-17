@@ -106,3 +106,26 @@
 /* V3：须知与场地分区；仅参加分组使用成功色。 */
 .match-facts .fact-row+.fact-notice{border-top:1rpx solid var(--line);margin-top:18rpx;padding-top:28rpx}
 .reply-group-heading.reply-group-heading-yes,.reply-group-heading-yes .reply-group-count{color:var(--success)}
+
+/* 报名未知结果沿用原核对路径，警告区别于失败和成功状态。 */
+.page .reply-pending.card{margin:24rpx 0;padding:24rpx;background:var(--warning-soft);border:1rpx solid #efd79c;border-radius:24rpx;color:var(--warning)}
+.reply-pending-title{font-size:var(--type-field);font-weight:600;line-height:1.5;margin-bottom:12rpx}
+.page .reply-pending .hint{color:var(--warning);margin:0 0 16rpx}
+.page .reply-pending button.reply-reconcile-button.ui-button[size="mini"]{background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand);box-shadow:none;min-height:44px}
+.page .fixed-actions .actions>button.reply-button[size="mini"][disabled],.page .fixed-actions .actions>button.reply-button.primary[size="mini"][disabled]{background:#e9e3ef;color:#95899f;border-color:#e1d8eb;box-shadow:none;opacity:1}
+.page .fixed-actions .actions>button.reply-button.primary[size="mini"][disabled] .reply-check{background:transparent;color:#95899f}
+
+/* 管理操作回到资料卡内；取消态明确说明报名不可更改。 */
+.match-facts .match-management{display:flex;gap:20rpx;margin-top:20rpx;margin-bottom:12rpx}
+.page .match-facts button.match-management-button[size="mini"]{flex:1;min-width:0;min-height:44px;padding:16rpx 12rpx;border:2rpx solid var(--control-border);border-radius:24rpx;background:var(--surface);color:var(--brand);font-size:var(--type-field);font-weight:600}
+.match-cancelled-notice{margin-top:24rpx;padding:24rpx;border:1rpx solid #efd79c;border-radius:24rpx;background:var(--warning-soft);color:var(--warning);font-size:var(--type-body);line-height:1.6}
+.page .match-facts button.match-management-button[size="mini"][disabled]{opacity:.5}
+
+/* 名单仅呈现比赛留存身份的首字和号码，不读取当前球员头像。 */
+.roster-row{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,94px);column-gap:12rpx}
+.roster-snapshot-avatar{position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;box-sizing:border-box;border:2px solid var(--surface,#fff);border-radius:50%;box-shadow:0 0 0 1px var(--line);background:var(--brand-soft);color:var(--brand-ink);font-size:28rpx;font-weight:600}
+.roster-snapshot-avatar .roster-snapshot-number{position:absolute;right:-3px;bottom:-2px;max-width:44px;box-sizing:border-box;padding:1px 4px;border-radius:6px;background:var(--brand);color:#fff;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.roster-row .roster-aside{max-width:100%;min-width:0}
+@media(max-width:350px){.roster-row{grid-template-columns:38px minmax(0,1fr) minmax(0,82px);column-gap:8px}.roster-snapshot-avatar{width:38px;height:38px}.roster-snapshot-avatar .roster-snapshot-number{max-width:38px}}
+
+.roster-stats .roster-stat{display:block;white-space:nowrap}

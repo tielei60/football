@@ -6,7 +6,7 @@ test('V3赛程首屏直接焦点，管理员创建入口不改变球员首屏',(
  assert.match(w,/^<view class="page schedule-page"><view wx:if="{{!loading && !error && tab==='upcoming' && visible.length}}" class="fixture-focus"/);
  assert.doesNotMatch(w,/每一场，都在这里/);
  assert.match(w,/<view wx:if="{{admin}}" class="schedule-admin-action"><button disabled="{{loading}}"[^>]*bindtap="create"/);
- const order=['class="fixture-focus"','class="tabs"','class="schedule-admin-action"','{{item.monthHeading}}'].map(s=>w.indexOf(s));
+ const order=['class="fixture-focus"','class="schedule-admin-action"','class="tabs"','{{item.monthHeading}}'].map(s=>w.indexOf(s));
  assert.ok(order.every(n=>n>=0));assert.deepEqual(order,[...order].sort((a,b)=>a-b));
  assert.match(css,/button\.schedule-create\[size="mini"\]\{min-height:44px/);
 });

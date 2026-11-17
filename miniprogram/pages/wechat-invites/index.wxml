@@ -30,7 +30,7 @@
       <view class="invite-heading history-heading">邀请记录</view>
       <view wx:if="{{!items.length}}" class="card empty">暂无邀请记录</view>
       <view wx:for="{{items}}" wx:key="id" class="card history-row">
-        <text class="history-status">{{item.label}}</text><text class="hint">有效期至 {{item.expires}}</text>
+        <view class="history-row-heading"><text class="history-row-title">历史邀请</text><text class="history-status">{{item.label}}</text></view><text class="hint">有效期至 {{item.expires}}</text>
       </view>
       <button size="mini" wx:if="{{hasMore}}" class="ui-button ui-block" bindtap="more" loading="{{loadingMore}}" disabled="{{busy||loadingMore||needsRefresh}}">加载更多</button>
     </block>

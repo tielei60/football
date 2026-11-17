@@ -9,8 +9,21 @@ const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
   for (const [p,sha] of Object.entries(baseline.immutable))
     assert.equal(crypto.createHash('sha256').update(read(p)).digest('hex'),sha,p);
-  for (const [p,attrs] of Object.entries(baseline.bindings))
-    for(const attr of attrs) assert.ok(read(p).includes(attr),`${p}: ${attr}`);
+  for (const [p,attrs] of Object.entries(baseline.bindings)) {
+    let source=read(p);
+    if(p==='pages/match-detail/index.wxml') {
+      // 只归一化三种原报名按钮新增的待核对禁用条件，原baseline不变。
+      const matched=[];
+      source=source.replace(/<button\b[^>]*bindtap="reply"[^>]*>/g,button=>{
+        const response=button.match(/data-response="(yes|maybe|no)"/)?.[1];
+        assert.ok(response,'只允许原三种报名选择');matched.push(response);
+        assert.ok(button.includes('disabled="{{loading || busy || replyPending || reconciling}}"'),'必须保留增强守卫');
+        return button.replace('disabled="{{loading || busy || replyPending || reconciling}}"','disabled="{{loading || (busy)}}"');
+      });
+      assert.deepEqual(matched.sort(),['maybe','no','yes']);
+    }
+    for(const attr of attrs) assert.ok(source.includes(attr),`${p}: ${attr}`);
+  }
 });
 function luminance(hex) {
   const c=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
