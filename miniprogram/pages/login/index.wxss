@@ -23,3 +23,8 @@
 .login-atmosphere { opacity:.46; }
 .login-shade { background:linear-gradient(110deg,rgba(61,8,77,.8),rgba(87,8,105,.55)); }
 .brand-mark,.login-eyebrow,.login-art .title,.login-team { position:relative; }
+
+/* V3 登录原稿队徽视觉比例；不随短屏缩成难辨识的小图。 */
+.brand-mark,.brand-image{width:216rpx;height:216rpx}
+.login-art{padding-top:60rpx;padding-bottom:64rpx}
+@media(max-height:650px){.brand-mark,.brand-image{width:192rpx;height:192rpx}.login-art{padding-top:40rpx}}

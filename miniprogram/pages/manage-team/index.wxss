@@ -10,3 +10,12 @@
 .crest-editor .avatar { margin:20rpx auto; }
 .actions { display:flex; gap:16rpx; }
 .actions button.ui-button[size="mini"] { flex:1; min-width:0; min-height:44px; white-space:normal; }
+
+/* V3 队徽字段：标签在预览框外，主要选择为描边、移除为弱操作。 */
+.crest-field{margin-top:32rpx}
+.crest-field .crest-editor{margin-top:16rpx;min-height:300rpx;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.page .actions button.crest-choose.ui-button[size="mini"]{display:flex;align-items:center;justify-content:center;gap:14rpx;background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none}
+.crest-action-icon{width:32rpx;height:32rpx;flex:none}
+.page .actions button.crest-remove.ui-button[size="mini"]{background:transparent;border-color:transparent;color:var(--muted);box-shadow:none}
+.page .actions button.crest-remove.ui-button[disabled]{background:transparent}
+.page .actions button.crest-choose.ui-button[size="mini"][disabled],.page .actions button.crest-remove.ui-button[size="mini"][disabled]{opacity:.5;box-shadow:none}

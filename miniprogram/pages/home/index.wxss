@@ -155,3 +155,8 @@
 
 /* 明确块级两行，避免原生 WXML 折叠纯空白换行。 */
 .hero-headline-line{display:block}
+
+/* V3 首页：主视觉斜切下沿，快捷入口保持图标优先。装饰不截断正文。 */
+.club-home-hero{border-radius:0;padding-bottom:36rpx}
+.club-home-hero::after{content:"";position:absolute;left:-3%;right:-3%;bottom:-40rpx;height:70rpx;background:var(--canvas);transform:rotate(-5deg);pointer-events:none}
+.club-quick image,.member-shortcuts image{width:72rpx;height:72rpx;flex-shrink:0}

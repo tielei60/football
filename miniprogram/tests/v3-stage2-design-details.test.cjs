@@ -1,0 +1,6 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const read=(p,ext='wxss')=>fs.readFileSync(path.join(__dirname,'../pages',p,'index.'+ext),'utf8');
+test('首页斜切装饰不接收事件，保留正文底部空间与入口图标',()=>{const s=read('home');assert.match(s,/club-home-hero\{border-radius:0;padding-bottom:36rpx\}/);assert.match(s,/club-home-hero::after\{[^}]*pointer-events:none/);assert.match(s,/club-quick image,.member-shortcuts image\{width:72rpx;height:72rpx/);});
+test('登录队徽在短屏仍保持可辨比例，不限制滚动容器高度',()=>{const s=read('login');assert.match(s,/brand-mark,.brand-image\{width:216rpx;height:216rpx\}/);assert.match(s,/@media\(max-height:650px\)\{.brand-mark,.brand-image\{width:192rpx;height:192rpx\}/);});
+test('赛季阵容白卡入口保留事件条件，并有独立禁用视觉',()=>{const w=read('manage-season','wxml'),s=read('manage-season');assert.match(w,/<button wx:if="{{id}}" bindtap="openRoster" disabled="{{loading \|\| \(busy\)}}" class="ui-button ui-block season-roster-entry"/);assert.match(s,/season-roster-entry.ui-button.ui-block\[size="mini"\]\[disabled\]\{opacity:.5/);});
+test('队徽操作的专属样式显式区分禁用状态',()=>{const s=read('manage-team');assert.match(s,/crest-choose.ui-button\[size="mini"\]\[disabled\]/);assert.match(s,/crest-remove.ui-button\[size="mini"\]\[disabled\]\{opacity:.5/);});

@@ -26,3 +26,10 @@ button.location-pick[size="mini"],button.venue-save[size="mini"]{display:flex;ju
 
 /* 冲突恢复仅复用返回入口，不自动重载当前表单。 */
 .page button.venue-reconcile[size="mini"]{min-height:44px;margin:20rpx 0;white-space:normal}
+
+/* V3 地图选点为描边次操作，保存保留唯一渐变主操作。 */
+.page button.location-pick[size="mini"]{gap:16rpx;background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none}
+.location-pick-icon{width:32rpx;height:32rpx;flex:none}
+.page .location-actions>button[size="mini"]{background:transparent;border-color:transparent;box-shadow:none}
+.page .location-actions>button.location-open{color:var(--muted)}
+.page .location-actions>button.location-clear{color:var(--danger)}

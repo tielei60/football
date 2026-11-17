@@ -7,3 +7,10 @@
 .error { overflow-wrap:anywhere; }
  .card .field { margin-bottom:32rpx; }
 .card .hint { padding:20rpx; border-radius:20rpx; background:var(--sky-soft); }
+
+/* V3：阵容管理是带方向提示的白色入口卡，不与保存主操作竞争。 */
+.page button.season-roster-entry.ui-button.ui-block[size="mini"]{display:flex;align-items:center;gap:20rpx;padding:24rpx;background:var(--surface);border:1rpx solid var(--line);text-align:left;color:var(--ink);min-height:56px}
+.season-roster-entry image{width:44rpx;height:44rpx;flex-shrink:0}
+.season-roster-entry text{min-width:0;overflow-wrap:anywhere}
+.season-roster-entry .entry-chevron{margin-left:auto;color:var(--brand);font-size:40rpx}
+.page button.season-roster-entry.ui-button.ui-block[size="mini"][disabled]{opacity:.5;box-shadow:none}

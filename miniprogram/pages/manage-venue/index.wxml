@@ -8,7 +8,7 @@
    <view class="field"><text class="field-label">地址</text><input class="input" value="{{form.address}}" data-field="address" bindinput="input" maxlength="300" disabled="{{loading || (busy)}}" placeholder="通过地图选择，或填写地址"/></view>
    <view class="location-section">
     <view class="location-heading"><text class="field-label">球场位置</text><text wx:if="{{markers.length}}" class="location-status">已选点</text></view>
-    <button id="venue-pick" size="mini" class="primary location-pick" bindtap="choose" disabled="{{loading || (busy)}}">{{markers.length?'重新选择位置':'微信地图选点'}}</button>
+    <button id="venue-pick" size="mini" class="location-pick" bindtap="choose" disabled="{{loading || (busy)}}"><image class="location-pick-icon" src="/assets/ui-v3-pin.png" mode="aspectFit" aria-hidden="true"/><text>{{markers.length?'重新选择位置':'微信地图选点'}}</text></button>
     <block wx:if="{{markers.length}}">
      <map hidden="{{businessUiBlocking}}" class="venue-map" latitude="{{form.latitude}}" longitude="{{form.longitude}}" markers="{{markers}}" scale="16" aria-label="已选择的球场位置"/>
      <view class="location-actions"><button id="venue-open" size="mini" disabled="{{loading}}" class="location-open" bindtap="open">查看位置</button><button id="venue-clear" size="mini" class="location-clear" bindtap="clear" disabled="{{loading || (busy)}}">移除坐标</button></view>
