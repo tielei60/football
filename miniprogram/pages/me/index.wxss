@@ -115,3 +115,8 @@
 /* 全幅身份区沿用 -28rpx 抵消页边距；顶部必须同为 28rpx，
    避免全局 32rpx 留下 4rpx 浅色缝。不移动原生导航或状态组件。 */
 .page{padding-top:28rpx}
+
+/* V3 原生核验：统计共用整卡，数字列只保留竖分隔，避免全局 metric 圆角卡污染。 */
+.page .section .metrics{gap:0}
+.page .section .metrics>.metric{background:transparent;border:0;border-radius:0;box-shadow:none}
+.page .section .metrics>.metric+.metric{border-left:1rpx solid var(--line)}

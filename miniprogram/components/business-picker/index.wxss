@@ -36,3 +36,5 @@
 
 /* 微信隔离组件只使用类选择器；尺寸下限以 CSS px 计算。 */
 .trigger{min-height:44px}
+/* 覆盖微信原生 button 的默认 184px 宽度；slot 边框必须填满单列。 */
+.trigger{width:100%!important;margin:0!important;padding:0!important}

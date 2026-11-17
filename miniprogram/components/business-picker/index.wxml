@@ -1,1 +1,1 @@
-<button size="mini" class="{{(disabled)?'control-disabled':''}} trigger" hover-class="trigger-pressed" hover-stay-time="80" bindtap="open" disabled="{{disabled}}" aria-label="{{defaultLabel}}"><slot/></button>
+<button class="{{(disabled)?'control-disabled':''}} trigger" hover-class="trigger-pressed" hover-stay-time="80" bindtap="open" disabled="{{disabled}}" aria-label="{{defaultLabel}}"><slot/></button>

@@ -7,11 +7,11 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
-test('packaged badge preserves confirmed source bytes without image editing', () => {
-  const source = fs.readFileSync(path.join(root, '../app/public/team-badge.png'));
+test('packaged badge uses V3 supplied transparent original without image editing', () => {
   const asset = fs.readFileSync(path.join(root, 'assets/team-badge.png'));
-  assert.deepEqual(asset, source);
-  assert.equal(hash(asset), '67daa96dd61285db3a9616dcb63200c9dfb7a7330516a9b371999af2648b6927');
+  assert.equal(hash(asset), '65630c8291acbbab2a6be34a085cb0fb4ae317810442ca4add2faaff64d054bf');
+  // 设计包 design/assets/team-badge-clean.png 原件；RGBA 保留透明背景。
+  assert.equal(asset[25], 6);
   assert.equal(asset.readUInt32BE(16), 256);
   assert.equal(asset.readUInt32BE(20), 256);
 });

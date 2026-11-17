@@ -144,3 +144,11 @@
 .statistics-banner:after { display:none; }
 .statistics-watermark { position:absolute; right:-20rpx; top:24rpx; width:224rpx; height:224rpx; opacity:.12; pointer-events:none; }
 .statistics-eyebrow,.statistics-banner .title,.statistics-banner .subtitle { position:relative; }
+
+/* V3 原生核验：统计共用整卡，数字列只保留竖分隔，避免全局 metric 圆角卡污染。 */
+.statistics-page .record-card .metrics{gap:0}
+.statistics-page .record-card .metrics>.metric{background:transparent;border:0;border-radius:0;box-shadow:none}
+.statistics-page .record-card .metrics>.metric+.metric{border-left:1rpx solid var(--line)}
+
+/* 原生 320 宽复验：中文表头不竖排，与数据列共享宽度下限。 */
+.statistics-page .ranking-header>text:not(.ranking-header-name),.statistics-page .ranking-values>text{min-width:30px;white-space:nowrap}

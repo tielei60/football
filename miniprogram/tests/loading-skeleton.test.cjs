@@ -25,7 +25,15 @@ test('skeleton hides decorative blocks from accessibility and respects reduced m
 test('component buttons opt out of native default width; shared actions are shrinkable',()=>{
  for(const component of ['business-dialog','business-picker','page-state']){
  const w=fs.readFileSync(path.join(root,'components',component,'index.wxml'),'utf8');
- for(const m of w.matchAll(/<button\b[^>]*>/g))assert.ok(m[0].includes('size="mini"'),component);
+ for(const m of w.matchAll(/<button\b[^>]*>/g)){
+  // picker 的 slot 必须铺满可用列；原生 mini 会额外收窄内部宽度。
+  if(component==='business-picker' && m[0].includes('bindtap="open"')){
+   assert.ok(!m[0].includes('size="mini"'));
+   const pickerCss=fs.readFileSync(path.join(root,'components',component,'index.wxss'),'utf8');
+   assert.match(pickerCss,/\.trigger\s*\{[^}]*width:\s*100%/);
+   assert.match(pickerCss,/\.trigger\s*\{[^}]*padding:\s*0/);
+  }else assert.ok(m[0].includes('size="mini"'),component);
+ }
  }
  const css=fs.readFileSync(path.join(root,'app.wxss'),'utf8');
  assert.ok(css.includes('.actions>button{flex:1 1 0;width:0;min-width:0'));

@@ -4,8 +4,7 @@
     error="{{error}}"
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error}}"
-    ><view class="hero club-home-hero"><image class="hero-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="hero-shade"/><view class="hero-content"><view class="hero-brand"><image wx:if="{{team.crest}}" src="{{team.crest}}" data-target="team" binderror="imageError" mode="aspectFit"/><text wx:else class="hero-badge-fallback">足</text><text>{{team.name}}</text></view><view class="hero-tagline">足球 · 伙伴 · 花园</view><view class="hero-headline">一起踢球，<text>
-</text>更好的我们。</view><view class="hero-caption">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view></view></view>
+    ><view class="hero club-home-hero"><image class="hero-atmosphere" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="hero-shade"/><view class="hero-content"><view class="hero-brand"><image wx:if="{{team.crest}}" src="{{team.crest}}" data-target="team" binderror="imageError" mode="aspectFit"/><text wx:else class="hero-badge-fallback">足</text><text>{{team.name}}</text></view><view class="hero-tagline">足球 · 伙伴 · 花园</view><view class="hero-headline"><text class="hero-headline-line">一起踢球，</text><text class="hero-headline-line">更好的我们。</text></view><view class="hero-caption">{{roleLabel ? roleLabel + " · " : ""}}一起上场</view></view></view>
 <view class="section next-section"><view aria-role="button"
         wx:if="{{next}}"
         class="card next"

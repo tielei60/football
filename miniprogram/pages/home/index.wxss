@@ -152,3 +152,6 @@
 .home-no-next-title{font-size:var(--type-page);line-height:1.4;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
 .home-no-next-description{margin-top:12rpx;font-size:var(--type-field);line-height:1.6;color:var(--muted)}
 .page .home-no-next button.home-records-link{display:flex;align-items:center;justify-content:center;gap:16rpx;min-height:44px;max-width:100%;margin:28rpx 0 0;padding:18rpx 24rpx;border:1rpx solid var(--brand);border-radius:20rpx;background:transparent;color:var(--brand-ink);font-size:var(--type-body);line-height:1.4;white-space:normal;overflow-wrap:anywhere;box-shadow:none}
+
+/* 明确块级两行，避免原生 WXML 折叠纯空白换行。 */
+.hero-headline-line{display:block}
