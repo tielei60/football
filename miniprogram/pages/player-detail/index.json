@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "球员资料",
+  "navigationBarTitleText": "球员档案",
   "enablePullDownRefresh": true,
   "usingComponents": { "page-state": "/components/page-state/index" }
 }

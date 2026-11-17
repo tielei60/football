@@ -98,6 +98,7 @@ Page({
   },
   onLoad(q) {
     this.id = q.id;
+    wx.setNavigationBarTitle?.({ title: this.id ? "编辑球员" : "新增球员" });
     return this.refresh();
   },
   onUnload() {

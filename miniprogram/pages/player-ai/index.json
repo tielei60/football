@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "出场照与头像",
+  "navigationBarTitleText": "头像与出场照生成",
   "enablePullDownRefresh": false,
   "usingComponents": {
     "page-state": "/components/page-state/index"

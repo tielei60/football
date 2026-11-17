@@ -39,6 +39,11 @@ for (const [item, expected] of Object.entries(baseline)) {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/manage-player'||item==='pages/manage-season') {
+      // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。
+      const subject=item==='pages/manage-player'?'球员':'赛季';
+      businessSource=businessSource.replace(`    wx.setNavigationBarTitle?.({ title: this.id ? "编辑${subject}" : "新增${subject}" });\n`,'');
+    }
     if(item==='pages/manage-players') {
       // 仅允许新增查询是否有效的展示投影；原输入、筛选及权限逻辑仍按旧基线冻结。
       businessSource=businessSource.replace('    searchHasText: false,\n','').replace('search: e.detail.value, searchHasText: e.detail.value.trim().length > 0','search: e.detail.value');

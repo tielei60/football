@@ -18,6 +18,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   onShow() { return a.show.call(this); },
   onLoad(q) {
     this.id = q.id;
+    wx.setNavigationBarTitle?.({ title: this.id ? "编辑赛季" : "新增赛季" });
     this.refresh();
   },
   onUnload(){ui.abort(this);return a.unload.apply(this,arguments);},

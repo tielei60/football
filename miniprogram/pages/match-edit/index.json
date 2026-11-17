@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "编辑比赛",
+  "navigationBarTitleText": "安排比赛",
   "enablePullDownRefresh": false,
   "usingComponents": { "page-state": "/components/page-state/index" }
 }
