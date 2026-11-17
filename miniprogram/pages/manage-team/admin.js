@@ -218,7 +218,7 @@ async function createRequest(page, path, payload) {
   const view = { form: JSON.parse(JSON.stringify(page.data.form)) };
   if (page.createKind === "player") {
     Object.assign(view, { status: page.data.status, membershipConfirmed: page.data.membershipConfirmed,
-      membershipIndex: page.data.membershipIndex, avatar: page.data.avatar, positionOptions: page.data.positionOptions,
+      membershipIndex: page.data.membershipIndex, initial: page.data.initial, avatar: page.data.avatar, positionOptions: page.data.positionOptions,
       feet: page.data.feet, footIndex: page.data.footIndex });
   }
   const entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };
