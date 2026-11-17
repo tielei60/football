@@ -34,6 +34,36 @@ function markup(source) {
   source=source.replace('<view wx:if="{{!admin}}" class="readonly-notes"><view class="readonly-season-note">赛季号码与当前球员资料可以不同。</view><view class="hint">赛季留存资料不改变球员当前资料或历史比赛快照。</view></view>','');
   return JSON.stringify((s=>[...s.matchAll(/<[\w-]+\b[^>]*>/g)].map(m=>{const attrs=[...m[0].matchAll(/\b((?:bind|catch)(?::)?\w+|wx:(?:if|elif|else|for|for-item|for-index|key)|disabled|value|checked|maxlength|type|password|data-[\w-]+)\s*=\s*"([^"]*)"/g)].map(a=>[a[1],a[2]]).sort((a,b)=>a[0].localeCompare(b[0]));return attrs.length?[m[0].match(/^<([\w-]+)/)[1],attrs]:null}).filter(Boolean).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))(source));
 }
+// 仅还原本次获准的归档成功展示同步；完整回调和相邻提示精确匹配且只能出现一次。
+function normalizePlayerArchive(source) {
+  const current = `            (p) => {
+              this.setData({
+                revision: p.revision,
+                status: p.status,
+                membershipConfirmed: p.membershipConfirmed !== false,
+                membershipIndex: p.membershipConfirmed === false ? 0 : p.status === "inactive" ? 2 : 1,
+              });
+              ui.showToast(this, { title: "状态已更新" });
+            },`;
+  const previous = `            (p) => {
+              this.setData({ revision: p.revision, status: p.status });
+              ui.showToast(this, { title: "状态已更新" });
+            },`;
+  assert.equal(source.split(current).length - 1, 1, "归档成功展示同步须完整唯一，变更需重新审查");
+  const start = source.indexOf("  archive() {"), end = source.indexOf("  toggleAccount() {", start);
+  const position = source.indexOf(current);
+  assert.ok(start >= 0 && end > start && position > start && position + current.length < end,
+    "获准片段只能位于归档方法内");
+  return source.replace(current, previous);
+}
+test("归档展示归一化拒绝映射篡改、重复或移出方法，保留其它源码", () => {
+  const source = fs.readFileSync(path.join(root, "pages/manage-player/index.js"), "utf8");
+  assert.throws(() => normalizePlayerArchive(source.replace("membershipIndex: p.membershipConfirmed === false ? 0 : p.status === \"inactive\" ? 2 : 1", "membershipIndex: 1")));
+  assert.throws(() => normalizePlayerArchive(source + source));
+  assert.throws(() => normalizePlayerArchive(source.replace("  archive() {", "  archiveChanged() {")));
+  const extra = "\n// 其它源码不得被归一化删除\n";
+  assert.equal(normalizePlayerArchive(source + extra), normalizePlayerArchive(source) + extra);
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
@@ -44,6 +74,7 @@ for (const [item, expected] of Object.entries(baseline)) {
       const subject=item==='pages/manage-player'?'球员':'赛季';
       businessSource=businessSource.replace(`    wx.setNavigationBarTitle?.({ title: this.id ? "编辑${subject}" : "新增${subject}" });\n`,'');
     }
+    if(item==='pages/manage-player') businessSource=normalizePlayerArchive(businessSource);
     if(item==='pages/manage-players') {
       // 仅允许新增查询是否有效的展示投影；原输入、筛选及权限逻辑仍按旧基线冻结。
       businessSource=businessSource.replace('    searchHasText: false,\n','').replace('search: e.detail.value, searchHasText: e.detail.value.trim().length > 0','search: e.detail.value');

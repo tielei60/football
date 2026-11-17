@@ -279,7 +279,12 @@ Page({
                 { revision: this.data.revision, status },
               ),
             (p) => {
-              this.setData({ revision: p.revision, status: p.status });
+              this.setData({
+                revision: p.revision,
+                status: p.status,
+                membershipConfirmed: p.membershipConfirmed !== false,
+                membershipIndex: p.membershipConfirmed === false ? 0 : p.status === "inactive" ? 2 : 1,
+              });
               ui.showToast(this, { title: "状态已更新" });
             },
           );
