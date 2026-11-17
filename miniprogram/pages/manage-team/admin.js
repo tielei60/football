@@ -217,7 +217,8 @@ async function createRequest(page, path, payload) {
   if (entries.has(page.createKind)) throw Object.assign(new Error("请先核对创建结果"), { status: 503 });
   const view = { form: JSON.parse(JSON.stringify(page.data.form)) };
   if (page.createKind === "player") {
-    Object.assign(view, { avatar: page.data.avatar, positionOptions: page.data.positionOptions,
+    Object.assign(view, { status: page.data.status, membershipConfirmed: page.data.membershipConfirmed,
+      membershipIndex: page.data.membershipIndex, avatar: page.data.avatar, positionOptions: page.data.positionOptions,
       feet: page.data.feet, footIndex: page.data.footIndex });
   }
   const entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };
