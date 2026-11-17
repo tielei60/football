@@ -23,3 +23,12 @@
 .page .card button.ui-button.ui-compact.clear-kickoff[size="mini"]{display:flex;justify-content:flex-start;width:auto;max-width:100%;margin:0 0 20rpx;padding:0 20rpx;background:transparent;border-color:transparent;box-shadow:none;color:var(--muted);font-weight:500;text-align:left}
 .publication-note{margin:-12rpx 0 24rpx;line-height:1.65}
 .page .card button.ui-button.ui-compact.clear-kickoff[size="mini"][disabled]{opacity:.5;box-shadow:none}
+
+/* 保存冲突/结果未确认是待核对状态，恢复动作随提示归组；普通错误仍红。 */
+.score-scope-note{margin-top:28rpx;line-height:1.65;color:var(--muted)}
+.recovery-notice{padding:24rpx;border:1rpx solid #f1d9a3;border-radius:24rpx;background:var(--warning-soft);color:var(--warning);margin-top:24rpx}
+.recovery-title{font-size:26rpx;font-weight:650;line-height:1.5;margin-bottom:12rpx}
+.recovery-message{font-size:25rpx;line-height:1.65;overflow-wrap:anywhere}
+.page .recovery-notice button.recovery-check[size="mini"]{background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none;min-height:44px;margin-top:16rpx}
+.page .recovery-notice button.recovery-continue[size="mini"]{background:transparent;border-color:transparent;box-shadow:none;min-height:44px;margin-top:12rpx}
+.page .recovery-notice button.ui-button[size="mini"][disabled]{background:var(--canvas);border-color:var(--line);color:var(--muted);opacity:.6;box-shadow:none}

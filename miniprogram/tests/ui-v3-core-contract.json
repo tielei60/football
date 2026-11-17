@@ -10,7 +10,7 @@
     "components/page-state/index.js": "98785591be9882dce8f65f4cbdd03f90b10bc50959facc52d387968818f87978",
     "components/business-dialog/index.js": "cd63ccaadf4ca2530ef778730010e17e92233d89b2b4d7825354efb99be7b13a",
     "components/business-picker/index.js": "50bc69a5e795f42c514238021accbc6296cec43d7c651658265f1a8096e64145",
-    "components/loading-skeleton/index.js": "b5bb599c09d476005051fc723cecd6b574f277dc138bfba67a5c828de4ac50a2"
+    "components/loading-skeleton/index.js": "1eecc108352e12c080967b351e9230fe150e75bd15a04cfa509aa178a089fd89"
   },
   "bindings": {
     "pages/home/index.wxml": [

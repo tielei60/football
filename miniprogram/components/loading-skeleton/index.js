@@ -10,7 +10,7 @@ Component({
  lifetimes:{attached(){this.rebuild();}},
  methods:{rebuild(){
   const count=Math.max(1,Math.min(8,Math.floor(Number(this.data.rows)||3)));
-  const variant=['list','form','detail','cards'].includes(this.data.type)?this.data.type:'list';
+  const variant=['list','form','detail','cards','home'].includes(this.data.type)?this.data.type:'list';
   this.setData({items:Array.from({length:count},(_,i)=>i),variant});
  }}
 });

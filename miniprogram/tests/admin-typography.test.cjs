@@ -26,6 +26,12 @@ function markup(source) {
     '<view wx:if="{{candidates.length}}" class="field-label candidate-label">可添加球员</view>',
     '<text wx:if="{{candidates.length}}" class="field-label candidate-label">添加赛季球员</text>'
   ]) source=source.replace(label,'');
+  // 第四阶段只增加恢复提示容器和只读说明；原事件、按钮条件及输入约束仍按旧基线冻结。
+  // 新提示分支由 v3-match-recovery-display 和 v3-login-readonly-state-display 独立测试。
+  source=source.replace('<view wx:if="{{conflict||uncertain}}" class="recovery-notice">','<view>');
+  source=source.replace('<view wx:if="{{actionError}}" class="recovery-message">{{actionError}}</view>','');
+  source=source.replace('<view wx:if="{{actionError&&!conflict&&!uncertain}}" class="error">','<view wx:if="{{actionError}}" class="error">');
+  source=source.replace('<view wx:if="{{!admin}}" class="readonly-notes"><view class="readonly-season-note">赛季号码与当前球员资料可以不同。</view><view class="hint">赛季留存资料不改变球员当前资料或历史比赛快照。</view></view>','');
   return JSON.stringify((s=>[...s.matchAll(/<[\w-]+\b[^>]*>/g)].map(m=>{const attrs=[...m[0].matchAll(/\b((?:bind|catch)(?::)?\w+|wx:(?:if|elif|else|for|for-item|for-index|key)|disabled|value|checked|maxlength|type|password|data-[\w-]+)\s*=\s*"([^"]*)"/g)].map(a=>[a[1],a[2]]).sort((a,b)=>a[0].localeCompare(b[0]));return attrs.length?[m[0].match(/^<([\w-]+)/)[1],attrs]:null}).filter(Boolean).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))(source));
 }
 for (const [item, expected] of Object.entries(baseline)) {

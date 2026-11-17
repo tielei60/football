@@ -8,3 +8,6 @@
 
 /* v3 组件表面与页面主题一致，交互仍由原组件管理。 */
 .state{border-radius:30rpx;border-color:#e5d7f3;box-shadow:0 6rpx 18rpx rgba(110,43,131,.04)}.state .retry{min-height:44px;border-radius:22rpx}
+
+/* V3 错误态：恢复加载是唯一主操作，保持所有页面的 retry 事件。 */
+.error-state{padding:76rpx 40rpx;background:linear-gradient(135deg,#fff,#faf5ff)}.error-state .state-symbol{display:flex;align-items:center;justify-content:center;width:120rpx;height:120rpx;margin:0 auto 36rpx;border-radius:38rpx;border:2rpx solid #dfc7f0;background:linear-gradient(135deg,#ead8f8,#e4efff)}.refresh-ring{position:relative;box-sizing:border-box;width:42rpx;height:42rpx;border:4rpx solid var(--brand-ink,#760b88);border-right-color:transparent;border-radius:50%;transform:rotate(-30deg)}.refresh-ring::after{content:"";position:absolute;width:14rpx;height:14rpx;right:-3rpx;top:-2rpx;border-right:4rpx solid var(--brand-ink,#760b88);border-bottom:4rpx solid var(--brand-ink,#760b88);transform:rotate(30deg)}.error-state .state-title{font-size:34rpx;font-weight:700}.error-state .state-message{margin-top:36rpx}.error-state .retry{display:flex;width:100%;min-width:0;min-height:44px;margin-top:44rpx;padding:20rpx 24rpx;color:#fff;background:linear-gradient(120deg,#a522c4,#680776);border:2rpx solid #780a8c;border-radius:24rpx;box-shadow:0 8rpx 18rpx rgba(110,43,131,.12)}

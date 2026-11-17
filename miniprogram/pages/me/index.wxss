@@ -120,3 +120,15 @@
 .page .section .metrics{gap:0}
 .page .section .metrics>.metric{background:transparent;border:0;border-radius:0;box-shadow:none}
 .page .section .metrics>.metric+.metric{border-left:1rpx solid var(--line)}
+
+/* 状态设计核对：管理卡片直接置于页面背景，年份和账号摘要降一级。 */
+.management-section .management-grid{gap:20rpx}
+.management-section>.section-title{margin-bottom:28rpx}
+.registration-heading{display:flex;align-items:center;justify-content:space-between;gap:16rpx;margin-bottom:24rpx}
+.registration-heading>.section-title{margin:0;min-width:0}
+.registration-year{flex:none;font-size:var(--type-meta);color:var(--muted);font-weight:400}
+.account-row-meta{min-width:0;max-width:42%;overflow-wrap:anywhere;font-size:var(--type-meta);font-weight:400;color:var(--muted);text-align:right}
+.page .account-menu button.account-row+button.account-row{border-top:1rpx solid var(--line)}
+
+/* 禁用账号行保留状态反馈，不被正常透明按钮规则覆盖。 */
+.page .account-menu button.account-row[disabled]{opacity:.5}

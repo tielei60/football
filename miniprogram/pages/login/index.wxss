@@ -28,3 +28,10 @@
 .brand-mark,.brand-image{width:216rpx;height:216rpx}
 .login-art{padding-top:60rpx;padding-bottom:64rpx}
 @media(max-height:650px){.brand-mark,.brand-image{width:192rpx;height:192rpx}.login-art{padding-top:40rpx}}
+
+/* 微信入口是次级登录方式；仅开启时合并两个容器之间的安全区留白。 */
+.page.login.login-with-wechat{padding-bottom:0}
+.page.wechat-entry{padding-top:20rpx}
+.page.wechat-entry button.wechat-login-button[size="mini"]{background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none;min-height:44px}
+.page.wechat-entry button.wechat-invite-button[size="mini"]{background:transparent;border-color:transparent;color:var(--muted);box-shadow:none;min-height:44px}
+.page.wechat-entry button.ui-button[size="mini"][disabled]{background:var(--canvas);border-color:var(--line);color:var(--muted);opacity:.6;box-shadow:none}

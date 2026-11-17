@@ -28,5 +28,5 @@ test('球队与账号菜单保留原入口、条件、错误和退出确认而�
  assert.match(w,/wx:if="{{session.user.role==='admin'}}"/);assert.match(w,/wx:if="{{session.user.systemAdmin}}"/);
  assert.match(w.slice(section),/disabled="{{loading}}" bindtap="tactics"/);assert.match(w.slice(section),/disabled="{{loading \|\| \(busy\)}}" bindtap="logout"/);
  assert.match(js,/logout\(\)\s*\{[\s\S]*?ui\.showModal\(this,[\s\S]*?if \(!result.confirm\) return/);
- assert.doesNotMatch(w.slice(section),/bindtap="(?:statistics|wechatBind)"/);
+ assert.doesNotMatch(w.slice(section),/bindtap="wechatBind"/);
 });

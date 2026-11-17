@@ -50,3 +50,9 @@
 
 /* 页级白底描边不能盖过业务禁用的弱化状态。 */
 .page .picker-row button.ui-button.ui-compact[size="mini"][disabled]{background:var(--canvas);border-color:var(--line);color:var(--muted);opacity:.6}
+
+/* 只读号码与说明采用辅助层级，不伪装成可编辑控件。 */
+.roster-readonly .read-number{color:var(--muted)}
+.readonly-notes{margin-top:28rpx}
+.readonly-season-note{padding:24rpx;border:1rpx solid #d7eafa;border-radius:24rpx;background:var(--sky-soft);color:#356275;font-size:25rpx;line-height:1.6}
+.readonly-notes>.hint{margin-top:20rpx;color:var(--muted);font-size:24rpx;line-height:1.6}

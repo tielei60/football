@@ -2,3 +2,6 @@
 
 /* v3 组件表面与页面主题一致，交互仍由原组件管理。 */
 .item,.hero{border-radius:30rpx}.avatar{border-radius:50%}.field{border-radius:22rpx}
+
+/* 首页使用对应内容轮廓，避免加载时呈现球员列表。 */
+.home-layout{padding:20rpx 0}.home-title{width:60%;height:50rpx;margin-bottom:44rpx;border-radius:14rpx}.home-subtitle{width:64%;height:24rpx;margin-bottom:30rpx;border-radius:14rpx}.home-match{height:360rpx;width:100%;border-radius:32rpx;margin-bottom:50rpx}.home-section{height:24rpx;width:48%;margin-bottom:32rpx;border-radius:14rpx}.home-row{height:144rpx;width:100%;border-radius:26rpx;margin-bottom:24rpx}

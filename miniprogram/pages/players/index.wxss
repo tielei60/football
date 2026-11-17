@@ -44,3 +44,6 @@
 .page .player-search button.search-clear[size="mini"]{min-width:44px;min-height:44px}
 
 .squad-count-icon{display:block;width:38rpx;height:38rpx;margin:0 auto 12rpx;flex:none}
+
+/* 空态仍保留筛选上下文，不引入示例数据或改动人员状态。 */
+.players-empty{box-sizing:border-box;padding:56rpx 40rpx;margin-top:24rpx;border:2rpx solid #e5d7f3;border-radius:30rpx;background:linear-gradient(135deg,#fff,#faf5ff)}.players-empty-symbol{display:flex;align-items:center;justify-content:center;width:120rpx;height:120rpx;margin:0 auto 32rpx;border-radius:38rpx;border:2rpx solid #dfc7f0;background:linear-gradient(135deg,#ead8f8,#e4efff)}.players-empty-symbol image{width:52rpx;height:52rpx}.players-empty .empty-title{font-size:34rpx;font-weight:700}.players-empty .empty-caption{margin-top:28rpx}.players-empty .reset-filters{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:40rpx;border:2rpx solid #b986d2;border-radius:24rpx;background:#fff;color:var(--brand-ink,#760b88)}

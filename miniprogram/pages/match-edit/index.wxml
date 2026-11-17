@@ -143,18 +143,22 @@
         maxlength="10000"
         placeholder="记录这场比赛的收获"
         disabled="{{loading || (busy)}}"
-      /></view
-    ><view wx:if="{{actionError}}" class="error">{{actionError}}</view
-    ><button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button><button disabled="{{loading}}" wx:if="{{uncertain}}" bindtap="checkSchedule" class="ui-button ui-block" size="mini">前往赛程核对</button><button disabled="{{loading}}" wx:if="{{uncertain}}" class="ghost ui-button ui-block" bindtap="confirmAbsent" size="mini">已核对，继续编辑</button>
-<button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block" size="mini">重新载入最新版本</button><button
+      /><view class="hint score-scope-note">只有“已完赛”比赛计入统计；比分未知时请留空。</view></view
+    ><view wx:if="{{actionError&&!conflict&&!uncertain}}" class="error">{{actionError}}</view>
+    <view wx:if="{{conflict||uncertain}}" class="recovery-notice">
+      <view class="recovery-title">{{uncertain?'结果待核对':'有更新需要核对'}}</view>
+      <view wx:if="{{actionError}}" class="recovery-message">{{actionError}}</view>
+      <button disabled="{{loading}}" wx:if="{{uncertain}}" bindtap="checkSchedule" class="ui-button ui-block recovery-check" size="mini">前往赛程核对</button>
+      <button disabled="{{loading}}" wx:if="{{uncertain}}" class="ghost ui-button ui-block recovery-continue" bindtap="confirmAbsent" size="mini">已核对，继续编辑</button>
+      <button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block recovery-check" size="mini">重新载入最新版本</button>
+    </view>
+    <button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button><button
       class="primary ui-button ui-block"
       style="margin-top: 20rpx"
       disabled="{{loading || (busy || conflict || uncertain || savedId)}}"
       loading="{{busy}}"
       bindtap="save"
-     size="mini">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button><view class="hint"
-      >只有“已完赛”比赛计入统计；比分未知时请留空。</view
-    ></block
+     size="mini">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button></block
   ></view
 >
 

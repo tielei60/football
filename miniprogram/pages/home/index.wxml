@@ -1,5 +1,5 @@
 <view class="page"
-  ><page-state id="page-state" skeleton-type="cards"
+  ><page-state id="page-state" skeleton-type="home"
     loading="{{loading}}"
     error="{{error}}"
     bind:retry="refresh"
