@@ -6,7 +6,7 @@
 .card { padding:34rpx; }
 .error { overflow-wrap:anywhere; }
  .card .field { margin-bottom:32rpx; }
-.card .hint { padding:20rpx; border-radius:20rpx; background:var(--sky-soft); }
+.card .hint { padding:0; border-radius:0; background:transparent; color:var(--muted); line-height:1.65; }
 
 /* V3：阵容管理是带方向提示的白色入口卡，不与保存主操作竞争。 */
 .page button.season-roster-entry.ui-button.ui-block[size="mini"]{display:flex;align-items:center;gap:20rpx;padding:24rpx;background:var(--surface);border:1rpx solid var(--line);text-align:left;color:var(--ink);min-height:56px}

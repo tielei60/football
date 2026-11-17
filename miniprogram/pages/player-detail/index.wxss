@@ -47,3 +47,18 @@
 .photo-link-title { display:flex; align-items:center; gap:20rpx; min-width:0; }
 .photo-link-icon { width:40rpx; height:40rpx; flex:none; }
 .photo-arrow { color:var(--brand); }
+
+/* ZIP 08：资料字段上下分层；标题在表现卡外，报名为透明统计区。 */
+.profile-detail{flex-direction:column;align-items:flex-start;gap:12rpx;max-width:100%}
+.profile-details{gap:24rpx 36rpx;padding-bottom:36rpx}
+.player-detail-page .profile-section{padding:0;border:0;background:transparent;box-shadow:none;margin-top:36rpx}
+.profile-section-heading{margin-bottom:28rpx;flex-wrap:wrap}
+.performance-card{padding:30rpx;border:1rpx solid var(--line);border-radius:30rpx;background:var(--surface);box-shadow:0 6rpx 18rpx #6a00680c}
+.performance-card .performance-row{margin-top:0;padding-bottom:30rpx}
+.performance-card .performance-item{padding:24rpx 0}
+.performance-card .coverage-note{margin-top:12rpx}
+.registration-section .registration-row{gap:0;margin-top:0}
+.registration-section .registration-item{padding:24rpx 4rpx;gap:16rpx}
+.registration-section .registration-item+.registration-item{border-left:1rpx solid var(--line)}
+.registration-section .registration-value{font-size:56rpx;color:var(--brand-ink)}
+.player-detail-page .profile-empty{padding:28rpx}

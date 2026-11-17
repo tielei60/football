@@ -1,4 +1,4 @@
-<view class="page schedule-page"><view wx:if="{{!loading && !error && tab==='upcoming' && visible.length}}" class="fixture-focus" aria-role="button" data-id="{{visible[0].id}}" bindtap="openMatch" hover-class="club-card-pressed"><image class="focus-image" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="focus-shade"/><view class="focus-content"><view class="focus-context"><text class="focus-label">焦点赛事</text><text>{{visible[0].competition || '球队比赛'}}{{visible[0].format ? ' · '+visible[0].format+'人制' : ''}}</text></view><view class="focus-teams"><view><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="focus-fallback">足</text><text>{{team.name}}</text></view><text class="focus-vs">VS</text><view><view class="focus-fallback" aria-hidden="true"><view class="opponent-ball"/></view><text>{{visible[0].opponent}}</text></view></view><view class="focus-meta">{{visible[0].dateLabel}} · {{visible[0].kickoff || '时间待定'}}</view><view class="focus-meta">{{visible[0].location || '地点待定'}}</view><view class="focus-link">查看比赛 · 去报名 ›</view></view></view><view class="tabs"
+<view class="page schedule-page"><view wx:if="{{!loading && !error && tab==='upcoming' && visible.length}}" class="fixture-focus" aria-role="button" data-id="{{visible[0].id}}" bindtap="openMatch" hover-class="club-card-pressed"><image class="focus-image" src="/assets/club-atmosphere.jpg" mode="aspectFill"/><view class="focus-shade"/><view class="focus-content"><view class="focus-context"><text class="focus-label">焦点赛事</text><text>{{visible[0].competition || '球队比赛'}}{{visible[0].format ? ' · '+visible[0].format+'人制' : ''}}</text></view><view class="focus-teams"><view><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="focus-fallback">足</text><text>{{team.name}}</text></view><view class="focus-result"><text class="focus-vs">VS</text><text class="focus-side">{{visible[0].side==='home'?'主场':visible[0].side==='away'?'客场':visible[0].side==='neutral'?'中立场':'主客场待定'}}</text></view><view><view class="focus-fallback" aria-hidden="true"><view class="opponent-ball"/></view><text>{{visible[0].opponent}}</text></view></view><view class="focus-meta"><image src="/assets/ui-v3-calendar.png" mode="aspectFit" aria-hidden="true"/><text>{{visible[0].dateLabel}} · {{visible[0].kickoff || '时间待定'}}</text></view><view class="focus-meta"><image src="/assets/ui-v3-pin.png" mode="aspectFit" aria-hidden="true"/><text>{{visible[0].location || '地点待定'}}</text></view><view class="focus-link"><image src="/assets/ui-v3-people.png" mode="aspectFit" aria-hidden="true"/><text>查看比赛 · 去报名 ›</text></view></view></view><view class="tabs"
     ><view aria-role="button"
       class="tab {{tab==='upcoming'?'active':''}}"
       data-tab="upcoming"
@@ -24,7 +24,7 @@
     bind:retry="refresh"
   /><block wx:if="{{!loading && !error}}"
     ><block wx:for="{{visible}}" wx:key="id"
-      ><view wx:if="{{item.monthHeading}}" class="section-title"
+      ><view wx:if="{{item.monthHeading}}" class="section-title schedule-month"
         >{{item.monthHeading}}</view
       ><view aria-role="button" class="card" data-id="{{item.id}}" bindtap="openMatch"
          hover-class="club-card-pressed"><view class="fixture-main">
@@ -32,12 +32,12 @@
           <view class="fixture-details">
             <view class="section-title break match-name">{{item.opponent}}</view>
             <view class="muted fixture-competition">{{item.competition || '球队比赛'}}{{item.format ? ' · '+item.format+'人制' : ''}}</view>
-            <view class="muted match-time">{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</view>
+            <view class="muted match-time"><view class="time-symbol" aria-hidden="true"/><text>{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</text></view>
           </view>
           <view class="fixture-status"><text class="tag {{item.status}}">{{item.statusLabel}}</text><view wx:if="{{item.status==='completed'}}" class="score">{{item.scoreLabel}}</view></view>
         </view
         ><view class="divider"></view
-        ><view class="muted break schedule-location">{{item.location || '地点待定'}}</view
+        ><view class="muted break schedule-location"><image src="/assets/ui-v3-pin.png" mode="aspectFit" aria-hidden="true"/><text>{{item.location || '地点待定'}}</text></view
         ><view wx:if="{{item.status==='published'}}" class="schedule-signup"
           ><view class="schedule-counts"><text class="signup-count-yes">参加 {{item.signupCountLabel}}</text><text class="signup-count-maybe">{{item.maybeCount}} 人待定</text><text class="signup-count-no">{{item.noCount}} 人请假</text></view
           ><text class="schedule-response">{{item.responseLabel}} ›</text></view

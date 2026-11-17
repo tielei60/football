@@ -5,13 +5,13 @@
   <block wx:if="{{!loading&&!error}}">
     <view wx:if="{{authorized}}" class="card section">
       <view class="section-title">新增普通管理员</view>
-      <text class="field-label">用户名</text><input class="input field" value="{{username}}" data-field="username" bindinput="input" maxlength="80" placeholder="用户名" disabled="{{busy||uncertain}}"/>
-      <text class="field-label">初始密码 · 10–200 位</text><input class="input field" password value="{{password}}" data-field="password" bindinput="input" maxlength="200" placeholder="初始密码 · 10–200 位" disabled="{{busy||uncertain}}"/>
+      <text class="field-label">用户名</text><input class="input field" value="{{username}}" data-field="username" bindinput="input" maxlength="80" placeholder="输入用户名" disabled="{{busy||uncertain}}"/>
+      <text class="field-label">初始密码 · 10–200 位</text><input class="input field" password value="{{password}}" data-field="password" bindinput="input" maxlength="200" placeholder="输入初始密码" disabled="{{busy||uncertain}}"/>
       <button size="mini" class="primary ui-button ui-block" bindtap="create" disabled="{{busy||uncertain}}" loading="{{busy}}">创建管理员</button>
     </view>
     <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
     <button wx:if="{{canRelease}}" size="mini" class="ui-button ui-block" bindtap="release" disabled="{{busy}}">已核对，确认未创建</button>
-    <button size="mini" class="ui-button ui-block section" bindtap="refresh" disabled="{{busy}}">重新载入核对</button>
+    <button size="mini" class="ui-button ui-block section accounts-refresh" bindtap="refresh" disabled="{{busy}}">重新载入核对</button>
     <view wx:if="{{accounts.length}}" class="section-title accounts-heading">球队账号</view>
     <view wx:if="{{accounts.length}}" class="card account-list">
     <view wx:for="{{accounts}}" wx:key="id" class="account-row">

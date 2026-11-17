@@ -31,3 +31,6 @@
 .export-result { margin:24rpx 0; }
 .export-result-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16rpx; }
 .page .export-result-actions > button.ui-button { box-sizing:border-box; width:100%; min-width:0; min-height:44px; margin:0; padding:20rpx 12rpx; line-height:1.5; white-space:normal; }
+
+/* V3 原生复核：操作层级与紧凑展示，不改变画布及事件。 */
+.export-heading{font-size:32rpx;font-weight:600;color:var(--ink);line-height:1.4}.page #tactic-export-pdf,.page #tactic-export-preview{min-height:44px}.page #tactic-export-pdf:not([disabled]),.page #tactic-export-preview:not([disabled]){background:#fff;border:1rpx solid var(--control-border)}.export-options .export-source{margin:0;font-size:24rpx;overflow-wrap:anywhere}

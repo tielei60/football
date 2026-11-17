@@ -35,3 +35,10 @@
 .page button.photo-choose { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12rpx; min-height:44px; padding:28rpx 16rpx; border:1px dashed var(--control-border); background:var(--canvas); color:var(--brand); box-sizing:border-box; }
 .photo-choose-plus { font-size:44rpx; line-height:1; }
 .photo-choose-hint { font-size:var(--type-meta); font-weight:400; line-height:1.5; }
+
+/* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
+.page #open-player-ai:not([disabled]){background:var(--surface);border-color:var(--control-border);color:var(--brand-ink)}
+.photo-ai-symbol{font-size:40rpx;line-height:1;margin-right:14rpx;flex:none}
+.page .photo-actions-main>button.ui-button[size="mini"]:not([disabled]){background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink)}
+.page .photo-actions-secondary>button.ui-button[size="mini"]:not([disabled]){background:transparent;border-color:transparent;box-shadow:none}
+.photo-field-label{font-weight:600}

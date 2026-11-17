@@ -72,3 +72,16 @@
 /* V3 管理表单：持久标签与实际命中区，不改输入事件。 */
 .roster-grid input.input{min-height:44px;box-sizing:border-box}
 .add-section .candidate-label{margin-top:20rpx;margin-bottom:0}.add-section .add-row{margin-top:12rpx}
+
+/* 横幅下仅保留紧凑比赛摘要，不重复放大对手标题。 */
+.roster-heading{align-items:center;gap:16rpx;padding:8rpx 0 24rpx}
+.roster-heading-main{display:flex;align-items:baseline;flex-wrap:wrap;gap:6rpx 16rpx}
+.roster-kicker{font-size:24rpx;font-weight:400;color:var(--muted)}
+.roster-opponent{margin-top:0;font-size:28rpx;line-height:1.5}
+.roster-total-number{font-size:28rpx}
+.add-section .section-title{border-left:0;padding-left:0}
+.identity-note{padding:16rpx 20rpx;border-radius:18rpx;background:var(--canvas);color:var(--muted)}
+
+/* 原生320复验：选择器与加入按钮共享尺寸下限，长候选底边仍对齐。 */
+.add-section .add-row{align-items:flex-end}
+.roster-page .add-row .add-picker,.roster-page .add-row button.add-button[size="mini"]{min-height:52px;box-sizing:border-box}

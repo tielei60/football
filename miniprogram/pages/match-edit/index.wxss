@@ -14,4 +14,12 @@
 @media(max-width:340px) { .filter-row { flex-wrap:wrap; } .filter-row>.grow { flex-basis:240rpx; } }
 
 /* 紧凑入口保留原视觉，显式覆盖全局 compact 的 rpx 最小触控尺寸。 */
+
+
+/* 日期和时间保留完整信息，统一两行容量；清除仍为44px弱操作。 */
+.date-time-row{align-items:stretch}
+.date-time-row .picker{min-height:112rpx;min-height:max(56px,112rpx)}
 .page button.ui-button.ui-compact.clear-kickoff[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}
+.page .card button.ui-button.ui-compact.clear-kickoff[size="mini"]{display:flex;justify-content:flex-start;width:auto;max-width:100%;margin:0 0 20rpx;padding:0 20rpx;background:transparent;border-color:transparent;box-shadow:none;color:var(--muted);font-weight:500;text-align:left}
+.publication-note{margin:-12rpx 0 24rpx;line-height:1.65}
+.page .card button.ui-button.ui-compact.clear-kickoff[size="mini"][disabled]{opacity:.5;box-shadow:none}

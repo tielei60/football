@@ -7,3 +7,6 @@
 .transfer-count { font-size: 28rpx; font-weight: 600; color: var(--ink); margin-bottom: 22rpx; }
 .card > .hint { font-size: 24rpx; line-height: 1.7; }
 .card > button { margin-top: 20rpx; }
+
+/* V3 原生复核：操作层级与紧凑展示，不改变画布及事件。 */
+.page .section-title::before,.page .step-number{display:none}.page .summary{padding:24rpx;background:var(--brand-soft);border-radius:20rpx;margin:24rpx 0}.page .summary .filename{padding:0;margin:0 0 10rpx;background:transparent;font-weight:600}.page .summary .transfer-count{margin:0;color:var(--muted);font-size:24rpx;font-weight:400}.page #transfer-choose,.page #transfer-export,.page #transfer-save{min-height:44px}.page #transfer-choose:not([disabled]),.page #transfer-export:not([disabled]),.page #transfer-save:not([disabled]){background:#fff;border:1rpx solid var(--control-border)}

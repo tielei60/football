@@ -8,6 +8,8 @@ page {
   --muted: #6e617a;
   --line: #e8def5;
   --control-border: #8d6a9e;
+  --field-label: #755381;
+  --control-surface: #fdfbff;
   --focus: #760b88;
   --danger: #b33951;
   /* 层级令牌只用于内容文字，不改变原生输入与紧凑工具几何。 */
@@ -445,3 +447,7 @@ input.input{min-height:44px}
 .picker,.filter-row .picker{min-height:44px}
 
 .club-card-pressed{opacity:.78}
+
+/* V3 字段层级统一：紫色标签与轻微染色控件，保留可辨识边框和输入几何。 */
+.page .field-label{color:var(--field-label);font-weight:600}
+.page input.input,.page textarea,.page .picker{background:var(--control-surface)}

@@ -4,9 +4,9 @@ const resultView = require("../../utils/match-result-view");
 Page({
   data: {
     shortcuts: [
-      { page: "schedule", label: "比赛", icon: "/assets/schedule-active.png" },
-      { page: "players", label: "球员", icon: "/assets/players-active.png" },
-      { page: "statistics", label: "数据", icon: "/assets/statistics-active.png" },
+      { page: "schedule", label: "比赛", icon: "/assets/schedule-shortcut.png" },
+      { page: "players", label: "球员", icon: "/assets/players-shortcut.png" },
+      { page: "statistics", label: "数据", icon: "/assets/statistics-shortcut.png" },
       { page: "tactics", label: "战术", icon: "/assets/tactics-shortcut.png" },
     ],
     loading: true,

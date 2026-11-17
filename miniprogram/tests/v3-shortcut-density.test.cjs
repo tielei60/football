@@ -1,0 +1,2 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+test('首页快捷入口使用144px设计几何PNG，导航不变',()=>{const code=fs.readFileSync(path.join(__dirname,'../pages/home/index.js'),'utf8');for(const name of ['schedule','players','statistics']){assert.ok(code.includes('/assets/'+name+'-shortcut.png'));const b=fs.readFileSync(path.join(__dirname,'../assets/'+name+'-shortcut.png'));assert.equal(b.readUInt32BE(16),144);assert.equal(b.readUInt32BE(20),144);}assert.ok(code.includes('wx.switchTab'));});

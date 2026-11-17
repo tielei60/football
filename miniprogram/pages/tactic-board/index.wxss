@@ -56,6 +56,11 @@
 .type-expanded .board-view-controls button.focus-toggle{width:auto;min-width:44px;margin:0;min-height:44px}
 .type-expanded .board-view-controls button.small{grid-column:1/-1;width:100%;margin:0;min-height:44px}
 
+
+/* V3 原生复核：操作层级与紧凑展示，不改变画布及事件。 */
+.type-expanded .board-view-controls{grid-template-columns:minmax(0,1fr) auto auto}.type-expanded .board-view-controls button.small{grid-column:auto;width:auto;min-width:44px;padding:10rpx}.type-expanded .board-view-controls button.focus-toggle{padding:10rpx}.type-expanded .playback-controls button.small{background:#fff;border:1rpx solid var(--control-border);border-radius:20rpx;min-height:44px}@media(max-width:360px){.type-expanded .board-view-controls{gap:8rpx}.type-expanded .board-view-controls button{font-size:22rpx}}
+/* 原生按钮文字居中与输入光标空间修复。 */
+.type-expanded .board-view-controls button,.type-expanded .playback-controls button{display:flex;align-items:center;justify-content:center;min-height:44px}
 /* UI v3：保留原 JS 坐标算法；工具区布局已变化，实际画布空间与触点须原生复验。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

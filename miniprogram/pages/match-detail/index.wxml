@@ -19,8 +19,8 @@
         <view class="match-result"><text class="score">{{match.status==='completed'?match.scoreLabel:'VS'}}</text><text class="match-side">{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</text></view>
         <view class="match-team"><view class="team-crest"><view class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{match.opponent}}</text></view>
       </view>
-      </view><view class="match-facts">
-        <view class="fact-row"><text class="fact-label">时间</text><view class="fact-content"><text class="fact-primary">{{match.dateLabel}} {{match.kickoff || '时间待定'}}</text></view></view>
+      <view class="match-hero-time">{{match.dateLabel}} {{match.kickoff || '时间待定'}}</view></view><view class="match-facts">
+
         <view class="fact-row"><text class="fact-label">场地</text><view class="fact-content"><text class="fact-primary">{{venueLocation.valid ? venueLocation.title : (match.location || venueLocation.address || '待定')}}</text><text wx:if="{{venueLocation.valid && venueLocation.address}}" class="fact-subtitle">{{venueLocation.address}}</text><text wx:elif="{{!match.location}}" class="fact-subtitle">{{venueLocation.message}}</text></view><button wx:if="{{venueLocation.valid}}" id="match-open-location" size="mini" class="fact-navigation" disabled="{{loading}}" bindtap="openLocation">导航 ›</button></view>
         <view wx:if="{{notice}}" class="fact-notice"><text class="fact-label">须知</text><text class="prewrap">{{notice}}</text></view>
         <button disabled="{{loading}}" bindtap="media" class="ui-button match-media-button" hover-class="match-control-pressed" size="mini">须知与相册 ›</button>
@@ -33,7 +33,7 @@
       <view class="section-heading"><text class="section-heading-title">报名情况</text><text wx:if="{{canReply}}" class="section-heading-note">我的报名：{{match.responseLabel}}</text></view>
       <view class="attendance-summary"><text class="signup-count-yes">参加 {{match.signupCountLabel}}</text><text class="signup-count-maybe">待定 {{match.maybeCount}}</text><text class="signup-count-no">请假 {{match.noCount}}</text></view>
       <view wx:for="{{replyGroups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="response" class="reply-group">
-        <view class="reply-group-heading">{{group.label}} <text class="reply-group-count">{{group.players.length}}</text></view>
+        <view class="reply-group-heading {{group.response==='yes'?'reply-group-heading-yes':''}}">{{group.label}} <text class="reply-group-count">{{group.players.length}}</text></view>
         <view class="reply-grid"><view wx:for="{{group.players}}" wx:for-item="player" wx:for-index="playerIndex" wx:key="playerId" class="reply-player"><view class="reply-avatar {{!player.avatar?'player-placeholder':''}}"><image wx:if="{{player.avatar}}" class="reply-avatar-image" src="{{player.avatar}}" mode="aspectFill" data-group="{{groupIndex}}" data-index="{{playerIndex}}" binderror="replyImageError"/><text wx:else>{{player.initial}}</text></view><text class="reply-name">{{player.name}}</text></view></view>
       </view>
       <view wx:if="{{!replies.length}}" class="section-empty">还没有报名回应</view>

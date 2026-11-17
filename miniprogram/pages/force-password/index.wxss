@@ -3,3 +3,6 @@
 .field { margin-bottom:28rpx; }
 .field-label { display:block; font-size:26rpx; font-weight:500; color:var(--muted); margin-bottom:12rpx; }
 .error { font-size:26rpx; line-height:1.6; margin:20rpx 0; overflow-wrap:anywhere; }
+
+/* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
+.page button.password-logout.ui-button[size="mini"]:not([disabled]){background:transparent;border-color:transparent;color:var(--muted);box-shadow:none}

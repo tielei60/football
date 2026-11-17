@@ -28,3 +28,7 @@
 .card .between { padding:4rpx 0 12rpx; flex-wrap:wrap; }
 .photo-order-actions { padding-top:16rpx; border-top:1px solid var(--line); }
 .prewrap { display:block; overflow-wrap:anywhere; }
+
+/* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
+.media-heading{display:flex;align-items:center;gap:16rpx;margin:36rpx 0 18rpx}.media-heading .section-title{flex:1;min-width:0;margin:0}.media-count{flex:none;font-size:var(--type-meta);color:var(--muted)}
+.page textarea.notice{height:220rpx;min-height:110px;margin-bottom:40rpx}

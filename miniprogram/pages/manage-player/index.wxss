@@ -10,8 +10,8 @@
 .portrait-editor .stack { flex:1; min-width:0; gap:12rpx; }
 .portrait-editor .stack button { width:100%; }
 .position-options { display:flex; flex-wrap:wrap; gap:12rpx; }
-.position-options button.ui-button.ui-compact[size="mini"] { flex:1 0 27%; min-height:44px; min-width:0; margin:0; padding:16rpx 12rpx; font-size:26rpx; border:1px solid var(--line); background:var(--canvas); white-space:normal; }
-.position-options button.selected { background:var(--brand-soft)!important; border-color:var(--brand)!important; color:var(--brand-ink); }
+.position-options button.ui-button.ui-compact[size="mini"] { flex:0 1 auto; width:auto; min-height:44px; min-width:44px; margin:0; padding:16rpx 20rpx; font-size:26rpx; font-weight:400; color:var(--muted); border:1px solid var(--line); background:var(--canvas); white-space:normal; }
+.position-options button.ui-button.ui-compact.selected[size="mini"] { font-weight:600; background:var(--brand-soft)!important; border-color:var(--brand)!important; color:var(--brand-ink); }
 .account-heading { gap:16rpx; flex-wrap:wrap; margin-bottom:24rpx; }
 .account-heading .bold { font-size:32rpx; }
 .account-card { margin-top:36rpx; }
@@ -35,3 +35,9 @@
 .page .portrait-editor>.avatar,.page .portrait-editor>.picture-preview{width:128rpx;height:128rpx;border-radius:32rpx}
 .page .portrait-editor .stack>button.ui-button.ui-compact[size="mini"]{width:auto;max-width:100%}
 @media(max-width:340px){.page .portrait-editor{flex-wrap:wrap}.page .portrait-editor>.tag{margin-left:0}}
+
+/* ZIP 12：选择头像描边，移除头像弱文字，不改变禁用条件。 */
+.page .portrait-editor .stack>button.ui-button.ui-compact[size="mini"]{background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none}
+.page .portrait-editor .stack>button.ghost.ui-button.ui-compact[size="mini"]{background:transparent;border-color:transparent;color:var(--muted)}
+.page .portrait-editor .stack>button.ui-button.ui-compact[size="mini"][disabled]{color:var(--muted);opacity:.55}
+.page .position-options button.ui-button.ui-compact[size="mini"][disabled]{opacity:.5;box-shadow:none}

@@ -34,3 +34,8 @@
 /* V3：账号统一白卡，条目分隔而非重复卡片。 */
 .card.account-list{padding:0 32rpx}.account-row{padding:32rpx 0;min-width:0;overflow-wrap:anywhere}.account-row+.account-row{border-top:1px solid var(--line)}
 .account-row .account-actions{border-top:0;padding-top:0}
+
+/* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
+.card .section-title,.account-row .account-name{border-left:0;padding-left:0}
+.field-label{font-weight:600;color:var(--muted)}
+.page button.accounts-refresh.ui-button:not([disabled]){background:var(--surface);border-color:var(--control-border)}

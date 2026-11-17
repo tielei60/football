@@ -56,6 +56,11 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 .page.canvas-focus .compose-workspace{display:block}.page.canvas-focus .compose-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8rpx}
 .page.canvas-focus .compose-actions button{width:100%;min-width:0}
 
+
+/* V3 原生复核：操作层级与紧凑展示，不改变画布及事件。 */
+.type-expanded #compose-undo,.type-expanded #stage-add,.type-expanded #stage-apply{background:#fff;border:1rpx solid var(--control-border);border-radius:20rpx;min-height:44px}.type-expanded #stage-delete{background:transparent;border-color:transparent;color:var(--muted);min-height:44px}.type-expanded #compose-focus{order:3;background:transparent;border-color:transparent;min-height:44px;min-width:44px}.type-expanded .stage-selector-row{margin-bottom:0}.type-expanded .stage-title-field input{border-radius:20rpx;background:var(--surface)}
+/* 原生按钮文字居中与输入光标空间修复。 */
+.type-expanded .compose-actions button,.type-expanded .stage-actions button,.type-expanded #stage-apply,.type-expanded #compose-focus{display:flex;align-items:center;justify-content:center;min-height:44px}
 /* UI v3：保留原 JS 坐标算法；工具区布局已变化，实际画布空间与触点须原生复验。 */
 .type-expanded .title { color: var(--brand-ink); font-weight: 700; }
 .type-expanded .picker { border-color: var(--control-border); border-radius: 20rpx; }

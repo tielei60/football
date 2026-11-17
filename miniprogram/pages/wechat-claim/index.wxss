@@ -39,3 +39,8 @@
 .claim-status-heading .claim-status { margin:0; padding:10rpx 16rpx; max-width:60%; border:0; border-radius:14rpx; font-size:var(--type-meta); line-height:1.5; background:var(--canvas); color:var(--muted); overflow-wrap:anywhere; }
 .claim-status-heading .claim-status.is-waiting { background:var(--warning-soft); color:var(--warning); }
 .claim-status-heading .claim-status.is-approved { background:var(--success-soft); color:var(--success); }
+
+/* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
+.confirmation{background:transparent;border:0;border-radius:0;font-size:60rpx;font-weight:700;letter-spacing:8rpx;padding:36rpx 0;overflow-wrap:anywhere}
+.claim-status-heading .section-title{border-left:0;padding-left:0}
+.page button.ui-button.ui-block:not(.primary):not([disabled]){background:var(--surface);border-color:var(--control-border);color:var(--brand-ink)}

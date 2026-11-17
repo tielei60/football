@@ -94,3 +94,15 @@
 
 /* ZIP 07：须知相册入口归入白色地点须知卡；管理员操作仍独立保留。 */
 .page .match-facts button.match-media-button[size="mini"] { display:flex; align-items:center; justify-content:flex-start; min-height:44px; margin:12rpx 0 0; padding:12rpx 0; color:var(--brand); background:transparent; border:0; box-shadow:none; }
+
+/* ZIP 07：时间归入主视觉，报名标题及摘要位于分组卡片外。 */
+.match-hero-time{position:relative;text-align:center;font-size:26rpx;line-height:1.6;color:#efddf8;margin-top:14rpx;overflow-wrap:anywhere}
+.match-detail-page .attendance-section{background:transparent;border:0;border-radius:0;padding:20rpx 0 0;box-shadow:none}
+.attendance-section .reply-group{background:var(--surface);border-radius:24rpx;padding:24rpx;margin-top:24rpx}
+.attendance-section .reply-group+.reply-group{border:0}
+.attendance-section .reply-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:24rpx 12rpx}
+@media(max-width:350px){.attendance-section .reply-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* V3：须知与场地分区；仅参加分组使用成功色。 */
+.match-facts .fact-row+.fact-notice{border-top:1rpx solid var(--line);margin-top:18rpx;padding-top:28rpx}
+.reply-group-heading.reply-group-heading-yes,.reply-group-heading-yes .reply-group-count{color:var(--success)}
