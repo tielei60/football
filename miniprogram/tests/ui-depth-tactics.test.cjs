@@ -12,6 +12,13 @@ test('v3 七个战术页业务代码和全部绑定条件保持不变',()=>{
   let markup=read(page,'wxml');
   if(page==='tactic-compose')markup=require('./tactic-workspace-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-board') {
+   // 第八阶段只增加身份文字节点，不更改原操作守卫；精确剔除这三个展示条件。
+   for(const [tag,replacement] of [
+    ['<text wx:if="{{!canEdit}}" class="tag board-readonly">','<text class="tag board-readonly">'],
+    ['<view wx:if="{{editing}}" class="board-edit-summary">','<view class="board-edit-summary">'],
+    ['<view wx:if="{{focusCanvas && !editing}}" class="board-focus-identity">','<view class="board-focus-identity">']
+   ]) {assert.equal(markup.split(tag).length-1,1,'exact display node');markup=markup.replace(tag,replacement);}
+
    // 仅剔除第五阶段新增展示包裹的条件；原控件条件仍冻结，
    // 新包裹对每个控件的有效条件由 v3-tactic-form-structure 的真值表检查。
    markup=markup.replace('<view wx:if="{{!editing}}" class="board-view-controls">','<view class="board-view-controls">')

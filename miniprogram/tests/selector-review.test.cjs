@@ -98,12 +98,12 @@ test("long list initial selected anchor does not jump when temporary selection c
     range = Array.from({ length: 200 }, (_, i) => "球员" + i),
     view = modal(range, 180);
   h.page.present({ modal: view, transient: null });
-  assert.equal(h.page.data.selectorAnchor, "picker-option-180");
+  assert.equal(h.page.data.selectorAnchor, "picker-option-178");
   h.page.pickerOption({ currentTarget: { dataset: { value: 181 } } });
-  assert.equal(h.page.data.selectorAnchor, "picker-option-180");
+  assert.equal(h.page.data.selectorAnchor, "picker-option-178");
   h.page.present({ modal: view, transient: { title: "提示" } });
-  assert.equal(h.page.data.selectorAnchor, "picker-option-180");
+  assert.equal(h.page.data.selectorAnchor, "picker-option-178");
   assert.equal(h.page.data.modal.pickerState.draft, 181);
   h.page.present({ modal: modal(range, 3, 2), transient: null });
-  assert.equal(h.page.data.selectorAnchor, "picker-option-3");
+  assert.equal(h.page.data.selectorAnchor, "picker-option-1");
 });

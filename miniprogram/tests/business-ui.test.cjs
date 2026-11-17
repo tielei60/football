@@ -116,12 +116,12 @@ test('picker lifecycle abort and invalid empty selection never emits confirmatio
  component.confirm();assert.equal(confirmed,false);
 });
 
-test('time picker uses compact content height and explicit shrinkable action columns',()=>{
+test('time picker uses five-row content height and explicit shrinkable action columns',()=>{
  let definition;
  vm.runInNewContext(fs.readFileSync(path.join(root,'components/business-dialog/index.js'),'utf8'),{Component:d=>definition=d});
  const height=definition.methods.bodySize({kind:'picker',pickerState:{mode:'time'}});
- assert.equal(height,432);
- assert.ok(height<definition.methods.bodySize({kind:'picker',pickerState:{mode:'date'}}));
+ assert.equal(height,680);
+ assert.equal(height,definition.methods.bodySize({kind:'picker',pickerState:{mode:'date'}}));
  const css=fs.readFileSync(path.join(root,'components/business-dialog/index.wxss'),'utf8');
  assert.match(css,/\.buttons>\.dialog-control\{flex:1 1 0;width:0;min-width:0/);
  assert.match(css,/\.time-scroll\{flex:1 1 0;width:0;min-width:0/);
@@ -150,9 +150,9 @@ test('selector initial anchor does not jump as draft changes or toast rerenders'
  vm.runInNewContext(fs.readFileSync(path.join(root,'components/business-dialog/index.js'),'utf8'),{Component:x=>d=x,require:()=>model});
  const c={...d.methods,data:structuredClone(d.data),setData(p){for(const[k,v]of Object.entries(p)){if(k==='modal.pickerState')this.data.modal.pickerState=v;else this.data[k]=v;}}};
  const modal={id:4,kind:'picker',pickerState:model.create({mode:'selector',range:Array.from({length:30},(_,i)=>'Option '+i),value:20})};
- c.present({modal,transient:null});assert.equal(c.data.selectorAnchor,'picker-option-20');
- c.pickerOption({currentTarget:{dataset:{value:25}}});assert.equal(c.data.modal.pickerState.draft,25);assert.equal(c.data.selectorAnchor,'picker-option-20');
- c.present({modal,transient:{title:'Info'}});assert.equal(c.data.modal.pickerState.draft,25);assert.equal(c.data.selectorAnchor,'picker-option-20');
+ c.present({modal,transient:null});assert.equal(c.data.selectorAnchor,'picker-option-18');
+ c.pickerOption({currentTarget:{dataset:{value:25}}});assert.equal(c.data.modal.pickerState.draft,25);assert.equal(c.data.selectorAnchor,'picker-option-18');
+ c.present({modal,transient:{title:'Info'}});assert.equal(c.data.modal.pickerState.draft,25);assert.equal(c.data.selectorAnchor,'picker-option-18');
  const w=fs.readFileSync(path.join(root,'components/business-dialog/index.wxml'),'utf8');assert.ok(w.includes('class="selection-mark'));assert.ok(w.includes('scroll-into-view="{{selectorAnchor}}"'));
 });
 test('picker accessibility combines semantic title and current value',()=>{

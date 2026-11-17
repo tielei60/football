@@ -1,7 +1,9 @@
-<view wx:if="{{modal}}" class="dialog-layer {{modal.pickerState.mode==='selector'?'selector-layer':''}}" catchtouchmove="swallow">
+<view wx:if="{{modal}}" class="dialog-layer {{modal.kind==='picker'?'picker-sheet-layer':''}} {{modal.pickerState.mode==='selector'?'selector-layer':''}}" catchtouchmove="swallow">
  <view class="shade" bindtap="mask" aria-hidden="true"/>
- <view class="dialog {{modal.kind==='picker'?'picker-dialog':''}} {{modal.pickerState.mode==='selector'?'selector-dialog':''}}" aria-role="dialog" aria-label="{{modal.title}}" aria-modal="true" catchtap="swallow">
-  <view wx:if="{{modal.pickerState.mode!=='selector'}}" class="eyebrow" aria-hidden="true">{{modal.danger?'请谨慎操作':'球队工作台'}}</view><view class="heading">{{modal.title}}</view><view wx:if="{{modal.pickerState.mode==='selector'}}" class="selector-count">共 {{modal.pickerState.rows.length}} 项</view>
+ <view class="dialog {{modal.kind==='picker'?'picker-dialog picker-sheet':''}} {{modal.pickerState.mode==='selector'?'selector-dialog':''}}" aria-role="dialog" aria-label="{{modal.title}}" aria-modal="true" catchtap="swallow">
+  <view wx:if="{{modal.kind==='picker'}}" class="sheet-handle" aria-hidden="true"/>
+  <view wx:if="{{modal.kind!=='picker'}}" class="eyebrow" aria-hidden="true">{{modal.danger?'请谨慎操作':'球队工作台'}}</view><view class="heading">{{modal.title}}</view><view wx:if="{{modal.pickerState.mode==='selector'}}" class="selector-count">共 {{modal.pickerState.rows.length}} 项</view>
+  <view wx:if="{{modal.kind==='picker'&&(modal.pickerState.mode==='date'||modal.pickerState.mode==='time')}}" class="picker-instruction">{{modal.content || (modal.pickerState.mode==='date'?'选择日期后确认':'选择时间后确认')}}</view>
   <scroll-view scroll-y class="body-scroll" scroll-into-view="{{selectorAnchor}}" style="height:{{bodyHeight}}rpx;">
    <block wx:if="{{modal.kind!=='picker'}}"><text class="body">{{modal.content}}</text><input wx:if="{{modal.editable}}" class="dialog-input" value="{{inputValue}}" placeholder="{{modal.placeholderText}}" maxlength="{{modal.maxlength}}" password="{{modal.password}}" focus="{{inputFocus}}" confirm-type="done" bindinput="input" bindconfirm="confirm" aria-label="{{modal.placeholderText||modal.title}}" adjust-position/></block>
    <view wx:else class="picker-panel">

@@ -18,7 +18,7 @@ test('专注状态保持独立，不继承非专注标题与表单装饰',()=>{
   assert.ok(source.includes(marker),n+' 明确原生布局待验');
   const extra=source.split(marker)[1].split('/* V3 实际命中区：')[0];
   // 新任务书允许独立命中区下限；这些规则不应携带标题、背景、画布尺寸或变换。
-  const hit=source.split('/* V3 实际命中区：')[1]||'';
+  const hit=(source.split('/* V3 实际命中区：')[1]||'').split('/* 状态 19–21：')[0].split('/* 状态22：')[0];
   for(const m of hit.matchAll(/([^{}]+)\{([^{}]*)\}/g))for(const prop of m[2].split(';').filter(Boolean))assert.match(prop.trim(),/^(min-height|box-sizing|grid-template-columns):/,n+' only hit area');
   assert.ok(extra,n);
   for(const m of extra.matchAll(/([^{}]+)\{[^{}]*\}/g))for(const selector of m[1].split(','))assert.ok(selector.trim().startsWith('.type-expanded '),n+': '+selector);

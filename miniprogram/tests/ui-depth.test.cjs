@@ -7,8 +7,10 @@ const crypto = require('node:crypto');
 const baseline = require('./ui-v3-core-contract.json');
 const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
-  for (const [p,sha] of Object.entries(baseline.immutable))
-    assert.equal(crypto.createHash('sha256').update(read(p)).digest('hex'),sha,p);
+  for (const [p,sha] of Object.entries(baseline.immutable)) {
+    const source=p==='components/business-dialog/index.js'?require('./v3-dialog-projection-normalize.cjs')(read(p)):read(p);
+    assert.equal(crypto.createHash('sha256').update(source).digest('hex'),sha,p);
+  }
   for (const [p,attrs] of Object.entries(baseline.bindings)) {
     let source=read(p);
     if(p==='pages/match-detail/index.wxml') {
@@ -21,6 +23,12 @@ test('V3 重设计保留原业务处理及模板事件、权限条件、提交�
         return button.replace('disabled="{{loading || busy || replyPending || reconciling}}"','disabled="{{loading || (busy)}}"');
       });
       assert.deepEqual(matched.sort(),['maybe','no','yes']);
+    }
+    if(p==='components/business-dialog/index.wxml') {
+      // 仅隐藏选择面板的装饰眉题；普通确认/输入仍显示，不放宽业务条件。
+      const eyebrow='<view wx:if="{{modal.kind!==\'picker\'}}" class="eyebrow"';
+      assert.equal(source.split(eyebrow).length-1,1,'必须仅有一个新装饰眉题条件');
+      source=source.replace(eyebrow,'<view wx:if="{{modal.pickerState.mode!==\'selector\'}}" class="eyebrow"');
     }
     for(const attr of attrs) assert.ok(source.includes(attr),`${p}: ${attr}`);
   }

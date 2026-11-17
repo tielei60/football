@@ -76,3 +76,7 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 
 /* V3 实际命中区：仅扩大控件盒子，不改变业务坐标。 */
 .page.canvas-focus .picker,.page.canvas-focus button.small,.page input{min-height:44px;box-sizing:border-box}
+
+/* 状态22：任务名称与战术来源分层，专注模式沿用原隐藏条件。 */
+.compose-source{font-size:var(--type-meta,24rpx);line-height:1.6;color:var(--muted);overflow-wrap:anywhere;margin:0 0 24rpx}
+@media(max-width:375px){.compose-source{font-size:12px}}

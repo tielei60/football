@@ -14,13 +14,15 @@ Component({
    if(state.mode==='selector')return state.labels?.[value]||'';
    return String(value||'');
   },
-  pickerMeta(state){
-   return {pickerSummary:this.summary(state),hourAnchor:'picker-hour-'+Math.max(0,(state?.hours||[]).findIndex(x=>x.selected)),minuteAnchor:'picker-minute-'+Math.max(0,(state?.minutes||[]).findIndex(x=>x.selected))};
+  previewAnchorIndex(rows){return Math.max(0,rows.findIndex(x=>x.selected)-2);},
+ selectorPreviewAnchor(state){const rows=state?.rows||[],index=rows.findIndex(x=>x.value===state.draft);return rows.length?'picker-option-'+rows[Math.max(0,index-2)].value:'';},
+ pickerMeta(state){
+   return {pickerSummary:this.summary(state),hourAnchor:'picker-hour-'+this.previewAnchorIndex(state?.hours||[]),minuteAnchor:'picker-minute-'+this.previewAnchorIndex(state?.minutes||[])};
   },
   bodySize(modal){
    if(modal?.kind==='picker'){
     const state=modal.pickerState;
-    if(state?.mode==='time')return 432;
+    if(state?.mode==='time')return 680;
     return state?.mode==='selector'?Math.min(680,Math.max(120,(state.rows?.length||0)*92+8)):680;
    }
    const lines=String(modal?.content||'').split('\n').reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/17)),0);
@@ -30,7 +32,7 @@ Component({
    if(this._detached)return;
    const changed=state.modal?.id!==this.data.modal?.id;
    const modal=!changed&&state.modal?.kind==='picker'?{...state.modal,pickerState:this.data.modal.pickerState}:state.modal;
-   this.setData({...state,modal,...(changed?{inputValue:modal?.value||'',inputFocus:!!modal?.editable,pickerYearMode:false,selectorAnchor:modal?.pickerState?.mode==='selector'?'picker-option-'+modal.pickerState.draft:'',bodyHeight:this.bodySize(modal),...this.pickerMeta(modal?.pickerState)}:{})});
+   this.setData({...state,modal,...(changed?{inputValue:modal?.value||'',inputFocus:!!modal?.editable,pickerYearMode:false,selectorAnchor:modal?.pickerState?.mode==='selector'?this.selectorPreviewAnchor(modal.pickerState):'',bodyHeight:this.bodySize(modal),...this.pickerMeta(modal?.pickerState)}:{})});
   },
   clearInput(){if(!this._detached)this.setData({inputValue:'',inputFocus:false,pickerYearMode:false,pickerSummary:''});},
   input(e){if(!this.data.modal?.editable)return;this.setData({inputValue:String(e.detail.value).slice(0,this.data.modal.maxlength)});},

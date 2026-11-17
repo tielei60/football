@@ -71,3 +71,31 @@
 /* 微信隔离组件只使用类选择器；尺寸下限以 CSS px 计算。 */
 .dialog-input{min-height:44px}.dialog .dialog-control{min-height:44px}.dialog .picker-panel .nav-step{flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:44px;line-height:44px}.dialog .picker-panel .calendar-heading{height:44px;min-height:44px;line-height:44px}.dialog .picker-panel .calendar-grid .day{height:44px;min-height:44px;max-height:44px;line-height:44px}
 .dialog .buttons>.dialog-control,.dialog .picker-panel .time-option,.dialog .picker-panel .year-grid .option,.dialog .picker-panel .option-list:not(.year-grid) .option,.dialog.selector-dialog .picker-panel .option-list .option{min-height:44px}
+
+/* V3 状态 36–39：选择类贴底，普通确认/输入仍居中；不改变选择逻辑。 */
+.dialog-layer.picker-sheet-layer{align-items:flex-end;padding:0}
+.dialog.picker-sheet{width:100%;max-width:none;max-height:calc(100vh - 24px - env(safe-area-inset-top));border-radius:48rpx 48rpx 0 0;padding:28rpx 38rpx calc(32rpx + env(safe-area-inset-bottom));box-shadow:0 -12rpx 64rpx rgba(56,28,72,.12)}
+.sheet-handle{flex-shrink:0;align-self:center;width:68rpx;height:8rpx;border-radius:8rpx;background:#d8d0e1;margin:2rpx 0 34rpx}
+.picker-sheet .heading{font-size:34rpx;line-height:1.4;color:var(--brand-ink,#61046f)}
+.picker-sheet .body-scroll{max-height:58vh;min-height:0}
+.dialog.picker-sheet .buttons{border-top:0;padding-top:0;margin-top:28rpx}
+.dialog.selector-dialog .option-list{gap:0}
+.dialog.selector-dialog .picker-panel .option-list .option{min-height:44px;border:0;border-bottom:1rpx solid var(--line,#e8def5);border-radius:0;background:transparent;padding:20rpx 14rpx}
+.dialog.selector-dialog .picker-panel .option-list .option.selected{border-color:var(--line,#e8def5);border-radius:20rpx;background:#f7f0ff;color:var(--brand-ink,#61046f)}
+.dialog .buttons>.cancel{background:#fff;color:var(--brand-ink,#61046f);border:2rpx solid var(--control-border,#b787cb);box-shadow:none}
+.dialog .buttons>.confirm.danger{background:#fff0f4;color:#b72f50;box-shadow:none}
+.dialog .buttons>.confirm.control-disabled{background:#e9e4ef;color:#766a80;box-shadow:none;opacity:.48}
+.dialog.picker-sheet .buttons>.dialog-control{min-height:44px}
+@media(max-height:450px){.dialog.picker-sheet{max-height:calc(100vh - 12px);padding-top:12rpx}.picker-sheet .sheet-handle{margin-bottom:12rpx}.picker-sheet .body-scroll{max-height:40vh}.dialog.picker-sheet .buttons{margin-top:12rpx}}
+
+/* 状态 38：时间列只突出当前选择，不改变分钟范围、滚动或点击语义。 */
+.dialog.picker-sheet .picker-panel .time-option{background:transparent;color:var(--muted,#6e617a);border:0;font-weight:400;font-size:36rpx;border-radius:20rpx}
+.dialog.picker-sheet .picker-panel .time-option.selected{background:var(--brand-soft,#f0e6fa);color:var(--brand-ink,#61046f);font-weight:600}
+
+.picker-instruction{flex-shrink:0;margin-top:14rpx;font-size:24rpx;line-height:1.5;color:var(--muted,#6e617a)}
+.dialog.picker-sheet .picker-panel .time-option.control-disabled{opacity:.48}
+
+/* 展示约五项及前两项上下文；选项范围和提交结果不变，短屏仍受外层滚动限制。 */
+.dialog.picker-sheet .picker-panel .time-scroll{height:520rpx;height:max(240px,520rpx)}
+/* 原生时间列数字显式居中，避免继承普通列表左对齐。 */
+.dialog.picker-sheet .picker-panel .time-option{text-align:center}

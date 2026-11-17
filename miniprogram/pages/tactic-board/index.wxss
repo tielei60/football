@@ -78,3 +78,11 @@
 .page.canvas-focus .edit-actions>button.edit-action,.page.canvas-focus button.focus-toggle,.page.canvas-focus .editor-tools button.small,.page.canvas-focus .editor-tools .picker,.page.canvas-focus .picker,.page.canvas-focus .playback-controls button.small,.page .properties input{min-height:44px;box-sizing:border-box}
 .page.canvas-focus .editor-tools{grid-template-columns:minmax(0,1fr) 44px 44px 44px}
 .page .board-shortcuts .shortcut{min-height:44px}
+
+/* 状态 19–21：编辑摘要、独立只读身份与专注阶段选择，不改变画布尺寸。 */
+.board-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16rpx}.board-title-row .title{flex:1;min-width:0;margin:0;overflow-wrap:anywhere}.board-readonly{flex:none;background:var(--canvas);color:var(--muted)}
+.board-source{font-size:var(--type-meta,24rpx);line-height:1.6;margin:16rpx 0;overflow-wrap:anywhere}
+.board-edit-summary{display:flex;align-items:center;justify-content:space-between;gap:12rpx;margin:8rpx 0 12rpx;color:var(--muted);font-size:var(--type-meta,24rpx);line-height:1.5}.board-edit-summary>text:first-child{min-width:0;overflow-wrap:anywhere}.board-edit-summary .tag{flex:none}
+.board-focus-identity{font-size:var(--type-meta,24rpx);line-height:1.5;color:var(--muted);margin:4rpx 0 8rpx}
+.canvas-focus .board-view-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8rpx;align-items:end;margin:8rpx 0}.canvas-focus .board-view-controls .editor-field-label{grid-column:1/-1;margin:0;font-size:24rpx}.canvas-focus .board-stage-controls{min-width:0;margin:0}.canvas-focus .board-view-controls .focus-toggle{margin:0;min-width:44px;padding:8rpx 12rpx}
+@media(max-width:375px){.board-source,.board-edit-summary,.board-focus-identity,.canvas-focus .board-view-controls .editor-field-label{font-size:12px}}

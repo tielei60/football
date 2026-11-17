@@ -1,7 +1,7 @@
 <view class="page {{focusCanvas&&tab===0?'canvas-focus':'type-expanded'}}">
 <page-state skeleton-type="detail" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
 <block wx:if="{{!loading && !error}}">
-<view wx:if="{{!focusCanvas||tab!==0}}" class="title">{{title}}</view>
+<view wx:if="{{!focusCanvas||tab!==0}}" class="compose-heading"><view class="title">动画与球员</view><view class="compose-source">{{title}} · 当前模板</view></view>
 <view class="compose-workspace"><text class="editor-field-label workspace-label">编辑内容</text><view id="compose-tab" class="workspace-segments"><button wx:for="{{tabs}}" wx:key="*this" class="workspace-segment {{tab===index?'is-active':''}}" data-index="{{index}}" bindtap="chooseWorkspace" disabled="{{loading||busy||conflict||businessUiBlocking}}" aria-label="{{item}}" aria-pressed="{{tab===index}}">{{item}}</button></view><view class="row compose-actions"><button id="compose-undo" class="small" bindtap="undo" disabled="{{loading || (!canUndo||busy||conflict)}}">撤销</button><button id="compose-save" class="primary small" bindtap="save" disabled="{{loading || (!changes||busy||conflict)}}">{{busy?'保存中':'保存 ('+changes+')'}}</button></view></view>
 <view wx:if="{{actionError}}" class="error">{{actionError}}</view><button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload">核对后重新载入</button>
 <block wx:if="{{tab===0}}">

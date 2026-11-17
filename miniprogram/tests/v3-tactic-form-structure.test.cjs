@@ -30,16 +30,16 @@ test('22/24 表单真实模板和级联在320/375/430下控件至少44且不横�
  assert.deepEqual(failures,[]);
 });
 
-test('21 标题先于专注按钮，阶段/缩放仅非专注，编辑时隐藏查看控件',()=>{
+test('21 标题先于专注按钮，阶段专注可选、缩放仅非专注，编辑隐藏查看控件',()=>{
  const w=read('tactic-board','wxml');
  assert.ok(w.indexOf('class="title"')<w.indexOf('id="board-focus"'));
- assert.match(w,/<view wx:if="{{!editing}}" class="board-view-controls"><block wx:if="{{!focusCanvas}}"><text class="editor-field-label">查看阶段/);
- assert.match(w,/<\/block><button wx:if="{{!editing}}" id="board-focus"[^>]*bindtap="toggleFocus"/);
+ assert.match(w,/<view wx:if="{{!editing}}" class="board-view-controls"><text class="editor-field-label">查看阶段/);
+ assert.match(w,/<button wx:if="{{!editing}}" id="board-focus"[^>]*bindtap="toggleFocus"/);
  assert.match(w,/<block wx:if="{{!focusCanvas}}"><button class="small" bindtap="zoom"/);
  assert.match(w,/hidden="{{businessUiBlocking}}"/);assert.match(w,/width:{{canvasWidth}}px;height:{{canvasHeight}}px/);
 });
 
-test('21 查看控件重组后的有效权限条件四组合与原逻辑相同',()=>{
+test('21 查看控件四组合符合专注阶段可选且编辑禁用的设计',()=>{
  const source=read('tactic-board','wxml').split('<view wx:if="{{!editing && playDuration>0}}"')[0],stack=[],conditions={};
  for(const match of source.matchAll(/<\/?[\w-]+\b[^>]*>/g)){
   const tag=match[0];if(tag.startsWith('</')){stack.pop();continue;}
@@ -51,6 +51,6 @@ test('21 查看控件重组后的有效权限条件四组合与原逻辑相同',
  const vm=require('node:vm');
  for(const editing of [false,true])for(const focusCanvas of [false,true])for(const handler of ['toggleFocus','selectStage','zoom']){
   assert.ok(conditions[handler]);const actual=conditions[handler].every(c=>vm.runInNewContext(c,{editing,focusCanvas,loading:false,error:''}));
-  assert.equal(actual,handler==='toggleFocus'?!editing:!editing&&!focusCanvas,handler+': '+editing+'/'+focusCanvas);
+  assert.equal(actual,handler==='zoom'?!editing&&!focusCanvas:!editing,handler+': '+editing+'/'+focusCanvas);
  }
 });
