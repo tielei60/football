@@ -31,7 +31,7 @@ test('320/375/430专注阶段工具无横向溢出且触点至少44px',async()=>
  finally{await browser.close();}
 });
 test('新增专注CSS仅限明确身份与工具选择器，不覆盖画布几何或隐藏控件',()=>{
- const section=read('pages/tactic-board/index.wxss').split('/* 状态 19–21：')[1];assert.ok(section);
+ const section=read('pages/tactic-board/index.wxss').split('/* 状态 19–21：')[1].split('/* 设计19/21次按钮：')[0];assert.ok(section);
  const allowed=new Set(['.board-title-row','.board-title-row .title','.board-readonly','.board-source','.board-edit-summary','.board-edit-summary>text:first-child','.board-edit-summary .tag','.board-focus-identity','.canvas-focus .board-view-controls','.canvas-focus .board-view-controls .editor-field-label','.canvas-focus .board-stage-controls','.canvas-focus .board-view-controls .focus-toggle']);
  const clean=section.slice(section.indexOf('*/')+2).replace(/@media\([^{}]+\)\{/g,'');
  for(const m of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)){

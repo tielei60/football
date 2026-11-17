@@ -1,5 +1,7 @@
 // Read-only renderer for the public Tactic.board contract. Never mutate the model.
 const WIDTH = 1250, HEIGHT = 826;
+// 纯显示主题；显式模型颜色始终保留，未知历史颜色不能当作默认色覆盖。
+const THEME = Object.freeze({grass: ['#17684f','#1b7257'],line:'#d4eee5b3',home:'#8c249f',away:'#94c8dd',outline:'#f6eafa',text:'#ffffff',textShadow:'#052f24',marking:'#e3d4fa'});
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const color = (value, fallback) => typeof value === 'string' && /^(#[a-f0-9]{3,8}|[a-z]{3,20}|rgba?\([\d.,%\s]+\))$/i.test(value) ? value : fallback;
 const list = value => Array.isArray(value) ? value : [];
@@ -24,13 +26,13 @@ function draw(ctx, board, width, height, stage = -1) {
   const scale = Math.min(width/HEIGHT,height/WIDTH);
   ctx.translate((width-HEIGHT*scale)/2,(height-WIDTH*scale)/2); ctx.scale(scale,scale);
   ctx.translate(HEIGHT,0);ctx.rotate(Math.PI/2);
-  ctx.fillStyle='#e8eff1';ctx.fillRect(0,0,WIDTH,HEIGHT);ctx.fillStyle='#e6f1e8';ctx.fillRect(68,62,1115,701);
-  ctx.strokeStyle='#8ba993';ctx.lineWidth=3;ctx.strokeRect(68,62,1115,701);
+  for(let stripe=0;stripe<8;stripe++){ctx.fillStyle=THEME.grass[stripe%2];ctx.fillRect(stripe*WIDTH/8,0,WIDTH/8,HEIGHT);}
+  ctx.strokeStyle=THEME.line;ctx.lineWidth=3;ctx.strokeRect(68,62,1115,701);
   ctx.beginPath();ctx.moveTo(625,62);ctx.lineTo(625,763);ctx.stroke();ctx.beginPath();ctx.arc(625,412,90,0,Math.PI*2);ctx.stroke();
   ctx.strokeRect(68,230,177,365);ctx.strokeRect(1006,230,177,365);ctx.strokeRect(68,320,65,185);ctx.strokeRect(1118,320,65,185);
   for(const m of content.markings) {
     if (![m.startX,m.startY,m.endX,m.endY].every(finite)) continue;
-    ctx.save();ctx.strokeStyle=color(m.strokeColor||m.color,'#633277');ctx.fillStyle=color(m.backgroundColor,'transparent');ctx.lineWidth=finite(m.width)?Math.max(1,Math.min(50,m.width)):2;ctx.setLineDash(m.dashed?[12,8]:[]);
+    ctx.save();ctx.strokeStyle=color(m.strokeColor||m.color,THEME.marking);ctx.fillStyle=color(m.backgroundColor,'transparent');ctx.lineWidth=finite(m.width)?Math.max(1,Math.min(50,m.width)):2;ctx.setLineDash(m.dashed?[12,8]:[]);
     const x=m.startX,y=m.startY,ex=m.endX,ey=m.endY,w=Math.abs(ex-x),h=Math.abs(ey-y);
     ctx.beginPath();
     if(m.kind==='line'||m.kind==='arrow'){ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();if(m.kind==='arrow'){const a=Math.atan2(ey-y,ex-x);ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(ex-18*Math.cos(a-.45),ey-18*Math.sin(a-.45));ctx.lineTo(ex,ey);ctx.lineTo(ex-18*Math.cos(a+.45),ey-18*Math.sin(a+.45));ctx.stroke();}}
@@ -40,7 +42,19 @@ function draw(ctx, board, width, height, stage = -1) {
     else if(m.kind==='text'){ctx.fillStyle=ctx.strokeStyle;ctx.font=`${14+(m.width||2)*4}px sans-serif`;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.translate(x,y);ctx.rotate(-Math.PI/2);String(m.label||'').split('\n').slice(0,20).forEach((line,i)=>ctx.fillText(line,0,i*32));}
     ctx.restore();
   }
-  for(const p of content.pieces){ctx.save();const ball=p.kind==='ball',r=ball?12:(finite(p.radius)?Math.max(5,Math.min(100,p.radius)):24);ctx.fillStyle=ball?'#fff':color(p.color,p.team==='away'?'#b75b66':'#8845a0');ctx.strokeStyle='#292431';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.translate(p.x,p.y);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 21px sans-serif';if(!ball){ctx.strokeStyle='#fff';ctx.lineWidth=4;const number=p.shirtNumber==null?'?':String(p.shirtNumber);ctx.strokeText(number,0,0);ctx.fillStyle='#292431';ctx.fillText(number,0,0);}ctx.fillStyle='#292431';ctx.font='bold 20px sans-serif';if(p.label)ctx.fillText(String(p.label).length>16?String(p.label).slice(0,15)+'…':String(p.label),0,-r-16);ctx.font='17px sans-serif';if(p.position)ctx.fillText(String(p.position).length>12?String(p.position).slice(0,11)+'…':String(p.position),0,r+18);ctx.restore();}
+  for(const p of content.pieces){
+    ctx.save();const ball=p.kind==='ball',away=p.team==='away',r=ball?12:(finite(p.radius)?Math.max(5,Math.min(100,p.radius)):24);
+    ctx.fillStyle=ball?'#fff':color(p.color,away?THEME.away:THEME.home);
+    ctx.strokeStyle=ball?THEME.textShadow:THEME.outline;ctx.lineWidth=ball?2:3;
+    // 客队使用断续描边，即使自定义颜色与主队相同也不只靠颜色区分。
+    ctx.setLineDash(!ball&&away?[5,4]:[]);ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.setLineDash([]);
+    ctx.translate(p.x,p.y);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';
+    const text=(value,x,y)=>{ctx.strokeStyle=THEME.textShadow;ctx.lineWidth=3;ctx.strokeText(value,x,y);ctx.fillStyle=THEME.text;ctx.fillText(value,x,y);};
+    ctx.font='bold 21px sans-serif';if(!ball)text(p.shirtNumber==null?'?':String(p.shirtNumber),0,0);
+    ctx.font='bold 20px sans-serif';if(p.label)text(String(p.label).length>16?String(p.label).slice(0,15)+'…':String(p.label),0,-r-16);
+    ctx.font='17px sans-serif';if(p.position)text(String(p.position).length>12?String(p.position).slice(0,11)+'…':String(p.position),0,r+18);
+    ctx.restore();
+  }
   ctx.restore();return { skipped:content.skipped,pieces:content.pieces.length };
 }
 // Clockwise portrait projection: screen=(HEIGHT-y,x). Stored Web coordinates stay unchanged.

@@ -86,3 +86,7 @@
 .board-focus-identity{font-size:var(--type-meta,24rpx);line-height:1.5;color:var(--muted);margin:4rpx 0 8rpx}
 .canvas-focus .board-view-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8rpx;align-items:end;margin:8rpx 0}.canvas-focus .board-view-controls .editor-field-label{grid-column:1/-1;margin:0;font-size:24rpx}.canvas-focus .board-stage-controls{min-width:0;margin:0}.canvas-focus .board-view-controls .focus-toggle{margin:0;min-width:44px;padding:8rpx 12rpx}
 @media(max-width:375px){.board-source,.board-edit-summary,.board-focus-identity,.canvas-focus .board-view-controls .editor-field-label{font-size:12px}}
+
+/* 设计19/21次按钮：仅改启用态色彩，不改几何、触点或禁用表现。 */
+.page.canvas-focus .edit-actions>button.edit-action:not(.edit-save):not([disabled]),.page.canvas-focus .playback-controls button.small:not([disabled]),.page.canvas-focus #editor-properties:not([disabled]){background:#fff;color:var(--brand-ink);border:1rpx solid var(--control-border);box-shadow:none}
+.page.canvas-focus #editor-undo:not([disabled]),.page.canvas-focus #editor-redo:not([disabled]),.page.canvas-focus button.focus-toggle:not([disabled]){background:transparent;color:var(--brand-ink);border-color:transparent;box-shadow:none}

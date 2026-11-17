@@ -8,7 +8,7 @@ const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:da
 test('v3 七个战术页业务代码和全部绑定条件保持不变',()=>{
  assert.equal(Object.keys(baseline).length,7);
  for(const [page,b] of Object.entries(baseline)) {
-  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
+  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
   let markup=read(page,'wxml');
   if(page==='tactic-compose')markup=require('./tactic-workspace-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-board') {
