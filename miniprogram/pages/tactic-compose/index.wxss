@@ -80,3 +80,10 @@ input{height:76rpx;min-height:76rpx;line-height:40rpx;padding:0 12rpx;box-sizing
 /* 状态22：任务名称与战术来源分层，专注模式沿用原隐藏条件。 */
 .compose-source{font-size:var(--type-meta,24rpx);line-height:1.6;color:var(--muted);overflow-wrap:anywhere;margin:0 0 24rpx}
 @media(max-width:375px){.compose-source{font-size:12px}}
+
+/* V3 装饰图标：不新增触点，不改变画布几何；窄屏优先保留完整文字。 */
+.tactic-control-icon{width:16px;height:16px;flex:0 0 16px;vertical-align:middle;margin-right:4px;pointer-events:none}
+button[disabled] .tactic-control-icon{opacity:.28}
+
+/* 球员属性应用按钮仅补触控高度下限；保留原有自然高度与布局。 */
+.page #piece-apply{min-height:44px}

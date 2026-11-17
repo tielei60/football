@@ -90,3 +90,11 @@
 /* 设计19/21次按钮：仅改启用态色彩，不改几何、触点或禁用表现。 */
 .page.canvas-focus .edit-actions>button.edit-action:not(.edit-save):not([disabled]),.page.canvas-focus .playback-controls button.small:not([disabled]),.page.canvas-focus #editor-properties:not([disabled]){background:#fff;color:var(--brand-ink);border:1rpx solid var(--control-border);box-shadow:none}
 .page.canvas-focus #editor-undo:not([disabled]),.page.canvas-focus #editor-redo:not([disabled]),.page.canvas-focus button.focus-toggle:not([disabled]){background:transparent;color:var(--brand-ink);border-color:transparent;box-shadow:none}
+
+/* V3 装饰图标：不新增触点，不改变画布几何；窄屏优先保留完整文字。 */
+.tactic-control-icon{width:16px;height:16px;flex:0 0 16px;vertical-align:middle;margin-right:4px;pointer-events:none}
+button[disabled] .tactic-control-icon{opacity:.28}
+.page #editor-undo .undo-icon{display:none}
+.page #playback-toggle{display:flex;align-items:center;justify-content:center}
+@media(min-width:400px){.page #editor-undo .undo-icon{display:inline-block;width:12px;height:12px;flex-basis:12px;margin-right:2px}}
+@media(max-width:360px){.page .playback-icon,.page .tool-icon{display:none}}
