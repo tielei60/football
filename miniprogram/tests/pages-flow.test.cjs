@@ -709,6 +709,8 @@ test("5xx unknown creation retains draft only for same login and requires explic
 
 test("player refresh cannot inherit the hidden admin draft filter", async () => {
   const { page } = setup("schedule", {
+    // ensureSession 返回身份；持久会话的 token 单独由 getSession 提供。
+    getSession: () => ({ ...session, token: "fixture-schedule-owner" }),
     ensureSession: async () => session,
     request: async () => [match()],
   });

@@ -16,18 +16,20 @@ Page({
     this.refresh();
   },
   onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
-  onHide(){ui.abort(this);return s.hide.apply(this,arguments);},
+  onHide(){ui.abort(this);this.setData({admin:false});return s.hide.apply(this,arguments);},
   imageError: s.imageError,
   openMatch: s.openMatch,
   refresh() {
+    const owner = s.api.getSession()?.token;
+    this.setData({ admin: false });
     return s.load(this, async (session) => {
+      if (!owner || owner !== s.api.getSession()?.token) return {};
+      const admin = session.user.role === "admin";
+      const tab = !admin && this.data.tab === "draft" ? "upcoming" : this.data.tab;
+      if (!admin) this.setData({ tab });
       const matches = (await s.api.request("/matches")).map((m) =>
         s.matchView(m, session.user.playerId),
       );
-      const admin = session.user.role === "admin";
-      // Tab pages can survive account switches. A player must not inherit the
-      // hidden admin-only draft filter and see an apparently empty schedule.
-      const tab = !admin && this.data.tab === "draft" ? "upcoming" : this.data.tab;
       return {
         matches,
         team: s.teamView(session.team),
@@ -63,9 +65,12 @@ Page({
   },
   changeTab(e) {
     const tab = e.currentTarget.dataset.tab;
+    if (this._disposed || this._hidden || this.data.loading || this.data.error ||
+        !["upcoming", "past", "draft"].includes(tab) || (tab === "draft" && !this.data.admin)) return;
     this.setData({ tab, visible: this.filter(this.data.matches, tab) });
   },
   create() {
+    if (this._disposed || this._hidden || this.data.loading || this.data.error || !this.data.admin) return;
     wx.navigateTo({ url: "/pages/match-edit/index" });
   },
 });

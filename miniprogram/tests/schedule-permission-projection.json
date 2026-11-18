@@ -1,0 +1,21 @@
+{
+  "sha256": "150a8cdc97bf9c4c06f0579040ea1c00bdf99acb0ddd4e6e069fa2727641bf21",
+  "changes": [
+    {
+      "before": "  onHide(){ui.abort(this);return s.hide.apply(this,arguments);},\n",
+      "after": "  onHide(){ui.abort(this);this.setData({admin:false});return s.hide.apply(this,arguments);},\n"
+    },
+    {
+      "before": "  refresh() {\n    return s.load(this, async (session) => {\n      const matches = (await s.api.request(\"/matches\")).map((m) =>\n        s.matchView(m, session.user.playerId),\n      );\n      const admin = session.user.role === \"admin\";\n      // Tab pages can survive account switches. A player must not inherit the\n      // hidden admin-only draft filter and see an apparently empty schedule.\n      const tab = !admin && this.data.tab === \"draft\" ? \"upcoming\" : this.data.tab;\n      return {\n        matches,\n        team: s.teamView(session.team),\n        admin,\n        tab,\n        visible: this.filter(matches, tab),\n      };\n    });\n  },\n",
+      "after": "  refresh() {\n    const owner = s.api.getSession()?.token;\n    this.setData({ admin: false });\n    return s.load(this, async (session) => {\n      if (!owner || owner !== s.api.getSession()?.token) return {};\n      const admin = session.user.role === \"admin\";\n      const tab = !admin && this.data.tab === \"draft\" ? \"upcoming\" : this.data.tab;\n      if (!admin) this.setData({ tab });\n      const matches = (await s.api.request(\"/matches\")).map((m) =>\n        s.matchView(m, session.user.playerId),\n      );\n      return {\n        matches,\n        team: s.teamView(session.team),\n        admin,\n        tab,\n        visible: this.filter(matches, tab),\n      };\n    });\n  },\n"
+    },
+    {
+      "before": "  changeTab(e) {\n    const tab = e.currentTarget.dataset.tab;\n    this.setData({ tab, visible: this.filter(this.data.matches, tab) });\n  },\n",
+      "after": "  changeTab(e) {\n    const tab = e.currentTarget.dataset.tab;\n    if (this._disposed || this._hidden || this.data.loading || this.data.error ||\n        ![\"upcoming\", \"past\", \"draft\"].includes(tab) || (tab === \"draft\" && !this.data.admin)) return;\n    this.setData({ tab, visible: this.filter(this.data.matches, tab) });\n  },\n"
+    },
+    {
+      "before": "  create() {\n    wx.navigateTo({ url: \"/pages/match-edit/index\" });\n  },",
+      "after": "  create() {\n    if (this._disposed || this._hidden || this.data.loading || this.data.error || !this.data.admin) return;\n    wx.navigateTo({ url: \"/pages/match-edit/index\" });\n  },"
+    }
+  ]
+}
