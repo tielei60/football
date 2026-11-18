@@ -23,15 +23,24 @@ Page({
     ui.abort(this);
     this._viewEpoch = (this._viewEpoch || 0) + 1;
     s.unload.call(this);
+    this.setData({ passwordOpen: false, actionError: "", currentPassword: "", newPassword: "" });
   },
   onHide() {
     ui.abort(this);
     this._viewEpoch = (this._viewEpoch || 0) + 1;
     s.hide.call(this);
+    this.setData({ passwordOpen: false, actionError: "" });
   },
   imageError: s.imageError,
   refresh() {
+    const requestedOwner = s.api.getSession()?.token;
     return s.load(this, async (session) => {
+      const token = s.api.getSession()?.token;
+      if (token && requestedOwner === token && this._authOwner && this._authOwner !== token) {
+        // 只释放已确认新登录的界面忙态，不取消旧请求或清理任何会话。
+        this._authAttempt = {};
+        this.setData({ busy: false, passwordOpen: false, actionError: "", currentPassword: "", newPassword: "" });
+      }
       const [players, stats] = await Promise.all([
         s.api.request("/players"),
         s.api.request("/statistics?year=" + new Date().getFullYear()),
@@ -109,6 +118,7 @@ Page({
     }
     const viewEpoch = this._viewEpoch || 0;
     const token = s.api.getSession()?.token;
+    this._authOwner = token;
     const attempt = (this._authAttempt = {});
     this.setData({ busy: true, actionError: "" });
     try {
@@ -149,6 +159,7 @@ Page({
         if (!result.confirm) return;
         const viewEpoch = this._viewEpoch || 0;
         const passwordEnabled = this.data.session?.user.passwordEnabled !== false;
+        this._authOwner = s.api.getSession()?.token;
         const attempt = (this._authAttempt = {});
         const active = () =>
           !this._disposed &&
