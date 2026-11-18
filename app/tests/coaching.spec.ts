@@ -185,16 +185,16 @@ test("backup restores training plans and versions, while legacy imports start wi
     coaching.plan = { ...plan };
     await tactics.saveTactic("反击", [], null);
     const backup = JSON.parse(await tactics.exportBackup());
-    const count = await tactics.importBackup(backup);
+    const importResult = await tactics.importBackup(backup);
     const restored = (await (await fetch("/api/tactics")).json()).sort((a, b) => b.tacticId - a.tacticId)[0];
     await tactics.loadTactic(restored.tacticId);
     const restoredPlan = { ...coaching.plan };
     const versionPlan = (await (await fetch(`/api/tactics/${restored.tacticId}/versions`)).json())[0]?.board
       .trainingPlan;
     await tactics.importTactic("旧版战术", [], { items: [], drawings: [], keyframes: [] });
-    return { count, restoredPlan, versionPlan, legacyPlan: { ...coaching.plan }, plan };
+    return { importResult, restoredPlan, versionPlan, legacyPlan: { ...coaching.plan }, plan };
   });
-  expect(result.count).toBe(1);
+  expect(result.importResult).toEqual({ importedCount: 1, receiptVerification: "verified" });
   expect(result.restoredPlan).toEqual(result.plan);
   expect(result.versionPlan).toEqual(result.plan);
   expect(result.legacyPlan).toEqual({ objective: "", instructions: "", durationMinutes: 15 });
