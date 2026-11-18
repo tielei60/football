@@ -1,0 +1,7 @@
+// 内存控制器与模板契约，不代表原生布局或触控验收。
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=path.join(__dirname,'..');
+function page(){let def;vm.runInNewContext(fs.readFileSync(path.join(root,'pages/tactics/index.js'),'utf8'),{Page:p=>def=p,require:()=>({})});return def;}
+test('战术空态区分当前空库、历史无留档和搜索不匹配，不另增业务入口',()=>{const w=fs.readFileSync(path.join(root,'pages/tactics/index.wxml'),'utf8');assert.ok(w.includes('wx:if="{{!visible.length}}" class="empty">{{items.length ? \'没有找到匹配的战术，请调整搜索内容\' : historical ? \'本场比赛尚未留存战术\' : \'还没有战术\'}}</view>'));assert.match(w,/wx:if="{{canManage}}"/);assert.match(w,/bindtap="create"/);});
+test('空库与筛选为空能分辨，空格搜索恢复全部且名称阵型规则不变',()=>{const p=page(),rows=[{id:'a',title:'前场压迫',formation:'4-3-3'},{id:'b',title:'快速反击',formation:'4-4-2'}];assert.equal(p.filter([], '').length,0);assert.equal(p.filter(rows,'不存在').length,0);assert.equal(rows.length,2);assert.equal(p.filter(rows,'   ').length,2);assert.equal(p.filter(rows,' 4-3-3 ')[0].id,'a');assert.equal(p.filter(rows,'反击')[0].id,'b');});
+test('模板实际空态表达式覆盖三种分支，历史搜索仍提示调整搜索',()=>{const w=fs.readFileSync(path.join(root,'pages/tactics/index.wxml'),'utf8');const expression=w.match(/class="empty">{{([\s\S]*?)}}<\/view>/)[1];const text=(items,historical)=>vm.runInNewContext(expression,{items,historical});assert.equal(text([],false),'还没有战术');assert.equal(text([],true),'本场比赛尚未留存战术');for(const historical of [true,false])assert.equal(text([{id:'a'}],historical),'没有找到匹配的战术，请调整搜索内容');});
