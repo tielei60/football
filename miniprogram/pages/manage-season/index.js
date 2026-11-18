@@ -83,6 +83,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       (s) => {
         this.id = s.id;
         this.setData({ id: s.id, revision: s.revision });
+        wx.setNavigationBarTitle?.({ title: "编辑赛季" });
         ui.showToast(this,{ title: "赛季已保存" });
       },
       !this.id,

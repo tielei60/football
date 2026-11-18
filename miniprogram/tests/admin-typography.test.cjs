@@ -101,15 +101,36 @@ test('账号筛选重置归一化不接受篡改或重复片段', () => {
   const extra = '\n// 其它改动仍进入原始SHA\n';
   assert.equal(normalizeRosterAccountFilters(source + extra), normalizeRosterAccountFilters(source) + extra);
 });
+function normalizeVenueReceipts(source) {
+  for (const {before,after} of require('./venue-late-receipt-projection.json')) {
+    assert.equal(source.split(after).length, 2, '球场回执精确变更块必须唯一且完整');
+    source=source.replace(after,before);
+  }
+  return source;
+}
+test('球场回执投影拒绝重复、篡改，并保留额外业务代码',()=>{
+  const source=fs.readFileSync(path.join(root,'pages/manage-venue/index.js'),'utf8');
+  assert.throws(()=>normalizeVenueReceipts(source+source));
+  const block=require('./venue-late-receipt-projection.json')[0].after;
+  assert.throws(()=>normalizeVenueReceipts(source.replace(block,block+'// tampered').replace('function current(page, operation)', 'function current(page, changed)')));
+  const extra='\n// 额外代码仍受旧基线保护\n';
+  assert.equal(normalizeVenueReceipts(source+extra),normalizeVenueReceipts(source)+extra);
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
     if(item==='pages/manage-player'||item==='pages/manage-season') {
       // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。
       const subject=item==='pages/manage-player'?'球员':'赛季';
       businessSource=businessSource.replace(`    wx.setNavigationBarTitle?.({ title: this.id ? "编辑${subject}" : "新增${subject}" });\n`,'');
+    }
+    if(item==='pages/manage-season') {
+      const savedTitle = '        wx.setNavigationBarTitle?.({ title: "编辑赛季" });\n';
+      assert.equal(businessSource.split(savedTitle).length, 2, '保存后的编辑标题必须唯一');
+      businessSource=businessSource.replace(savedTitle,'');
     }
     if(item==='pages/manage-player') businessSource=normalizePlayerAccountAndTitle(normalizePlayerArchive(businessSource));
     if(item==='pages/manage-players') {

@@ -14,3 +14,6 @@
 .season-roster-entry text{min-width:0;overflow-wrap:anywhere}
 .season-roster-entry .entry-chevron{margin-left:auto;color:var(--brand);font-size:40rpx}
 .page button.season-roster-entry.ui-button.ui-block[size="mini"][disabled]{opacity:.5;box-shadow:none}
+
+/* V3 原图：日期是表单字段值，使用正文色，不作为品牌强调项。 */
+.card .picker-value { color:var(--ink); }
