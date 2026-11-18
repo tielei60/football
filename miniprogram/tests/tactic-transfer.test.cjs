@@ -318,3 +318,34 @@ test('17O副本选择切换文件或账号复位，忙碌与待核对期间不�
 test('17O确认文案区分默认具名与明确副本，不承诺必新增',async()=>{let modal;const h=fixture({}, {showModal:o=>{modal=o;o.success({confirm:false});}});await h.page.refresh();selected(h.page);h.page._collection.collectionName='named';h.page.data.namedCollection=true;h.page.importFile();assert.match(modal.content,/相同内容不重复新增/);assert.doesNotMatch(modal.content,/将新增/);h.page.toggleCopy();h.page.importFile();assert.match(modal.content,/即使此前导入/);assert.equal(h.writes.length,0);});
 test('17O旧pending随机任务名恢复时不被文件名覆盖',async()=>{const requests=[];const h=fixture({request:async(p,m,d)=>{requests.push(structuredClone(d));throw Error('offline');}});await h.page.refresh();selected(h.page);await h.page.executeImport();const originalTask=requests[0].collectionName;h.page._collection.collectionName='旧文件中的名称';const next=h.newPage();await next.refresh();await next.executeImport();assert.equal(requests[1].collectionName,originalTask);assert.deepEqual(requests[1],requests[0]);assert.notEqual(requests[1].collectionName,'旧文件中的名称');});
 test('17O确认框打开后副本选择变化，迟到确认不发送导入',async()=>{let modal;const h=fixture({}, {showModal:o=>{modal=o;}});await h.page.refresh();selected(h.page);h.page._collection.collectionName='named';h.page.data.namedCollection=true;h.page.importFile();assert.ok(modal);h.page.toggleCopy();assert.equal(h.page.data.asCopy,true);modal.success({confirm:true});await new Promise(r=>setImmediate(r));assert.equal(h.writes.length,0);assert.equal(h.page.data.busy,false);});
+
+for(const variant of ['account-roundtrip','same-account-token','origin','team'])test('阶段37同进程未确认导入隔离与返回恢复：'+variant,async()=>{
+ const store=new Map();const initial={...session,serverOrigin:'https://server-a.example',token:'A'};let current=initial,calls=0;
+ const h=fixture({getSession:()=>current,ensureSession:async()=>current,request:async()=>{calls++;throw Error('回执丢失');}},persistentStorage(store));
+ await h.page.refresh();selected(h.page);await h.page.executeImport();
+ assert.equal(h.page.data.pending,true);assert.equal(store.size,1);const guard=JSON.stringify([...store]);
+ if(variant==='account-roundtrip')current={...initial,user:{...initial.user,id:2},token:'B'};
+ if(variant==='same-account-token')current={...initial,token:'A2'};
+ if(variant==='origin')current={...initial,serverOrigin:'https://server-b.example',token:'B'};
+ if(variant==='team')current={...initial,team:{...initial.team,id:2},user:{...initial.user,teamId:2},token:'B'};
+ await h.page.refresh();
+ assert.equal(h.page.data.pending,false);assert.equal(h.page._collection,null);assert.equal(h.page.data.fileName,'');
+ assert.equal(h.page.data.recoveryBlocked,variant==='same-account-token');assert.equal(JSON.stringify([...store]),guard);
+ current={...initial,token:'A3'};await h.page.refresh();
+ assert.equal(h.page.data.recoveryBlocked,true);assert.equal(h.page.data.pending,false);assert.equal(h.page._collection,null);
+ selected(h.page);await h.page.executeImport();assert.equal(calls,1);assert.equal(JSON.stringify([...store]),guard);
+});
+
+for(const outcome of ['success','network','forbidden'])test('阶段37A旧回执不污染B当前导入任务：'+outcome,async()=>{
+ const store=new Map();let current={...session,serverOrigin:'https://server-a.example',token:'A'},finish,fail;let calls=0;
+ const h=fixture({getSession:()=>current,ensureSession:async()=>current,request:()=>{calls++;return calls===1?new Promise((resolve,reject)=>{finish=resolve;fail=reject;}):Promise.reject(Error('B回执未知'));}},persistentStorage(store));
+ await h.page.refresh();selected(h.page);const old=h.page.executeImport();await new Promise(r=>setImmediate(r));
+ const aKey=[...store.keys()][0];current={...current,user:{...current.user,id:2},token:'B'};await h.page.refresh();selected(h.page);await h.page.executeImport();
+ assert.equal(store.size,2);const bKey=[...store.keys()].find(k=>k!==aKey),bGuard=JSON.stringify(store.get(bKey));
+ const state=JSON.stringify(h.page.data),collection=h.page._collection;
+ if(outcome==='success')finish({importedCount:1});else fail(Object.assign(Error('A旧错误'),outcome==='forbidden'?{status:403}:{}));
+ await old;
+ assert.equal(JSON.stringify(h.page.data),state);assert.equal(h.page._collection,collection);assert.equal(JSON.stringify(store.get(bKey)),bGuard);
+ assert.equal(store.has(aKey),outcome==='network');assert.equal(calls,2);
+ const reopened=h.newPage();await reopened.refresh();assert.equal(reopened.data.pending,true);assert.equal(reopened.data.recoveryBlocked,false);
+});
