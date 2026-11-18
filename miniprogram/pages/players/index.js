@@ -27,7 +27,15 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     const owner = s.api.getSession()?.token;
     if (this._filterOwner !== owner) {
       this._filterOwner = owner;
-      this.setData({status:"active",statusInitialized:false});
+      // Tab pages survive logout; filters belong to the current login only.
+      this.setData({
+        status: "active",
+        statusInitialized: false,
+        search: "",
+        selectedPosition: "",
+        positionIndex: 0,
+        positions: ["全部位置"],
+      });
     }
     return s.load(this, async (session) => {
       const players = (await s.api.request("/players")).map(s.playerView);

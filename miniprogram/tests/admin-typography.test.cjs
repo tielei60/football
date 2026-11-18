@@ -83,6 +83,24 @@ test("账号能力与标题归一化拒绝篡改重复片段且不吞其它逻�
   const extra = "\n// 未获准源码仍进入原SHA\n";
   assert.equal(normalizePlayerAccountAndTitle(source + extra), normalizePlayerAccountAndTitle(source) + extra);
 });
+// 账号切换筛选重置已由 membership-state 专项审查，仅归一化唯一完整片段。
+function normalizeRosterAccountFilters(source) {
+  const current = `      this.setData({
+        status: "active",
+        statusInitialized: false,
+        search: "",
+        searchHasText: false,
+      });`;
+  assert.equal(source.split(current).length, 2, '账号筛选重置片段必须唯一且完整');
+  return source.replace(current, '      this.setData({status:"active",statusInitialized:false});');
+}
+test('账号筛选重置归一化不接受篡改或重复片段', () => {
+  const source = fs.readFileSync(path.join(root, 'pages/manage-players/index.js'), 'utf8');
+  assert.throws(() => normalizeRosterAccountFilters(source + source));
+  assert.throws(() => normalizeRosterAccountFilters(source.replace('        search: "",', '        search: "保留旧值",')));
+  const extra = '\n// 其它改动仍进入原始SHA\n';
+  assert.equal(normalizeRosterAccountFilters(source + extra), normalizeRosterAccountFilters(source) + extra);
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
@@ -95,6 +113,7 @@ for (const [item, expected] of Object.entries(baseline)) {
     }
     if(item==='pages/manage-player') businessSource=normalizePlayerAccountAndTitle(normalizePlayerArchive(businessSource));
     if(item==='pages/manage-players') {
+      businessSource=normalizeRosterAccountFilters(businessSource);
       // 仅允许新增查询是否有效的展示投影；原输入、筛选及权限逻辑仍按旧基线冻结。
       businessSource=businessSource.replace('    searchHasText: false,\n','').replace('search: e.detail.value, searchHasText: e.detail.value.trim().length > 0','search: e.detail.value');
     }

@@ -20,7 +20,12 @@ Page({onHide(){a.hide.call(this);},
     const owner = a.s.api.getSession()?.token;
     if (this._filterOwner !== owner) {
       this._filterOwner = owner;
-      this.setData({status:"active",statusInitialized:false});
+      this.setData({
+        status: "active",
+        statusInitialized: false,
+        search: "",
+        searchHasText: false,
+      });
     }
     return a.load(this, async () => {
       const players = (await a.s.api.request("/players")).map((p) => ({
