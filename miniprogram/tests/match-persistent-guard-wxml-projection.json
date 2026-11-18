@@ -1,0 +1,6 @@
+[
+  {
+    "before": "      <button disabled=\"{{loading}}\" wx:if=\"{{uncertain}}\" class=\"ghost ui-button ui-block recovery-continue\" bindtap=\"confirmAbsent\" size=\"mini\">已核对，继续编辑</button>",
+    "after": "      <button disabled=\"{{loading || busy}}\" wx:if=\"{{uncertain}}\" class=\"ghost ui-button ui-block recovery-continue\" bindtap=\"confirmExists\" size=\"mini\">已核对，比赛已存在</button>\n      <button disabled=\"{{loading}}\" wx:if=\"{{uncertain}}\" class=\"ghost ui-button ui-block recovery-continue\" bindtap=\"confirmAbsent\" size=\"mini\">已核对，继续编辑</button>"
+  }
+]

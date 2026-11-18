@@ -36,6 +36,8 @@ function markup(source) {
 }
 // 仅还原本次获准的归档成功展示同步；完整回调和相邻提示精确匹配且只能出现一次。
 function normalizeMatchAuth(source) {
+  // 阶段39持久核对仅精确逆投影，原业务断言保留。
+  for(const {before,after} of require('./match-persistent-guard-projection.json')){assert.equal(source.split(after).length,2,'比赛持久核对实现变更需复审');source=source.replace(after,before);}
  for(const {before,after} of require('./match-edit-auth-projection.json')) {
   assert.equal(source.split(after).length,2,'比赛认证恢复片段必须完整且唯一');source=source.replace(after,before);
  }
@@ -257,6 +259,7 @@ for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
       if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
+      if(item==='pages/match-edit'&&ext==='wxml')for(const {before,after} of require('./match-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'比赛已存在核对入口必须精确且唯一');source=source.replace(after,before);}
       return source; };
     assert.equal(hash(markup(item==='pages/manage-venues'?normalizeVenuesPermission(read('wxml'),'wxml'):item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');

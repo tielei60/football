@@ -149,6 +149,7 @@
       <view class="recovery-title">{{uncertain?'结果待核对':'有更新需要核对'}}</view>
       <view wx:if="{{actionError}}" class="recovery-message">{{actionError}}</view>
       <button disabled="{{loading}}" wx:if="{{uncertain}}" bindtap="checkSchedule" class="ui-button ui-block recovery-check" size="mini">前往赛程核对</button>
+      <button disabled="{{loading || busy}}" wx:if="{{uncertain}}" class="ghost ui-button ui-block recovery-continue" bindtap="confirmExists" size="mini">已核对，比赛已存在</button>
       <button disabled="{{loading}}" wx:if="{{uncertain}}" class="ghost ui-button ui-block recovery-continue" bindtap="confirmAbsent" size="mini">已核对，继续编辑</button>
       <button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block recovery-check" size="mini">重新载入最新版本</button>
     </view>

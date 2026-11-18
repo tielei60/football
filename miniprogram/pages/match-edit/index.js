@@ -2,6 +2,22 @@ const ui=require('../../utils/ui');
 const s = require("../shared");
 // Unconfirmed creation drafts are process-only and bound to the issuing login.
 let pendingCreateDraft = null;
+// 仅持久化核对标识，不保存名称、地址、坐标或登录令牌。
+function matchGuardKey() {
+  const session=s.api.getSession(),origin=session?.serverOrigin;
+  if(!origin||!Number.isSafeInteger(session?.user?.id)||!Number.isSafeInteger(session?.team?.id))throw new Error('无法确认比赛管理账号，请重新登录。');
+  return 'football.native.match-create-guard.v1:'+encodeURIComponent(origin)+':'+session.user.id+':'+session.team.id;
+}
+function readMatchGuard(key) {
+  const value=wx.getStorageSync(key);
+  if(!value)return null;
+  if(typeof value!=='object'||typeof value.taskId!=='string'||!value.taskId)throw new Error('比赛核对记录无法读取，请先检查本地存储。');
+  return value;
+}
+function clearMatchGuard(key,taskId) {
+  if(readMatchGuard(key)?.taskId===taskId){wx.removeStorageSync(key);if(readMatchGuard(key))throw new Error('无法清除比赛核对提醒，请重新打开核对。');}
+}
+
 const formats = [
   { label: "未设置", value: null },
   ...[5, 6, 7, 8, 9, 11].map((value) => ({ label: value + "人制", value })),
@@ -98,6 +114,8 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           pendingCreateDraft.token !== privateSession?.token)
       )
         pendingCreateDraft = null;
+      this._guardKey=matchGuardKey();
+      const guard=!this.id?readMatchGuard(this._guardKey):null;
       const seasons = [
         { id: null, name: "未分配赛季" },
         ...(await s.api.request("/seasons")),
@@ -115,7 +133,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         venues,
         venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),
         draftOwner,
-        uncertain: !!draft&&!draft.savedId,
+        uncertain: (!!draft&&!draft.savedId)||!!guard,
         savedId:draft?.savedId||null,
         revision: m?.revision ?? null,
         dateLabel: m
@@ -156,7 +174,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           seasons.findIndex((f) => f.id === (m?.seasonId ?? draft?.seasonId)),
         ),
         conflict: false,
-        actionError: draft?.savedId?"比赛已保存，请进入详情核对。":draft ? "上次创建结果尚未确认，请先核对赛程。" : "",
+        actionError: draft?.savedId?"比赛已保存，请进入详情核对。":draft ? "上次创建结果尚未确认，请先核对赛程。" : guard ? "上次比赛创建结果待核对，请先查看赛程和草稿。" : "",
       };
     });
   },
@@ -195,7 +213,12 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   checkSchedule() {
     wx.switchTab({ url: "/pages/schedule/index" });
   },
-  confirmAbsent() {
+  confirmAbsent() {this.confirmRecovery(false);},
+  confirmExists() {this.confirmRecovery(true);},
+  confirmRecovery(exists) {
+    if(this.data.busy||this._hidden||this._disposed||!this.data.uncertain||this.id||this.data.savedId)return;
+    let key,guard;
+    try{key=matchGuardKey();guard=readMatchGuard(key);}catch(e){this.setData({actionError:e.message});return;}
     const attempt = pendingCreateDraft;
     const token = s.api.getSession()?.token;
     if(this._hidden||this._disposed||(attempt&&attempt.token!==token))return;
@@ -206,12 +229,17 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     }
     if (attempt && attempt.token !== token) return;
     ui.showModal(this,{
-      title: "确认未创建比赛",
-      content: "请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。",
+      title: exists ? "确认比赛已存在" : "确认未创建比赛",
+      content: exists ? "确认已在赛程或草稿找到上次比赛？仅解除提醒，不会修改或创建比赛。" : "请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。",
       success: (result) => {
         if (result.confirm && !this._disposed && pendingCreateDraft === attempt && !attempt?.inFlight && !attempt?.savedId && !this._hidden && s.api.getSession()?.token === token) {
-          pendingCreateDraft = null;
-          this.setData({ uncertain: false, actionError: "" });
+          try{
+            if(key!==matchGuardKey()||readMatchGuard(key)?.taskId!==guard?.taskId)throw new Error('核对账号或任务已变化，请重新打开比赛核对。');
+            if(guard)clearMatchGuard(key,guard.taskId);
+            pendingCreateDraft = null;
+            this.setData({ uncertain: false, actionError: "" });
+            if(exists)this.checkSchedule();
+          }catch(e){this.setData({actionError:e.message});}
         }
       },
     });
@@ -267,15 +295,25 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       inFlight: true,
       operation,
     } : null;
-    if (attempt) pendingCreateDraft = attempt;
+    let dispatched=false;
     this.setData({ busy: true, actionError: "" });
     try {
+      if(attempt){
+        const key=matchGuardKey();this._guardKey=key;
+        if(readMatchGuard(key)){this.setData({uncertain:true,actionError:'上次比赛创建结果待核对，请先查看赛程和草稿。'});return;}
+        const taskId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+        wx.setStorageSync(key,{taskId,createdAt:Date.now()});
+        if(readMatchGuard(key)?.taskId!==taskId)throw new Error('无法保存比赛核对记录，未发起创建。');
+        attempt.guardKey=key;attempt.taskId=taskId;pendingCreateDraft=attempt;
+      }
+      dispatched=true;
       const result = await s.api.request(
         this.id ? "/matches/" + encodeURIComponent(this.id) : "/matches",
         this.id ? "PUT" : "POST",
         payload,
       );
       if(!Number.isSafeInteger(result?.id)||result.id<1||(this.id&&String(result.id)!==String(this.id)))throw new Error('保存响应编号异常，请先核对比赛结果。');
+      if(attempt)clearMatchGuard(attempt.guardKey,attempt.taskId);
       operation.savedId=result.id;
       if(attempt&&pendingCreateDraft===attempt){attempt.savedId=result.id;attempt.inFlight=false;}
       if(active()){
@@ -284,7 +322,8 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       }
     } catch (error) {
       const status = error.status || error.statusCode || 0;
-      const uncertain = !this.id && (status === 0 || status >= 500);
+      let uncertain = !this.id && dispatched && (error.staleSession===true || status === 0 || status >= 500);
+      if(attempt&&dispatched&&!uncertain){try{clearMatchGuard(attempt.guardKey,attempt.taskId);}catch(_){uncertain=true;}}
       if (attempt && pendingCreateDraft === attempt) {
         if (uncertain) attempt.inFlight = false;
         else pendingCreateDraft = null;
@@ -313,6 +352,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         if ((error.status || error.statusCode) === 401) s.fail(this, error);
       }
     } finally {
+      if(attempt)attempt.inFlight=false;
       operation.resolve();
       if (active()) this.setData({ busy: false });
     }

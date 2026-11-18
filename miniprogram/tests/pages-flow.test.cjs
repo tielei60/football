@@ -22,8 +22,11 @@ function setup(name, overrides = {}, wxOverrides = {}) {
     ...overrides,
   };
   if (!api.beginLogin) api.beginLogin = (...args) => { let settled=false; const promise=api.login(...args).finally(()=>{settled=true;}); return {promise,cancel(){if(!settled)api.clearSession();}}; };
+  const storage=new Map();
+  if(name==='match-edit'){const get=api.getSession;api.getSession=()=>{const v=get();return v?{...v,serverOrigin:v.serverOrigin||'https://club.example',user:{id:1,teamId:1,...v.user},team:{id:1,...v.team}}:v;};}
   const wx = new Proxy(
     {
+      getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),
       stopPullDownRefresh() {},
       showModal(options) {
         options.success({ confirm: true });
@@ -702,7 +705,7 @@ test("5xx unknown creation retains draft only for same login and requires explic
   page.data.form.opponent = "";
   page._hidden=false; // 新页面实例可见；onUnload后的旧实例不能直接模拟可见页面。
   await page.refresh();
-  assert.equal(page.data.uncertain, false);
+  assert.equal(page.data.uncertain, true); // 同账号新token仍须核对，草稿本身不持久化。
   assert.equal(page.data.form.opponent, "");
 });
 
@@ -787,7 +790,7 @@ test('old create success cannot clear the newer login attempt', async () => {
   });
   await page.refresh(); page.data.form.opponent = '原请求'; page.data.form.date = '2026-11-15';
   const clean = structuredClone(page.data), first = page.save(); page.onUnload();
-  account = { ...account, token: 'new' };
+  account = { ...account, user:{...account.user,id:2}, token: 'new' };
   const next = { ...page, data: clean, _disposed: false, _hidden: false }; await next.refresh();
   next.data.form.opponent = '新请求'; const second = next.save(); next.onUnload();
   finish[0]({ id: 8 }); await first;

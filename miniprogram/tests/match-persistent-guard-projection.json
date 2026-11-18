@@ -1,0 +1,42 @@
+[
+  {
+    "before": "// Unconfirmed creation drafts are process-only and bound to the issuing login.\nlet pendingCreateDraft = null;\nconst formats = [\n  { label: \"未设置\", value: null },\n",
+    "after": "// Unconfirmed creation drafts are process-only and bound to the issuing login.\nlet pendingCreateDraft = null;\n// 仅持久化核对标识，不保存名称、地址、坐标或登录令牌。\nfunction matchGuardKey() {\n  const session=s.api.getSession(),origin=session?.serverOrigin;\n  if(!origin||!Number.isSafeInteger(session?.user?.id)||!Number.isSafeInteger(session?.team?.id))throw new Error('无法确认比赛管理账号，请重新登录。');\n  return 'football.native.match-create-guard.v1:'+encodeURIComponent(origin)+':'+session.user.id+':'+session.team.id;\n}\nfunction readMatchGuard(key) {\n  const value=wx.getStorageSync(key);\n  if(!value)return null;\n  if(typeof value!=='object'||typeof value.taskId!=='string'||!value.taskId)throw new Error('比赛核对记录无法读取，请先检查本地存储。');\n  return value;\n}\nfunction clearMatchGuard(key,taskId) {\n  if(readMatchGuard(key)?.taskId===taskId){wx.removeStorageSync(key);if(readMatchGuard(key))throw new Error('无法清除比赛核对提醒，请重新打开核对。');}\n}\n\nconst formats = [\n  { label: \"未设置\", value: null },\n"
+  },
+  {
+    "before": "      )\n        pendingCreateDraft = null;\n      const seasons = [\n        { id: null, name: \"未分配赛季\" },\n",
+    "after": "      )\n        pendingCreateDraft = null;\n      this._guardKey=matchGuardKey();\n      const guard=!this.id?readMatchGuard(this._guardKey):null;\n      const seasons = [\n        { id: null, name: \"未分配赛季\" },\n"
+  },
+  {
+    "before": "        venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),\n        draftOwner,\n        uncertain: !!draft&&!draft.savedId,\n        savedId:draft?.savedId||null,\n        revision: m?.revision ?? null,\n",
+    "after": "        venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),\n        draftOwner,\n        uncertain: (!!draft&&!draft.savedId)||!!guard,\n        savedId:draft?.savedId||null,\n        revision: m?.revision ?? null,\n"
+  },
+  {
+    "before": "        ),\n        conflict: false,\n        actionError: draft?.savedId?\"比赛已保存，请进入详情核对。\":draft ? \"上次创建结果尚未确认，请先核对赛程。\" : \"\",\n      };\n    });\n",
+    "after": "        ),\n        conflict: false,\n        actionError: draft?.savedId?\"比赛已保存，请进入详情核对。\":draft ? \"上次创建结果尚未确认，请先核对赛程。\" : guard ? \"上次比赛创建结果待核对，请先查看赛程和草稿。\" : \"\",\n      };\n    });\n"
+  },
+  {
+    "before": "    wx.switchTab({ url: \"/pages/schedule/index\" });\n  },\n  confirmAbsent() {\n    const attempt = pendingCreateDraft;\n    const token = s.api.getSession()?.token;\n",
+    "after": "    wx.switchTab({ url: \"/pages/schedule/index\" });\n  },\n  confirmAbsent() {this.confirmRecovery(false);},\n  confirmExists() {this.confirmRecovery(true);},\n  confirmRecovery(exists) {\n    if(this.data.busy||this._hidden||this._disposed||!this.data.uncertain||this.id||this.data.savedId)return;\n    let key,guard;\n    try{key=matchGuardKey();guard=readMatchGuard(key);}catch(e){this.setData({actionError:e.message});return;}\n    const attempt = pendingCreateDraft;\n    const token = s.api.getSession()?.token;\n"
+  },
+  {
+    "before": "    if (attempt && attempt.token !== token) return;\n    ui.showModal(this,{\n      title: \"确认未创建比赛\",\n      content: \"请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。\",\n      success: (result) => {\n        if (result.confirm && !this._disposed && pendingCreateDraft === attempt && !attempt?.inFlight && !attempt?.savedId && !this._hidden && s.api.getSession()?.token === token) {\n          pendingCreateDraft = null;\n          this.setData({ uncertain: false, actionError: \"\" });\n        }\n      },\n",
+    "after": "    if (attempt && attempt.token !== token) return;\n    ui.showModal(this,{\n      title: exists ? \"确认比赛已存在\" : \"确认未创建比赛\",\n      content: exists ? \"确认已在赛程或草稿找到上次比赛？仅解除提醒，不会修改或创建比赛。\" : \"请先核对赛程和草稿。仅在确认没有上次比赛时继续，避免重复创建。\",\n      success: (result) => {\n        if (result.confirm && !this._disposed && pendingCreateDraft === attempt && !attempt?.inFlight && !attempt?.savedId && !this._hidden && s.api.getSession()?.token === token) {\n          try{\n            if(key!==matchGuardKey()||readMatchGuard(key)?.taskId!==guard?.taskId)throw new Error('核对账号或任务已变化，请重新打开比赛核对。');\n            if(guard)clearMatchGuard(key,guard.taskId);\n            pendingCreateDraft = null;\n            this.setData({ uncertain: false, actionError: \"\" });\n            if(exists)this.checkSchedule();\n          }catch(e){this.setData({actionError:e.message});}\n        }\n      },\n"
+  },
+  {
+    "before": "      operation,\n    } : null;\n    if (attempt) pendingCreateDraft = attempt;\n    this.setData({ busy: true, actionError: \"\" });\n    try {\n      const result = await s.api.request(\n        this.id ? \"/matches/\" + encodeURIComponent(this.id) : \"/matches\",\n",
+    "after": "      operation,\n    } : null;\n    let dispatched=false;\n    this.setData({ busy: true, actionError: \"\" });\n    try {\n      if(attempt){\n        const key=matchGuardKey();this._guardKey=key;\n        if(readMatchGuard(key)){this.setData({uncertain:true,actionError:'上次比赛创建结果待核对，请先查看赛程和草稿。'});return;}\n        const taskId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);\n        wx.setStorageSync(key,{taskId,createdAt:Date.now()});\n        if(readMatchGuard(key)?.taskId!==taskId)throw new Error('无法保存比赛核对记录，未发起创建。');\n        attempt.guardKey=key;attempt.taskId=taskId;pendingCreateDraft=attempt;\n      }\n      dispatched=true;\n      const result = await s.api.request(\n        this.id ? \"/matches/\" + encodeURIComponent(this.id) : \"/matches\",\n"
+  },
+  {
+    "before": "      );\n      if(!Number.isSafeInteger(result?.id)||result.id<1||(this.id&&String(result.id)!==String(this.id)))throw new Error('保存响应编号异常，请先核对比赛结果。');\n      operation.savedId=result.id;\n      if(attempt&&pendingCreateDraft===attempt){attempt.savedId=result.id;attempt.inFlight=false;}\n",
+    "after": "      );\n      if(!Number.isSafeInteger(result?.id)||result.id<1||(this.id&&String(result.id)!==String(this.id)))throw new Error('保存响应编号异常，请先核对比赛结果。');\n      if(attempt)clearMatchGuard(attempt.guardKey,attempt.taskId);\n      operation.savedId=result.id;\n      if(attempt&&pendingCreateDraft===attempt){attempt.savedId=result.id;attempt.inFlight=false;}\n"
+  },
+  {
+    "before": "    } catch (error) {\n      const status = error.status || error.statusCode || 0;\n      const uncertain = !this.id && (status === 0 || status >= 500);\n      if (attempt && pendingCreateDraft === attempt) {\n        if (uncertain) attempt.inFlight = false;\n",
+    "after": "    } catch (error) {\n      const status = error.status || error.statusCode || 0;\n      let uncertain = !this.id && dispatched && (error.staleSession===true || status === 0 || status >= 500);\n      if(attempt&&dispatched&&!uncertain){try{clearMatchGuard(attempt.guardKey,attempt.taskId);}catch(_){uncertain=true;}}\n      if (attempt && pendingCreateDraft === attempt) {\n        if (uncertain) attempt.inFlight = false;\n"
+  },
+  {
+    "before": "      }\n    } finally {\n      operation.resolve();\n      if (active()) this.setData({ busy: false });\n",
+    "after": "      }\n    } finally {\n      if(attempt)attempt.inFlight=false;\n      operation.resolve();\n      if (active()) this.setData({ busy: false });\n"
+  }
+]
