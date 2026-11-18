@@ -1,0 +1,6 @@
+[
+  {
+    "before": "      operation.error=error.message||\"保存结果需要核对\";\n      if (active()) {",
+    "after": "      operation.error=error.message||\"保存结果需要核对\";\n      // 当前请求 401 会清空会话，但仍须结束本页等待；旧视图/旧账号不接管。\n      if (status === 401 && error.staleSession !== true && !s.api.getSession() &&\n          this._saveAttempt === operation && !this._disposed && !this._hidden &&\n          (this._view || 0) === operation.view) {\n        this.setData({ busy: false, uncertain: false, actionError: error.message || \"登录已过期\" });\n        s.fail(this, error);\n        return;\n      }\n      if (active()) {"
+  }
+]

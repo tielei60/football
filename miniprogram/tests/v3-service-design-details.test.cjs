@@ -23,3 +23,8 @@ test('比赛相册与邀请认领保留设计队徽和独立计数',()=>{for(con
 test('首次改密三个输入均有提示',()=>{for(const text of ['输入初始密码','设置新的登录密码','重复输入新密码'])assert.ok(read('force-password').includes(`placeholder="${text}"`));});
 test('次操作描边不覆盖禁用和危险态',()=>{for(const p of ['player-ai','wechat-invites','wechat-claim','system-accounts','force-password','player-photos'])assert.ok(read(p,'wxss').includes(':not([disabled])'));assert.ok(read('player-ai','wxss').includes(':not(.danger)'));assert.ok(read('wechat-invites','wxss').includes(':not(.invite-danger)'));});
 test('核验编号可换行且须知输入有高度下限',()=>{assert.match(read('wechat-claim','wxss'),/font-size:60rpx[^}]*overflow-wrap:anywhere/);assert.ok(read('match-media','wxss').includes('min-height:110px'));});
+
+test('比赛相册原图19横图188px对应376rpx，操作层级保持',()=>{
+ const css=read('match-media','wxss');assert.match(css,/\.photo \{ height:376rpx;/);
+ assert.match(css,/\.actions>button\.danger\.ui-button:not\(\[disabled\]\)[^}]*background:transparent[^}]*color:var\(--muted\)/);
+});

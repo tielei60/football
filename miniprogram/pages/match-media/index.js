@@ -15,9 +15,20 @@ Page({
   const showTurn=this._showTurn=(this._showTurn||0)+1,token=s.api.getSession()?.token;
   if(!this._loaded)return this.refresh();
   const epoch=this._epoch;
-  try{await s.api.ensureSession();if(this._disposed||this._hidden||epoch!==this._epoch||showTurn!==this._showTurn)return;
+  try{const session=await s.api.ensureSession();if(this._disposed||this._hidden||epoch!==this._epoch||showTurn!==this._showTurn)return;
    owned(this.id);
    if(this._owner!==s.api.getSession()?.token){this._image=null;this.setData({photos:[],notice:'',preview:'',caption:'',loading:false,error:'登录已变化，请重新打开比赛。'});return;}
+   const admin=session.user.role==='admin';
+   if(admin!==this.data.admin){
+    this._imageEpoch=(this._imageEpoch||0)+1;
+    this._roleRefreshPending=true;
+    this.setData({admin});
+   }
+   if(this._roleRefreshPending){
+    // 管理入口即时跟随角色；在途写入结束后再核对，保留上传防重回执。
+    if(this.data.busy){this.setData({loading:false});return;}
+    return this.refresh();
+   }
    if(this._needsRefresh){this._needsRefresh=false;return this.refresh();}
    this.setData({loading:false});this.loadPictures();
   }catch(e){if(!this._disposed&&!this._hidden&&epoch===this._epoch&&showTurn===this._showTurn){const current=s.api.getSession();if(current?.token===token||((e.status||e.statusCode)===401&&!current)){this.setData({loading:false});s.fail(this,e);}}}
@@ -26,6 +37,7 @@ Page({
  onUnload(){ui.abort(this);this._imageEpoch=(this._imageEpoch||0)+1;s.unload.call(this);},
  async refresh(preserve=true){
   if(this.data.busy)return;
+  this._roleRefreshPending=false;
   this._imageEpoch=(this._imageEpoch||0)+1;
   const token=s.api.getSession()?.token,showTurn=this._showTurn;
   const local=this._loaded&&preserve&&this._owner===token?{notice:this.data.notice,preview:this.data.preview,caption:this.data.caption}:null;
@@ -80,7 +92,19 @@ Page({
  input(e){if(this.data.busy||this.data.uncertain)return;const field=e.currentTarget.dataset.field;if(['notice','caption'].includes(field)&&this.editable()){this.setData({[field]:e.detail.value});this.alertDraft();}},
  choose(){if(!this.editable()||this.data.uncertain)return;const epoch=this._epoch,turn=this._imageEpoch=(this._imageEpoch||0)+1;wx.chooseMedia({count:1,mediaType:['image'],sourceType:['album'],success:r=>{if(this._disposed||epoch!==this._epoch||turn!==this._imageEpoch||this._owner!==s.api.getSession()?.token)return;const f=r.tempFiles?.[0];if(!f)return;if(f.size>2097152){this.setData({actionError:'请选择 2 MB 内的 PNG 或 JPG'});return;}wx.getFileSystemManager().readFile({filePath:f.tempFilePath,encoding:'base64',success:result=>{if(this._disposed||epoch!==this._epoch||turn!==this._imageEpoch||this._owner!==s.api.getSession()?.token)return;const data=result.data;const mime=data.startsWith('iVBORw0KGgo')?'png':data.startsWith('/9j/')?'jpeg':null;if(!mime||data.length*3/4>2097154){this.setData({actionError:'请选择 2 MB 内的 PNG 或 JPG'});return;}this._image='data:image/'+mime+';base64,'+data;this.setData({preview:f.tempFilePath,actionError:''});this.alertDraft();},fail:()=>{if(!this._disposed&&turn===this._imageEpoch)this.setData({actionError:'图片读取失败，请重选'});}});},fail:e=>{if(!this._disposed&&epoch===this._epoch&&turn===this._imageEpoch&&!/cancel/.test(e.errMsg||''))this.setData({actionError:'无法选择图片，请检查相册授权'});}});},
  editable(){return this.data.admin&&!this.data.busy&&!this.data.conflict&&!this.data.loading&&!this.data.error&&!this._hidden&&!this._disposed&&this._owner===s.api.getSession()?.token;},
- async perform(work,done,options={}){if(!this.editable())return;const epoch=this._epoch,token=this._owner,showTurn=this._showTurn,attempt=this._writeAttempt={};this.setData({busy:true,actionError:''});this._imageEpoch=(this._imageEpoch||0)+1;try{const session=await s.api.ensureSession();if(session.user.role!=='admin'||this._owner!==s.api.getSession()?.token)throw new Error('登录已变化，请重新载入');if(this._disposed||this._hidden||epoch!==this._epoch||showTurn!==this._showTurn)return;const result=await work();if(!this._disposed&&epoch===this._epoch&&this._owner===s.api.getSession()?.token){if(done)done(result);this.setData({busy:false});if(this._hidden)this._needsRefresh=true;else await this.refresh();}}catch(e){if(!this._disposed&&!this._hidden&&epoch===this._epoch&&showTurn===this._showTurn){const current=s.api.getSession();if((e.status||e.statusCode)===401&&!current)s.fail(this,e);else if(current?.token===token&&this._owner===token)this.setData({conflict:(e.status||e.statusCode)===409||(options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)),actionError:options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)?'排序结果尚未确认，请重新载入核对后再操作。':(e.status||e.statusCode)===409?'比赛已被修改，内容已保留，请重新载入核对。':e.message});}}finally{if(!this._disposed&&epoch===this._epoch&&this._writeAttempt===attempt)this.setData({busy:false});}},
+ async perform(work,done,options={}){if(!this.editable())return;const epoch=this._epoch,token=this._owner,showTurn=this._showTurn,attempt=this._writeAttempt={};this.setData({busy:true,actionError:''});this._imageEpoch=(this._imageEpoch||0)+1;try{const session=await s.api.ensureSession();if(session.user.role!=='admin'||this._owner!==s.api.getSession()?.token)throw new Error('登录已变化，请重新载入');if(this._disposed||this._hidden||epoch!==this._epoch||showTurn!==this._showTurn)return;const result=await work();if(!this._disposed&&epoch===this._epoch&&this._owner===s.api.getSession()?.token){if(done)done(result);this.setData({busy:false});if(this._hidden)this._needsRefresh=true;else await this.refresh();}}catch(e){
+  // 隐藏/返回改变显示代次，不代表已发出的排序得到确定结果。
+  const unknownOrder=options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500);
+  if(unknownOrder&&!this._disposed&&epoch===this._epoch&&token===this._owner&&token===s.api.getSession()?.token&&this._writeAttempt===attempt){
+   if(this._hidden)this._needsRefresh=true;
+   else this.setData({conflict:true,actionError:'排序结果尚未确认，请重新载入核对后再操作。'});
+  }
+  if(!this._disposed&&!this._hidden&&epoch===this._epoch&&showTurn===this._showTurn){const current=s.api.getSession();if((e.status||e.statusCode)===401&&!current)s.fail(this,e);else if(current?.token===token&&this._owner===token)this.setData({conflict:(e.status||e.statusCode)===409||(options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)),actionError:options.order&&(!(e.status||e.statusCode)||(e.status||e.statusCode)>=500)?'排序结果尚未确认，请重新载入核对后再操作。':(e.status||e.statusCode)===409?'比赛已被修改，内容已保留，请重新载入核对。':e.message});}}finally{
+  if(!this._disposed&&epoch===this._epoch&&this._writeAttempt===attempt){
+   this.setData({busy:false});
+   if(this._roleRefreshPending&&!this._hidden&&token===this._owner&&token===s.api.getSession()?.token)await this.refresh();
+  }
+ }},
  async saveNotice(){
   if(!this.editable()||this.data.uncertain)return;
   const notice=this.data.notice,server=this._savedNotice||'',revision=this.revision,epoch=this._epoch,owner=this._owner,showTurn=this._showTurn;

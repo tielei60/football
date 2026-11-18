@@ -24,7 +24,7 @@
 /* v3：须知与相册各自成组，媒体操作不挤压图片说明。 */
 .card { padding:28rpx; border-radius:30rpx; }
 .section-title { margin:36rpx 0 18rpx; padding-left:18rpx; border-left:6rpx solid var(--brand); }
-.photo { height:420rpx; border-radius:24rpx; }
+.photo { height:376rpx; border-radius:24rpx; }
 .card .between { padding:4rpx 0 12rpx; flex-wrap:wrap; }
 .photo-order-actions { padding-top:16rpx; border-top:1px solid var(--line); }
 .prewrap { display:block; overflow-wrap:anywhere; }
@@ -32,3 +32,7 @@
 /* V3 设计逐页复核：仅展示层，保留条件、事件与禁用态。 */
 .media-heading{display:flex;align-items:center;gap:16rpx;margin:36rpx 0 18rpx}.media-heading .section-title{flex:1;min-width:0;margin:0}.media-count{flex:none;font-size:var(--type-meta);color:var(--muted)}
 .page textarea.notice{height:220rpx;min-height:110px;margin-bottom:40rpx}
+
+/* 原图 19 为横向比赛照片；封面描边，移除弱化但确认机制保持。 */
+.page .card .actions>button.ui-button:not([disabled]):not(.danger){background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink)}
+.page .card .actions>button.danger.ui-button:not([disabled]){background:transparent;border-color:transparent;color:var(--muted);box-shadow:none}

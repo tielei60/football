@@ -291,6 +291,14 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       }
       operation.conflict=status===409||!!(this.id&&(status===0||status>=500));
       operation.error=error.message||"保存结果需要核对";
+      // 当前请求 401 会清空会话，但仍须结束本页等待；旧视图/旧账号不接管。
+      if (status === 401 && error.staleSession !== true && !s.api.getSession() &&
+          this._saveAttempt === operation && !this._disposed && !this._hidden &&
+          (this._view || 0) === operation.view) {
+        this.setData({ busy: false, uncertain: false, actionError: error.message || "登录已过期" });
+        s.fail(this, error);
+        return;
+      }
       if (active()) {
         const conflict = operation.conflict;
         this.setData({

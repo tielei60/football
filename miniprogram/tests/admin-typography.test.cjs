@@ -35,6 +35,18 @@ function markup(source) {
   return JSON.stringify((s=>[...s.matchAll(/<[\w-]+\b[^>]*>/g)].map(m=>{const attrs=[...m[0].matchAll(/\b((?:bind|catch)(?::)?\w+|wx:(?:if|elif|else|for|for-item|for-index|key)|disabled|value|checked|maxlength|type|password|data-[\w-]+)\s*=\s*"([^"]*)"/g)].map(a=>[a[1],a[2]]).sort((a,b)=>a[0].localeCompare(b[0]));return attrs.length?[m[0].match(/^<([\w-]+)/)[1],attrs]:null}).filter(Boolean).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))(source));
 }
 // 仅还原本次获准的归档成功展示同步；完整回调和相邻提示精确匹配且只能出现一次。
+function normalizeMatchAuth(source) {
+ for(const {before,after} of require('./match-edit-auth-projection.json')) {
+  assert.equal(source.split(after).length,2,'比赛认证恢复片段必须完整且唯一');source=source.replace(after,before);
+ }
+ return source;
+}
+test('比赛认证投影拒绝重复篡改且保留其他业务',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/match-edit/index.js'),'utf8'),{after}=require('./match-edit-auth-projection.json')[0];
+ assert.throws(()=>normalizeMatchAuth(source.replace(after,after+after)));
+ assert.throws(()=>normalizeMatchAuth(source.replace('error.staleSession !== true','true')));
+ assert.equal(normalizeMatchAuth(source+'\nextra'),normalizeMatchAuth(source)+'\nextra');
+});
 function normalizePlayerArchive(source) {
   const current = `            (p) => {
               this.setData({
@@ -135,6 +147,7 @@ for (const [item, expected] of Object.entries(baseline)) {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
     if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(businessSource);
     if(item==='pages/manage-player'||item==='pages/manage-season') {
