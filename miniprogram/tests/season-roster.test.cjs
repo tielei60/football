@@ -199,3 +199,14 @@ test("late load cannot replace newer draft revision",async()=>{
  await h.page.refresh();resolve({season:{name:"Old",revision:7},roster:[snapshot]});await old;
  assert.equal(h.page.data.revision,9);assert.equal(h.page._original.length,0);
 });
+
+for(const status of [undefined,502,409,400])test('赛季阵容保存回执分类 '+status,async()=>{
+ const h=fixture();await h.page.refresh();h.page.number({currentTarget:{dataset:{id:'p1'}},detail:{value:'15'}});
+ const draft=JSON.stringify(h.page.data.rows),original=h.page._original;let writes=0;
+ h.api.request=async()=>{writes++;throw Object.assign(Error('明确校验失败'),{status});};
+ await h.page.save();
+ assert.equal(h.page.data.actionError,status===409?'赛季已被修改，输入已保留，请重新载入核对。':status===400?'明确校验失败':'保存结果尚未确认，输入已保留。请返回并重新打开赛季阵容核对，勿直接重复保存。');
+ assert.equal(h.page.data.conflict,status===409);assert.equal(h.page.data.busy,false);
+ assert.equal(JSON.stringify(h.page.data.rows),draft);assert.equal(h.page._original,original);assert.equal(h.page.data.revision,7);
+ assert.equal(writes,1);if(status===409){await h.page.save();assert.equal(writes,1);}
+});

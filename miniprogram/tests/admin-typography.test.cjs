@@ -272,7 +272,13 @@ for (const [item, expected] of Object.entries(baseline)) {
       const patch = { conflict, actionError: conflict ? '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。' : error.message || '保存未完成，输入已保留。' };`);
     }
 
-    if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(normalizeSeasonAuth(businessSource));
+    if(item==='pages/season-roster') {
+      // 阶段35：精确允许已专项验证的未知回执提示，其他JS继续对照原基线。
+      const reviewed = "   const status=e.status||e.statusCode;\n   const unconfirmed=!status||status>=500;\n   this.setData({busy:false,conflict:status===409,actionError:status===409?'赛季已被修改，输入已保留，请重新载入核对。':unconfirmed?'保存结果尚未确认，输入已保留。请返回并重新打开赛季阵容核对，勿直接重复保存。':e.message||'保存失败'});";
+      assert.equal(businessSource.split(reviewed).length,2,'赛季阵容未知回执提示变更需复审');
+      businessSource=businessSource.replace(reviewed,"   this.setData({busy:false,conflict:(e.status||e.statusCode)===409,actionError:(e.status||e.statusCode)===409?'赛季已被修改，输入已保留，请重新载入核对。':e.message||'保存失败'});");
+      businessSource=normalizeSeasonReturn(normalizeSeasonAuth(businessSource));
+    }
     if(item==='pages/manage-player'||item==='pages/manage-season') {
       // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。
       const subject=item==='pages/manage-player'?'球员':'赛季';

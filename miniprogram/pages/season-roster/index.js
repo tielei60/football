@@ -105,7 +105,9 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
    ui.showToast(this,{title:'赛季阵容已保存'});
   } else {
    const e=outcome.error;
-   this.setData({busy:false,conflict:(e.status||e.statusCode)===409,actionError:(e.status||e.statusCode)===409?'赛季已被修改，输入已保留，请重新载入核对。':e.message||'保存失败'});
+   const status=e.status||e.statusCode;
+   const unconfirmed=!status||status>=500;
+   this.setData({busy:false,conflict:status===409,actionError:status===409?'赛季已被修改，输入已保留，请重新载入核对。':unconfirmed?'保存结果尚未确认，输入已保留。请返回并重新打开赛季阵容核对，勿直接重复保存。':e.message||'保存失败'});
    if((e.status||e.statusCode)===401)s.fail(this,e);
   }
  },
