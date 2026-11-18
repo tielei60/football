@@ -5,10 +5,16 @@ const root=path.resolve(__dirname,'../pages');
 const read=(page,ext)=>fs.readFileSync(path.join(root,page,'index.'+ext),'utf8');
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
 const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:data-)[\w-]+|id|disabled|hidden|value|checked|range|range-key|maxlength|min|max|step|type|style|disable-scroll|scroll-x)="[^"]*")/g),m=>m[1]).sort();
+function restoreExportFeedback(source){const {before,after}=require('./tactic-export-feedback-projection.json');assert.equal(source.split(after).length,2,'导出回调保护必须完整唯一');return source.replace(after,before);}
+test('导出反馈保护投影拒绝篡改重复并保留额外代码',()=>{
+ const source=read('tactic-export','js'),{after}=require('./tactic-export-feedback-projection.json');
+ assert.throws(()=>restoreExportFeedback(source.replace(after,after.replace(/\S/,'!'))));assert.throws(()=>restoreExportFeedback(source.replace(after,after+after)));
+ assert.equal(restoreExportFeedback(source+'\nextra'),restoreExportFeedback(source)+'\nextra');
+});
 test('v3 七个战术页业务代码和全部绑定条件保持已审基线',()=>{
  assert.equal(Object.keys(baseline).length,7);
  for(const [page,b] of Object.entries(baseline)) {
-  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):page==='tactic-transfer'?require('./tactic-transfer-named-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
+  assert.equal(hash(page==='tactic-export'?restoreExportFeedback(read(page,'js')):page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):page==='tactic-transfer'?require('./tactic-transfer-named-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
   let markup=read(page,'wxml');
   if(page==='tactic-transfer')markup=require('./tactic-transfer-named-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-compose')markup=require('./tactic-workspace-contract.cjs').restoreMarkup(markup);
