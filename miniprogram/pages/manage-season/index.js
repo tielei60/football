@@ -22,9 +22,11 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     this.refresh();
   },
   onUnload(){ui.abort(this);return a.unload.apply(this,arguments);},
-  refresh() {
+  async refresh() {
     if (this.data.busy) return;
-    return a.load(this, async () => {
+    const owner = a.s.api.getSession()?.token;
+    const view = this._adminView || 0;
+    const loading = a.load(this, async () => {
       const season = this.id
         ? (await a.s.api.request("/seasons")).find(
             (s) => String(s.id) === String(this.id),
@@ -46,6 +48,12 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         actionError: "",
       };
     });
+    const epoch = this._epoch;
+    await loading;
+    if (!this._disposed && !this._hidden && this._epoch === epoch &&
+        (this._adminView || 0) === view && a.s.api.getSession()?.token === owner &&
+        this.data.authorized && !this.data.error && this.id && this.data.id === this.id)
+      wx.setNavigationBarTitle?.({ title: "编辑赛季" });
   },
   input: a.input,
   date(e) {

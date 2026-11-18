@@ -223,11 +223,26 @@ test('账号同名核对投影拒绝篡改重复，其他代码仍参与哈希',
  }
  assert.equal(normalizeSystemCreate(source+'\nextra'),normalizeSystemCreate(source)+'\nextra');
 });
+function normalizeSeasonRestoredTitle(source){
+ for(const {before,after} of require('./season-restored-title-projection.json')){
+  assert.equal(source.split(after).length,2,'赛季恢复标题片段必须唯一完整');source=source.replace(after,before);
+ }
+ return source;
+}
+test('赛季恢复标题投影拒绝篡改重复并保留其他源码',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/manage-season/index.js'),'utf8');
+ for(const {after} of require('./season-restored-title-projection.json')){
+  assert.throws(()=>normalizeSeasonRestoredTitle(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!'))));
+  assert.throws(()=>normalizeSeasonRestoredTitle(source.replace(after,after+after)));
+ }
+ assert.equal(normalizeSeasonRestoredTitle(source+'\nextra'),normalizeSeasonRestoredTitle(source)+'\nextra');
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/manage-season') businessSource=normalizeSeasonRestoredTitle(businessSource);
     if(item==='pages/force-password') businessSource=normalizePasswordLoad(normalizePasswordSubmit(normalizePasswordGate(businessSource,'js')));
     if(item==='pages/system-accounts') businessSource=normalizeSystemAuth(normalizeSystemCreate(businessSource));
     if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);

@@ -112,7 +112,9 @@ async function act(page, work, done, creating = false) {
         actionError: uncertain
           ? "结果未确认，请先到列表核对，勿重复新建。"
           : code === 409
-            ? "记录已变化，输入已保留。请重新载入核对。"
+            ? (page.createKind === "season" && e.message === "新的赛季日期范围会排除已归属比赛，请先调整比赛归属或日期。"
+              ? e.message + " 输入已保留，请重新载入核对。"
+              : "记录已变化，输入已保留。请重新载入核对。")
             : e.message || "操作失败",
       });
       if (code === 401) s.fail(page, e);
