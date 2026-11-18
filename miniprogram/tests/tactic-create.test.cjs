@@ -266,3 +266,22 @@ test("过期草稿移除内容保留核对收据，不自动重试", async () =>
 test("持久写失败不得POST且保留输入",async()=>{const bad=new Map();bad.set=()=>{throw Error("存储失败")};const f=fixture(null,bad);await f.page.onShow();f.page.data.title="演练";await f.page.create();assert.equal(f.calls.filter(x=>x[1]==="POST").length,0);assert.equal(f.page.data.title,"演练");assert.match(f.page.data.actionError,/存储失败/);});
 
 test("各页面不声明覆盖微信Page保留options或route属性的方法",()=>{const root=path.join(__dirname,"../pages");for(const dir of fs.readdirSync(root)){const file=path.join(root,dir,"index.js");if(fs.existsSync(file))assert.doesNotMatch(fs.readFileSync(file,"utf8"),/\b(?:options|route)\s*\([^)]*\)\s*\{/ ,dir);}});
+
+for(const status of [400,403,429])test('未知创建后重试返回'+status+'仍保留原收据防重复',async()=>{
+ let posts=0;const f=fixture(async(p,m)=>{
+  if(p==='/tactic-formations')return {formations:[]};
+  if(p.startsWith('/tactic-create-receipts'))throw Object.assign(Error('暂未收到'),{status:404});
+  if(m==='POST'){posts++;if(posts===1)throw Error('响应丢失');throw Object.assign(Error('本次重试被拒绝'),{status});}
+ });
+ await f.page.onShow();f.page.data.title='等待核对';await f.page.create();const original=[...f.storage.values()][0];
+ await f.page.recover();f.page.retry();f.modals.at(-1).success({confirm:true});await new Promise(r=>setImmediate(r));
+ assert.equal(f.storage.size,1);assert.equal([...f.storage.values()][0].requestId,original.requestId);assert.equal(f.page.data.pending,true);assert.equal(f.page.data.canRetry,false);
+ await f.page.create();assert.equal(posts,2);
+});
+for(const status of [400,403])test('跨实例恢复的未知创建重试'+status+'不丢原请求',async()=>{
+ const store=new Map();const first=fixture(async(p)=>{if(p==='/tactic-formations')return {formations:[]};throw Error('响应未知')},store);
+ await first.page.onShow();first.page.data.title='跨页核对';await first.page.create();const original=[...store.values()][0];first.page.onUnload();
+ const next=fixture(async(p)=>{if(p==='/tactic-formations')return {formations:[]};throw Object.assign(Error('拒绝'),{status:p.startsWith('/tactic-create-receipts')?404:status})},store);
+ await next.page.onShow();await next.page.recover();next.page.retry();next.modals.at(-1).success({confirm:true});await new Promise(r=>setImmediate(r));
+ assert.equal(store.size,1);assert.equal([...store.values()][0].requestId,original.requestId);assert.equal(next.page.data.pending,true);assert.equal(next.page.data.canRetry,false);
+});

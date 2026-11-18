@@ -213,14 +213,15 @@ Page({
       this._receipt = { requestId };
       this._payload = payload;
       this.setData({ pending: true, canRetry: false, pendingSummary: `${payload.tactic.title} · ${payload.tactic.board.playerCount} 人制 · ${payload.tactic.formationName || "空白战术"}` });
-      await this.submit(payload, owner, turn);
+      await this.submit(payload, owner, turn, true);
     } catch (e) {
       if (this.active(owner, turn)) this.setData({ actionError: e.message });
     }
   },
-  async submit(payload, owner, turn) {
+  async submit(payload, owner, turn, firstAttempt = false) {
     const storageKey = this._key;
     if (flights.has(storageKey)) return;
+    this.setData({ canRetry: false });
     const attempt = {};
     flights.set(storageKey, attempt);
     this.setData({ busy: true, actionError: "" });
@@ -235,7 +236,8 @@ Page({
     } catch (e) {
       if (!this.active(owner, turn)) return;
       const status = e.status || e.statusCode || 0;
-      if (status >= 400 && status < 500 && status !== 409) {
+      // 重试被拒绝不能证明先前未知请求未创建；保留原收据继续核对。
+      if (firstAttempt && status >= 400 && status < 500 && status !== 409) {
         wx.removeStorageSync(storageKey);
         this._receipt = null;
         this._payload = null;
