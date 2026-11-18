@@ -319,7 +319,7 @@
     ]
   },
   "tactic-transfer": {
-    "js": "ce66d09a5609c052395006004422f7e7b2e3459fc8d1ec753cd5f714e494ce5c",
+    "js": "e640a02d86b940609d6363a11619767701a800f9e92d83220e28f6571be3d53f",
     "attrs": [
       "bind:retry=\"refresh\"",
       "bindtap=\"checkList\"",

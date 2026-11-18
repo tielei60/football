@@ -1,11 +1,11 @@
-// v3 允许重组展示，不允许更改战术事件、权限、触点和持久化语义。
+// v3 展示及业务保持已审基线。2026-11-18 导出生命周期修复仅更新该页 JS 哈希；其余绑定、权限、画布契约不变。
 const test=require('node:test'), assert=require('node:assert/strict'), fs=require('node:fs'), path=require('node:path'), crypto=require('node:crypto');
 const baseline=require('./ui-v3-tactic-contract.json');
 const root=path.resolve(__dirname,'../pages');
 const read=(page,ext)=>fs.readFileSync(path.join(root,page,'index.'+ext),'utf8');
 const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
 const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:data-)[\w-]+|id|disabled|hidden|value|checked|range|range-key|maxlength|min|max|step|type|style|disable-scroll|scroll-x)="[^"]*")/g),m=>m[1]).sort();
-test('v3 七个战术页业务代码和全部绑定条件保持不变',()=>{
+test('v3 七个战术页业务代码和全部绑定条件保持已审基线',()=>{
  assert.equal(Object.keys(baseline).length,7);
  for(const [page,b] of Object.entries(baseline)) {
   assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
