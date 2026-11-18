@@ -19,23 +19,33 @@ module.exports = {
   },
   stamp() { return { turn: this._turn, token: s.api.getSession()?.token }; },
   current(stamp) { return !this._disposed && !this._hidden && stamp.turn === this._turn && !!stamp.token && stamp.token === s.api.getSession()?.token; },
+  authFailure(stamp, error) {
+    if ((error.status || error.statusCode) !== 401 || error.staleSession === true ||
+        this._disposed || this._hidden || stamp.turn !== this._turn ||
+        this._owner !== stamp.token || s.api.getSession()) return false;
+    this._credential = null; this._createId = null; this._cursor = null;
+    this.setData({ busy: false, loadingMore: false, loading: false, authorized: false,
+      canCopy: false, cardPath: '', cardOpen: false, activeInvite: null, items: [],
+      binding: null, playerName: '', needsRefresh: false, actionError: '' });
+    s.fail(this, error);
+    return true;
+  },
   ready() { return !this._disposed && !this._hidden && !this.data.businessUiBlocking && this.data.authorized && this.data.enabled && !this.data.loading && !this.data.error && !this.data.busy && !this.data.loadingMore && !this.data.needsRefresh && s.api.getSession()?.token === this._owner; },
   apiPath(tail) { return '/players/' + encodeURIComponent(this.id) + '/wechat-' + tail; },
   async refresh() {
     if (this._hidden || this.data.busy || this.data.loadingMore) return;
     this._turn = (this._turn || 0) + 1;
-    const turn = this._turn;
+    const stamp = this.stamp();
+    if (this._owner !== stamp.token) { this._credential = null; this._createId = null; }
+    this._owner = stamp.token;
     this.setData({ loading: true, error: '', actionError: '', authorized: false });
     try {
       const session = await s.api.ensureSession();
       const stored = s.api.getSession();
-      const stamp = { turn, token: stored?.token };
-      if (!stored || stored.user?.id !== session.user?.id || stored.team?.id !== session.team?.id) throw Error('登录身份已变化，请重新载入');
+      if (!stored || stored.token !== stamp.token || stored.user?.id !== session.user?.id || stored.team?.id !== session.team?.id) throw Error('登录身份已变化，请重新载入');
       if (!this.current(stamp)) return;
       if (session.user.role !== 'admin') throw Error('仅管理员可以管理微信邀请');
       if (!this.id) throw Error('缺少球员编号');
-      if (this._owner !== stamp.token) { this._credential = null; this._createId = null; }
-      this._owner = stamp.token;
       const capability = await s.api.capabilities();
       if (!this.current(stamp)) return;
       if (!capability.wechat) { this._credential = null; this.setData({ enabled: false, authorized: true, canCopy: false, items: [], activeInvite: null, binding: null }); return; }
@@ -50,8 +60,9 @@ module.exports = {
       this._cursor = list.nextCursor || null;
       this.setData({ enabled: true, authorized: true, playerName: player.name, archived: player.membershipConfirmed !== false && player.status !== 'active', unconfirmed: player.membershipConfirmed === false, binding: { bound: binding.bound === true, revision: binding.revision, passwordEnabled: binding.passwordEnabled === true }, activeInvite, items: list.items.map(view), hasMore: !!this._cursor, canCopy: !!this._credential, cardPath: this._credential ? this.data.cardPath : '', needsRefresh: false });
     } catch (error) {
-      if (turn === this._turn && !this._hidden && !this._disposed) { this._credential = null; this.setData({ error: error.message || '暂时无法加载', canCopy: false }); }
-    } finally { if (turn === this._turn && !this._hidden && !this._disposed) this.setData({ loading: false }); }
+      if (this.authFailure(stamp, error)) return;
+      if (this.current(stamp)) { this._credential = null; this.setData({ error: error.message || '暂时无法加载', canCopy: false }); }
+    } finally { if (this.current(stamp)) this.setData({ loading: false }); }
   },
   async more() {
     if (!this.ready() || !this._cursor) return;
@@ -66,7 +77,7 @@ module.exports = {
       if (!activeInvite || this._credential?.id !== activeInvite.id || activeInvite.status !== 'pending') this._credential = null;
       this._cursor = list.nextCursor || null;
       this.setData({ items: [...byId.values()], activeInvite, hasMore: !!this._cursor, canCopy: !!this._credential });
-    } catch (e) { if (this.current(stamp)) this.setData({ actionError: e.message || '加载失败，请重试' }); }
+    } catch (e) { if (this.authFailure(stamp, e)) return; if (this.current(stamp)) this.setData({ actionError: e.message || '加载失败，请重试' }); }
     finally { if (this.current(stamp)) this.setData({ loadingMore: false }); }
   },
   async mutate(path, body, capture) {
@@ -79,6 +90,7 @@ module.exports = {
       await this.refresh();
       if (notice && this.current({ turn: stamp.turn + 1, token: stamp.token }) && !this.data.error) this.setData({ actionError: notice });
     } catch (e) {
+      if (this.authFailure(stamp, e)) return;
       if (this.current(stamp)) this.setData({ busy: false, needsRefresh: true, actionError: (e.message || '操作结果未确认') + '，请先重新载入核对，勿重复操作。' });
     }
   },
@@ -105,6 +117,7 @@ module.exports = {
       if (!this.current({ turn: stamp.turn + 1, token: stamp.token }) || this.data.error || !this._credential) return;
       await this.generateCard();
     } catch (e) {
+      if (this.authFailure(stamp, e)) return;
       if (this.current(stamp)) this.setData({ busy: false, needsRefresh: true, actionError: (e.message || '邀请结果未确认') + '，请重新载入后重试。' });
     }
   },
@@ -150,7 +163,7 @@ module.exports = {
       ctx.fillText('仅限本人使用 · 24 小时内有效', 170, 970);
       const cardPath = await new Promise((resolve, reject) => wx.canvasToTempFilePath({ canvas, width:750,height:1050,destWidth:750,destHeight:1050,fileType:'png',success:r=>resolve(r.tempFilePath),fail:()=>reject(Error('邀请卡片生成失败')) }, this));
       if (this.current(stamp) && this._credential === secret) this.setData({ cardPath, cardOpen: true });
-    } catch (e) { if (this.current(stamp)) this.setData({ actionError: e.message || '生成邀请卡片失败，请重试' }); }
+    } catch (e) { if (this.authFailure(stamp, e)) return; if (this.current(stamp)) this.setData({ actionError: e.message || '生成邀请卡片失败，请重试' }); }
     finally { if (this.current(stamp)) this.setData({ busy: false }); }
   },
   closeCard() { this.setData({ cardOpen: false }); },

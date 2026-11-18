@@ -40,9 +40,24 @@ Page({
       api.getSession()?.token === owner
     );
   },
+  recoverExpired(owner, turn, error) {
+    // 当前 401 已由 API 清会话；不能再用 token 相等判定，但仍须拒绝旧视图。
+    if ((error.status || error.statusCode) !== 401 || error.staleSession === true ||
+        this._hidden || this._disposed || this._turn !== turn ||
+        this._authOwner !== owner || api.getSession())
+      return false;
+    this.setData({
+      loading: false, busy: false, authorized: false, accounts: [],
+      username: "", password: "", uncertain: false, canRelease: false,
+      error: error.message || "登录已过期，请重新登录。", actionError: "",
+    });
+    wx.reLaunch({ url: "/pages/login/index" });
+    return true;
+  },
   async refresh() {
     const owner = api.getSession()?.token,
       turn = (this._turn = (this._turn || 0) + 1);
+    this._authOwner = owner;
     const p = pending(owner);
     this.setData({
       loading: true,
@@ -99,6 +114,7 @@ Page({
           });
       }
     } catch (e) {
+      if (this.recoverExpired(owner, turn, e)) return;
       if (this.active(owner, turn)) {
         this.setData({ error: e.message });
         if (e.status === 401) wx.reLaunch({ url: "/pages/login/index" });
@@ -163,9 +179,10 @@ Page({
         await this.refresh();
       }
     } catch (e) {
-      const status = e.status || 0;
+      const status = e.status || e.statusCode || 0;
       if (status >= 400 && status < 500 && pendingCreate === p)
         pendingCreate = null;
+      if (this.recoverExpired(owner, turn, e)) return;
       if (this.active(owner, turn))
         this.setData({
           uncertain: pendingCreate === p,
@@ -238,6 +255,7 @@ Page({
         await this.refresh();
       }
     } catch (e) {
+      if (this.recoverExpired(owner, turn, e)) return;
       if (this.active(owner, turn)) {
         this.setData({
           actionError:

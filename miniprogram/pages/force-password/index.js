@@ -36,6 +36,12 @@ Page({
     const owner = api.getSession()?.token,
       turn = (this._turn = (this._turn || 0) + 1);
     this.setData({ loading: true, error: "", errorSource: "", busy: false });
+    let loadError;
+    const current = () =>
+      !this._hidden && !this._disposed && turn === this._turn &&
+      loadError?.staleSession !== true &&
+      (api.getSession()?.token === owner ||
+        ((loadError?.status || loadError?.statusCode) === 401 && !api.getSession()));
     try {
       const session = await api.ensureSession({ allowPasswordChange: true });
       if (!this.active(owner, turn)) return;
@@ -47,14 +53,14 @@ Page({
         throw Error("此账号无法使用密码，请联系系统管理员。");
       this._owner = owner;
     } catch (e) {
-      if (!this._hidden && !this._disposed && turn === this._turn) {
+      loadError = e;
+      if (current()) {
         this.setData({ error: e.message, errorSource: "load" });
-        if (e.status === 401 && !api.getSession())
+        if ((e.status || e.statusCode) === 401 && !api.getSession())
           wx.reLaunch({ url: "/pages/login/index" });
       }
     } finally {
-      if (!this._hidden && !this._disposed && turn === this._turn)
-        this.setData({ loading: false });
+      if (current()) this.setData({ loading: false });
     }
   },
   input(e) {

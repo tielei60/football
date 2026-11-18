@@ -142,11 +142,47 @@ test('赛季返回权限投影拒绝重复与篡改并保留未批准代码',()=
   const extra='\n// 其它业务代码继续冻结\n';
   assert.equal(normalizeSeasonReturn(source+extra),normalizeSeasonReturn(source)+extra);
 });
+// 系统账号当前401恢复：只反向投影完整唯一已审查片段，不改原SHA。
+const systemAuthBlocks=require('./system-accounts-auth-projection.json');
+function normalizeSystemAuth(source){
+ for(const {before,after} of systemAuthBlocks){
+  assert.equal(source.split(after).length,2,'系统账号认证恢复片段必须唯一且完整');
+  source=source.replace(after,before);
+ }
+ return source;
+}
+test('系统账号认证投影拒绝篡改重复，其他源码继续参与哈希',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/system-accounts/index.js'),'utf8');
+ for(const {after} of systemAuthBlocks){
+  assert.throws(()=>normalizeSystemAuth(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!'))));
+  assert.throws(()=>normalizeSystemAuth(source.replace(after,after+after)));
+ }
+ assert.equal(normalizeSystemAuth(source+'\nextra'),normalizeSystemAuth(source)+'\nextra');
+});
+// 强制改密仅归一化加载回执归属，本次不改变密码提交逻辑或规则。
+const passwordLoadBlocks=require('./force-password-load-projection.json');
+function normalizePasswordLoad(source){
+ for(const {before,after} of passwordLoadBlocks){
+  assert.equal(source.split(after).length,2,'改密加载归属片段必须唯一且完整');
+  source=source.replace(after,before);
+ }
+ return source;
+}
+test('改密加载投影拒绝篡改重复并保留其他源码',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/force-password/index.js'),'utf8');
+ for(const {after} of passwordLoadBlocks){
+  assert.throws(()=>normalizePasswordLoad(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!'))));
+  assert.throws(()=>normalizePasswordLoad(source.replace(after,after+after)));
+ }
+ assert.equal(normalizePasswordLoad(source+'\nextra'),normalizePasswordLoad(source)+'\nextra');
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/force-password') businessSource=normalizePasswordLoad(businessSource);
+    if(item==='pages/system-accounts') businessSource=normalizeSystemAuth(businessSource);
     if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
     if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(businessSource);

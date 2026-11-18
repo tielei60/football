@@ -1,0 +1,18 @@
+[
+  {
+    "before": "      api.getSession()?.token === owner\n    );\n  },\n  async refresh() {\n    const owner = api.getSession()?.token,\n      turn = (this._turn = (this._turn || 0) + 1);\n    const p = pending(owner);\n    this.setData({\n      loading: true,\n",
+    "after": "      api.getSession()?.token === owner\n    );\n  },\n  recoverExpired(owner, turn, error) {\n    // 当前 401 已由 API 清会话；不能再用 token 相等判定，但仍须拒绝旧视图。\n    if ((error.status || error.statusCode) !== 401 || error.staleSession === true ||\n        this._hidden || this._disposed || this._turn !== turn ||\n        this._authOwner !== owner || api.getSession())\n      return false;\n    this.setData({\n      loading: false, busy: false, authorized: false, accounts: [],\n      username: \"\", password: \"\", uncertain: false, canRelease: false,\n      error: error.message || \"登录已过期，请重新登录。\", actionError: \"\",\n    });\n    wx.reLaunch({ url: \"/pages/login/index\" });\n    return true;\n  },\n  async refresh() {\n    const owner = api.getSession()?.token,\n      turn = (this._turn = (this._turn || 0) + 1);\n    this._authOwner = owner;\n    const p = pending(owner);\n    this.setData({\n      loading: true,\n"
+  },
+  {
+    "before": "          });\n      }\n    } catch (e) {\n      if (this.active(owner, turn)) {\n        this.setData({ error: e.message });\n        if (e.status === 401) wx.reLaunch({ url: \"/pages/login/index\" });\n",
+    "after": "          });\n      }\n    } catch (e) {\n      if (this.recoverExpired(owner, turn, e)) return;\n      if (this.active(owner, turn)) {\n        this.setData({ error: e.message });\n        if (e.status === 401) wx.reLaunch({ url: \"/pages/login/index\" });\n"
+  },
+  {
+    "before": "        await this.refresh();\n      }\n    } catch (e) {\n      const status = e.status || 0;\n      if (status >= 400 && status < 500 && pendingCreate === p)\n        pendingCreate = null;\n      if (this.active(owner, turn))\n        this.setData({\n          uncertain: pendingCreate === p,\n",
+    "after": "        await this.refresh();\n      }\n    } catch (e) {\n      const status = e.status || e.statusCode || 0;\n      if (status >= 400 && status < 500 && pendingCreate === p)\n        pendingCreate = null;\n      if (this.recoverExpired(owner, turn, e)) return;\n      if (this.active(owner, turn))\n        this.setData({\n          uncertain: pendingCreate === p,\n"
+  },
+  {
+    "before": "        await this.refresh();\n      }\n    } catch (e) {\n      if (this.active(owner, turn)) {\n        this.setData({\n          actionError:\n",
+    "after": "        await this.refresh();\n      }\n    } catch (e) {\n      if (this.recoverExpired(owner, turn, e)) return;\n      if (this.active(owner, turn)) {\n        this.setData({\n          actionError:\n"
+  }
+]
