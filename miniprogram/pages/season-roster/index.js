@@ -113,7 +113,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   if(!this.editable())return;
   if(this.data.rows.some(r=>r.number!==''&&(!/^\d+$/.test(r.number)||Number(r.number)>9999))){this.setData({actionError:'号码为 0–9999 的整数，未知请留空'});return;}
   const payload={revision:this.data.revision,roster:this.data.rows.map(r=>({playerId:r.playerId,number:r.number===''?null:Number(r.number)}))};
-  const epoch=this._epoch,owner=this._owner;
+  const epoch=this._epoch,owner=this._owner,attempt=this._saveAttempt={};
   this.setData({busy:true,actionError:''});
   let outcome;
   try {
@@ -122,7 +122,15 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
    if(this._disposed||epoch!==this._epoch)return;
    outcome={result:await s.api.request('/seasons/'+encodeURIComponent(this.id)+'/roster','PUT',payload)};
   } catch(error){outcome={error};}
-  if(this._disposed||epoch!==this._epoch)return;
+  if(this._disposed||epoch!==this._epoch||this._saveAttempt!==attempt)return;
+  // api 当前401会先清会话；旧代次回执不能接管当前页面。
+  if(outcome?.error?.staleSession===true)return;
+  if(!this._hidden&&owner===this._owner&&!s.api.getSession()&&
+     (outcome?.error?.status||outcome?.error?.statusCode)===401){
+   this._outcome=null;
+   this.setData({busy:false,loading:false,admin:false,rows:[],players:[],candidates:[]});
+   s.fail(this,outcome.error);return;
+  }
   if(owner!==s.api.getSession()?.token){this.setData({busy:false,loading:false,rows:[],players:[],candidates:[],error:'登录身份已变化，请重新打开页面'});return;}
   if(this._hidden)this._outcome=outcome;
   else this.applyOutcome(outcome);

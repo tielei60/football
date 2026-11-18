@@ -1,0 +1,48 @@
+{
+  "js": {
+    "sha256": "bd555a72842a0130aef96c0a45bf9982d4f62ea3c5c8ac93f9b62c91bd3ccd6f",
+    "changes": [
+      {
+        "before": "Page({onHide(){ui.abort(this);},",
+        "after": "Page({onHide(){ui.abort(this);this._hidden=true;this.setData({admin:false,venues:[]});return s.hide.apply(this,arguments);},"
+      },
+      {
+        "before": "error: \"\", venues: [], search: \"\"",
+        "after": "error: \"\", venues: [], search: \"\", admin: false"
+      },
+      {
+        "before": "  onShow() {\n    this.refresh();",
+        "after": "  onShow() {\n    this._hidden = false;\n    return this.refresh();"
+      },
+      {
+        "before": "  refresh() {\n    return s.load",
+        "after": "  refresh() {\n    const owner = s.api.getSession()?.token;\n    this._venueOwner = owner;\n    this.setData({admin:false});\n    return s.load"
+      },
+      {
+        "before": "      if (session.user.role !== \"admin\")",
+        "after": "      if (!owner || owner !== s.api.getSession()?.token) return {};\n      if (session.user.role !== \"admin\")"
+      },
+      {
+        "before": "return { venues: await s.api.request(\"/venues\") };",
+        "after": "return { venues: await s.api.request(\"/venues\"), admin: true };"
+      },
+      {
+        "before": "  create() {\n",
+        "after": "  create() {\n    if (this._disposed || this._hidden || this.data.loading || this.data.error || !this.data.admin || !this._venueOwner || this._venueOwner !== s.api.getSession()?.token) return;\n"
+      },
+      {
+        "before": "  edit(e) {\n",
+        "after": "  edit(e) {\n    if (this._disposed || this._hidden || this.data.loading || this.data.error || !this.data.admin || !this._venueOwner || this._venueOwner !== s.api.getSession()?.token) return;\n"
+      }
+    ]
+  },
+  "wxml": {
+    "sha256": "f0dc99df19faeab51052a723b46f36e7057c8987953b7edc91a1792a68bc8e82",
+    "changes": [
+      {
+        "before": "<view class=\"admin-create-action\">",
+        "after": "<view wx:if=\"{{!loading && !error && admin}}\" class=\"admin-create-action\">"
+      }
+    ]
+  }
+}

@@ -1,9 +1,19 @@
 // ZIP V3 首屏对应：11/13/15、23/25/30、27–29。仅验证展示契约，不代表原生视觉或服务验证。
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const read=(page,ext='wxml')=>fs.readFileSync(path.join(__dirname,'../pages',page,'index.'+ext),'utf8');
+const venueCreate=/<view wx:if="{{!loading && !error && admin}}" class="admin-create-action"><button[^>]*disabled="{{loading}}"[^>]*class="[^"]*ui-block[^"]*"[^>]*bindtap="create"/;
+test('球场新增入口必须完整满足加载、错误与管理员门禁',()=>{
+ const w=read('manage-venues');assert.match(w,venueCreate);
+ for(const condition of ['!loading && !error','!loading && admin','!error && admin','true']) {
+  assert.doesNotMatch(w.replace('!loading && !error && admin',condition),venueCreate);
+ }
+ assert.doesNotMatch(w.replace('wx:if="{{!loading && !error && admin}}" ',''),venueCreate);
+});
 test('管理列表新增操作独立整行，保留事件与禁用',()=>{
  for(const page of ['manage-players','manage-seasons','manage-venues']) {
-  const w=read(page);assert.match(w,/<view class="admin-create-action"><button[^>]*disabled="{{loading}}"[^>]*class="[^"]*ui-block[^"]*"[^>]*bindtap="create"/);
+  const w=read(page);
+  if(page==='manage-venues')assert.match(w,venueCreate);
+  else assert.match(w,/<view class="admin-create-action"><button[^>]*disabled="{{loading}}"[^>]*class="[^"]*ui-block[^"]*"[^>]*bindtap="create"/);
   if(page!=='manage-venues')assert.match(w,/wx:if="{{authorized}}"/);
   assert.match(read(page,'wxss'),/min-height:44px/);
  }

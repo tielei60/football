@@ -1,0 +1,10 @@
+[
+  {
+    "before": "  const epoch=this._epoch,owner=this._owner;",
+    "after": "  const epoch=this._epoch,owner=this._owner,attempt=this._saveAttempt={};"
+  },
+  {
+    "before": "  if(this._disposed||epoch!==this._epoch)return;\n  if(owner!==s.api.getSession()?.token)",
+    "after": "  if(this._disposed||epoch!==this._epoch||this._saveAttempt!==attempt)return;\n  // api 当前401会先清会话；旧代次回执不能接管当前页面。\n  if(outcome?.error?.staleSession===true)return;\n  if(!this._hidden&&owner===this._owner&&!s.api.getSession()&&\n     (outcome?.error?.status||outcome?.error?.statusCode)===401){\n   this._outcome=null;\n   this.setData({busy:false,loading:false,admin:false,rows:[],players:[],candidates:[]});\n   s.fail(this,outcome.error);return;\n  }\n  if(owner!==s.api.getSession()?.token)"
+  }
+]

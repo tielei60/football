@@ -128,6 +128,12 @@ test('球场回执投影拒绝重复、篡改，并保留额外业务代码',()=
   const extra='\n// 额外代码仍受旧基线保护\n';
   assert.equal(normalizeVenueReceipts(source+extra),normalizeVenueReceipts(source)+extra);
 });
+function normalizeSeasonAuth(source) {
+ for(const {before,after} of require('./season-roster-auth-projection.json')) {
+  assert.ok(before&&after);assert.equal(source.split(after).length,2,'赛季阵容认证片段必须唯一完整');source=source.replace(after,before);
+ }
+ return source;
+}
 function normalizeSeasonReturn(source) {
   for (const {before,after} of require('./season-roster-return-projection.json')) {
     assert.equal(source.split(after).length,2,'赛季返回权限变更必须精确且唯一');
@@ -237,17 +243,24 @@ test('赛季恢复标题投影拒绝篡改重复并保留其他源码',()=>{
  }
  assert.equal(normalizeSeasonRestoredTitle(source+'\nextra'),normalizeSeasonRestoredTitle(source)+'\nextra');
 });
+function normalizeVenuesPermission(source,ext){
+ for(const {before,after} of require('./venues-permission-projection.json')[ext].changes){
+  assert.equal(source.split(after).length,2,'球场列表权限片段必须唯一完整');source=source.replace(after,before);
+ }
+ return source;
+}
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
-    assert.equal(hash(markup(item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
+    assert.equal(hash(markup(item==='pages/manage-venues'?normalizeVenuesPermission(read('wxml'),'wxml'):item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
+    if(item==='pages/manage-venues') businessSource=normalizeVenuesPermission(businessSource,'js');
     if(item==='pages/manage-season') businessSource=normalizeSeasonRestoredTitle(businessSource);
     if(item==='pages/force-password') businessSource=normalizePasswordLoad(normalizePasswordSubmit(normalizePasswordGate(businessSource,'js')));
     if(item==='pages/system-accounts') businessSource=normalizeSystemAuth(normalizeSystemCreate(businessSource));
     if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
-    if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(businessSource);
+    if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(normalizeSeasonAuth(businessSource));
     if(item==='pages/manage-player'||item==='pages/manage-season') {
       // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。
       const subject=item==='pages/manage-player'?'球员':'赛季';
