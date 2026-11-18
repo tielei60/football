@@ -474,3 +474,51 @@ for (const pageName of ['me', 'force-password']) for (const receipt of ['network
   assert.match(pageName==='me'?p.data.actionError:p.data.error,/新密码/);
   assert.equal(p.data.busy,false);assert.deepEqual(routes,[]);
 });
+
+test('球员照片真实上传成功后切账号迟到：保留A核对标记、B独立、重登不重复写', async t => {
+  const { readFileSync } = await import('node:fs');
+  const { runInNewContext } = await import('node:vm');
+  const { createRequire } = await import('node:module');
+  const require=createRequire(import.meta.url),f=await fixture(t);
+  const initial=(await f.login()).body;
+  const {player,account}=await setupPlayer(f,initial.token);
+  const storage=new Map([['football.native.session.v1',{...initial,serverOrigin:f.base}]]);
+  let definition,release,submitted,postCount=0,notify;
+  const committed=new Promise(r=>notify=r),routes=[];
+  const photoPath=`/api/players/${player.id}/photos`;
+  const wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),stopPullDownRefresh(){},enableAlertBeforeUnload(){},disableAlertBeforeUnload(){},reLaunch:o=>routes.push(o.url),redirectTo:o=>routes.push(o.url),
+    request(o){const pathname=new URL(o.url).pathname;
+      f.call(pathname,{method:o.method,body:o.data,token:o.header.Authorization?.replace(/^Bearer /,''),headers:{'X-Football-Client':'native-v1'}}).then(result=>{
+        if(pathname===photoPath&&o.method==='POST'){postCount++;submitted=o.data;release=()=>o.success({statusCode:result.status,data:result.body});notify(result);}
+        else o.success({statusCode:result.status,data:result.body});
+      },()=>o.fail({errMsg:'request:fail'}));
+    }};
+  const photoCache={createScope:()=>({}),dispose(){},remove(){},put:(_s,k)=>'wxfile://fixture/'+k,clearAll(){}};
+  const ac={module:{exports:{}},wx,require:n=>n==='../config'?{apiBaseUrl:f.base,allowLocalHttp:true}:n==='./media'?{clearImageCache(){}}:photoCache};
+  runInNewContext(readFileSync(new URL('../miniprogram/utils/api.js',import.meta.url),'utf8'),ac);const api=ac.module.exports;
+  const sc={module:{exports:{}},wx,require:n=>n.endsWith('/api')?api:n.endsWith('/player-initial')?{playerInitial:()=>''}:{imageSource:v=>v}};
+  runInNewContext(readFileSync(new URL('../miniprogram/pages/shared.js',import.meta.url),'utf8'),sc);
+  runInNewContext(readFileSync(new URL('../miniprogram/pages/player-photos/index.js',import.meta.url),'utf8'),{wx,Page:p=>definition=p,require:n=>n.endsWith('/shared')?sc.module.exports:n.endsWith('/player-photo-cache')?photoCache:n.endsWith('/ui')?{abort(){}}:n.endsWith('/text-draft')?require('../miniprogram/utils/text-draft.js'):{apiBaseUrl:f.base}});
+  const page=()=>({...definition,id:player.id,data:structuredClone(definition.data),setData(patch){for(const [key,v] of Object.entries(patch)){const parts=key.replace(/\[(\d+)\]/g,'.$1').split('.');let obj=this.data;for(const p of parts.slice(0,-1))obj=obj[p];obj[parts.at(-1)]=v;}}});
+  const a=page();await a.refresh();assert.equal(a.data.admin,true);
+  const sharp=createRequire(new URL('../app/package.json',import.meta.url))('sharp');
+  const png='data:image/png;base64,'+(await sharp({create:{width:16,height:12,channels:3,background:'#8845a0'}}).png().toBuffer()).toString('base64');
+  a._image=png;a.setData({preview:'wxfile://fixture/picked',caption:'匿名几何样本'});
+  const work=a.upload();const receipt=await committed;assert.equal(receipt.status,201,JSON.stringify(receipt.body));
+  await api.beginLogin(account.username,account.password).promise;
+  const b=page();await b.refresh();assert.equal(b.data.admin,false);assert.equal(b.data.recoveryBlocked,false);
+  release();await work;
+  const guards=()=>[...storage.entries()].filter(([k])=>k.startsWith('football.player-photo.pending:'));
+  assert.equal(guards().length,1);assert.equal(guards()[0][1].requestId,submitted.requestId);
+  assert.equal(api.getSession().user.username,account.username);assert.equal(b.data.recoveryBlocked,false);
+  await api.beginLogin(credentials.username,credentials.password).promise;
+  const reopened=page();await reopened.refresh();assert.equal(reopened.data.recoveryBlocked,true);assert.equal(reopened.data.uncertain,false);
+  reopened._image=png;await reopened.upload();assert.equal(postCount,1);
+  const before=(await f.call(photoPath,{token:api.getSession().token})).body;
+  assert.equal(before.photos.length,1);assert.equal(before.photos[0].caption,'匿名几何样本');
+  const replay=await f.call(photoPath,{method:'POST',token:api.getSession().token,body:submitted});
+  assert.ok(replay.status>=200&&replay.status<300);
+  const after=(await f.call(photoPath,{token:api.getSession().token})).body;
+  assert.equal(after.photos.length,1);assert.equal(after.revision,before.revision);
+  assert.deepEqual(after.photos,before.photos);assert.equal(guards().length,1);assert.deepEqual(routes,[]);
+});

@@ -14,5 +14,9 @@
   {
     "before": "        !this._disposed &&\n        epoch === this._epoch &&\n        this._writeAttempt === attempt\n      )\n        this.setData({ busy: false });\n    }\n  },\n  captionInput(e) {\n",
     "after": "        !this._disposed &&\n        epoch === this._epoch &&\n        this._writeAttempt === attempt\n      ) {\n        this.setData({ busy: false });\n        if (this._roleRefreshPending && !this._hidden &&\n            token === this._owner && token === s.api.getSession()?.token)\n          await this.refresh();\n      }\n    }\n  },\n  captionInput(e) {\n"
+  },
+  {
+    "before": "if (status >= 400 && status < 500) {",
+    "after": "if (status >= 400 && status < 500 && e.staleSession !== true) {"
   }
 ]

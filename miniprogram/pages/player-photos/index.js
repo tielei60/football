@@ -703,7 +703,7 @@ Page({
           return result;
         } catch (e) {
           const status = e.status || e.statusCode || 0;
-          if (status >= 400 && status < 500) {
+          if (status >= 400 && status < 500 && e.staleSession !== true) {
             clear(receiptKey, p.requestId);
             drop(p);
           }

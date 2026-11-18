@@ -571,3 +571,17 @@ test('声明小文件但读到超限字节仍拒绝，不写预览',async()=>{
 test('9张容量不发起新的上传请求',async()=>{
  const h=fixture();await h.page.refresh();h.page.setData({photos:Array.from({length:9},(_,id)=>({id,caption:'',draft:''}))});image(h.page);await h.page.upload();assert.equal(h.posts.length,0);assert.equal(h.storage.size,0);
 });
+
+test('旧上传staleSession保留原账号核对标记，B不受阻、A重登不自动再POST', async () => {
+  let active={...session,token:'A'},posted=0;
+  const h=fixture({getSession:()=>active,ensureSession:async()=>active,request:async (url,method)=>{
+    if(method==='POST'){posted++;active={...session,user:{...session.user,id:2},token:'B'};throw Object.assign(Error('会话已切换'),{status:401,staleSession:true});}
+    return url.endsWith('/photos')?listing:{dataUrl:'data:image/png;base64,iVBORw0KGgoBAgME'};
+  }});
+  await h.page.refresh();image(h.page);await h.page.upload();
+  assert.equal(h.storage.size,1);
+  const b=h.newPage();b.id='p1';await b.refresh();assert.equal(b.data.recoveryBlocked,false);assert.equal(b.data.uncertain,false);
+  active={...session,token:'A-new'};
+  const a=h.newPage();a.id='p1';await a.refresh();assert.equal(a.data.recoveryBlocked,true);assert.equal(a.data.uncertain,false);
+  image(a);await a.upload();assert.equal(posted,1);assert.equal(h.storage.size,1);
+});
