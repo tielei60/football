@@ -75,7 +75,7 @@ Page({
   async submit() {
     const owner = this._owner,
       turn = this._turn;
-    if (!this.active(owner, turn) || this.data.busy || this.data.loading)
+    if (!this.active(owner, turn) || this.data.busy || this.data.loading || this.data.errorSource === "load")
       return;
     const currentPassword = this.data.currentPassword,
       newPassword = this.data.newPassword;
@@ -92,11 +92,19 @@ Page({
       return;
     }
     this.setData({ busy: true, error: "", errorSource: "" });
+    let submitError, completed = false;
+    const current = () =>
+      !this._hidden && !this._disposed && turn === this._turn &&
+      submitError?.staleSession !== true &&
+      (api.getSession()?.token === owner ||
+        (!api.getSession() && (completed ||
+          (submitError?.status || submitError?.statusCode) === 401)));
     try {
       await api.request("/auth/password", "PUT", {
         currentPassword,
         newPassword,
       });
+      completed = true;
       if (api.getSession()?.token === owner) api.clearSession();
       if (
         !this._hidden &&
@@ -106,6 +114,8 @@ Page({
       )
         wx.reLaunch({ url: "/pages/login/index" });
     } catch (e) {
+      submitError = e;
+      if (!current()) return;
       if (this.active(owner, turn))
         this.setData({
           errorSource: "submit",
@@ -116,11 +126,11 @@ Page({
         !this._disposed &&
         turn === this._turn &&
         !api.getSession() &&
-        e.status === 401
+        (e.status || e.statusCode) === 401
       )
         wx.reLaunch({ url: "/pages/login/index" });
     } finally {
-      if (!this._hidden && !this._disposed && turn === this._turn)
+      if (current())
         this.setData({
           busy: false,
           currentPassword: "",

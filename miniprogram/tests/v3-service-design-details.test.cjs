@@ -14,8 +14,22 @@ test('照片分组投影拒绝篡改和重复，保留额外事件',()=>{
  const w=read('player-photos');assert.throws(()=>photoActionOrder(w.replace('bindtap="remove"','bindtap="unsafe"')));
  assert.throws(()=>photoActionOrder(w+w));assert.ok(photoActionOrder(w+'<button bindtap="other"/>').includes('bindtap="other"'));
 });
+// 初始化失败的唯一提交门禁已专项验证；原 SHA 保持不变。
+function passwordLoadGate(source){
+ for(const {before,after} of require('./force-password-load-gate-projection.json').filter(b=>b.ext==='wxml')){
+  assert.equal(source.split(after).length,2,'改密提交门禁必须完整且唯一');
+  source=source.replace(after,before);
+ }
+ return source;
+}
+test('改密门禁投影拒绝篡改重复并保留额外事件',()=>{
+ const w=read('force-password'),{after}=require('./force-password-load-gate-projection.json').find(b=>b.ext==='wxml');
+ assert.throws(()=>passwordLoadGate(w.replace(after,after.replace('loading || ',''))));
+ assert.throws(()=>passwordLoadGate(w+w));
+ assert.ok(passwordLoadGate(w+'<button bindtap="other"/>').includes('bindtap="other"'));
+});
 for(const [page,digest] of Object.entries(expected)) test(`${page} 保留业务绑定和守卫`,()=>{
-const source=page==='player-photos'?photoActionOrder(read(page)):read(page);
+const source=page==='player-photos'?photoActionOrder(read(page)):page==='force-password'?passwordLoadGate(read(page)):read(page);
 const attrs=[...source.matchAll(/\s((?:bind[\w:]*|catch[\w:]*|wx:if|wx:elif|wx:else|wx:for|wx:key|disabled|data-[\w-]+|loading|hidden|value|password|maxlength)(?:="[^"]*")?)(?=[\s\/>])/g)].map(m=>m[1]);
 assert.equal(crypto.createHash('sha256').update(attrs.join('\n')).digest('hex'),digest);
 });

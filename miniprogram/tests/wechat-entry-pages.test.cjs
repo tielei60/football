@@ -220,3 +220,46 @@ test("new entry markup is narrowly capability-gated and password ability is chec
   );
   assert.match(css, /\.wechat-entry\s*\{\s*padding-top:\s*0;?\s*\}/);
 });
+
+test('认领忙碌时双击与状态/登录入口不重复发起微信操作', async () => {
+  let resolve, attempts = 0;
+  const h = page('wechat-claim', { beginWechat: () => {
+    attempts++;
+    return { promise: new Promise(r => { resolve = r; }), cancel() {} };
+  } });
+  h.p.onLoad({ credential: code }); await h.p.onShow();
+  const first = h.p.submit();
+  await h.p.submit(); await h.p.status(); await h.p.login(); h.p.back();
+  assert.equal(attempts, 1); assert.equal(h.p.data.busy, true);
+  assert.equal(h.calls.length, 0);
+  resolve(result); await first;
+  assert.equal(h.p.data.busy, false); assert.equal(h.p.data.status, 'claimed');
+});
+
+test('认领限流提示主动重试且保留邀请码，不自动发起第二次请求', async () => {
+  let attempts = 0;
+  const h = page('wechat-claim', { beginWechat: () => {
+    attempts++;
+    return { promise: Promise.reject(Object.assign(Error('限流'), { status: 429 })), cancel() {} };
+  } });
+  h.p.onLoad({ credential: code }); await h.p.onShow(); await h.p.submit();
+  await Promise.resolve();
+  assert.equal(attempts, 1); assert.equal(h.p.data.busy, false);
+  assert.equal(h.p.data.showInput, true); assert.equal(h.p._credential, code);
+  assert.equal(h.p.data.actionError, '操作较频繁，请稍后主动重试。');
+  assert.equal(h.calls.length, 0);
+});
+
+test('认领能力加载失败阻止提交，主动重试成功后仅显式提交才发起认领', async () => {
+  let capabilities = 0, attempts = 0;
+  const h = page('wechat-claim', {
+    capabilities: async () => { if (++capabilities === 1) throw Error('network'); return { wechat: true }; },
+    beginWechat: () => { attempts++; return { promise: Promise.resolve(result), cancel() {} }; }
+  });
+  h.p.onLoad({ credential: code }); await h.p.onShow();
+  assert.equal(h.p.data.loading, false); assert.match(h.p.data.error, /请重试/);
+  await h.p.submit(); assert.equal(attempts, 0);
+  await h.p.refresh(); assert.equal(capabilities, 2); assert.equal(h.p.data.error, '');
+  assert.equal(h.p.data.enabled, true); assert.equal(attempts, 0);
+  await h.p.submit(); assert.equal(attempts, 1); assert.equal(h.p.data.status, 'claimed');
+});

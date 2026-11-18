@@ -98,3 +98,44 @@ test('无会话直接进入邀请页也结束载入并返回登录', async()=>{
   const f=setup({api:{ensureSession:async()=>{throw Object.assign(Error('请先登录'),{status:401})}}});
   f.setSession(null); await f.page.onShow(); assert.equal(f.failures.length,1); assert.equal(f.page.data.loading,false);
 });
+
+// 阶段24：补公开能力请求及同账号刷新代次，不重复已有换账号矩阵。
+for (const clear of [false,true]) test('能力请求401会话'+(clear?'已清理':'仍保留')+'按当前状态恢复',async()=>{
+  const f=setup(); let reject;
+  f.api.capabilities=()=>new Promise((r,j)=>{reject=j});
+  const work=f.page.onShow();for(let i=0;i<10&&!reject;i++)await Promise.resolve();
+  if(clear)f.setSession(null);
+  reject(Object.assign(Error('能力请求被拒绝'),{status:401}));await work;
+  assert.equal(f.page.data.loading,false);assert.equal(f.page.data.authorized,false);
+  assert.equal(f.failures.length,clear?1:0);assert.equal(f.page.data.error,'能力请求被拒绝');
+  assert.equal(f.requests.length,0);
+});
+for(const operation of ['refresh','create','mutate','more','generateCard'])test(operation+' statusCode401仍可结束等待',async()=>{
+  const f=setup();await f.page.onShow();
+  if(operation==='more')f.page._cursor='cursor';
+  if(operation==='generateCard'){f.page._credential={id:f.active.id,value:'b'.repeat(64)};f.page.setData({canCopy:true,activeInvite:f.active});}
+  f.api.request=async()=>{f.setSession(null);throw Object.assign(Error('会话失效'),{statusCode:401});};
+  await(operation==='mutate'?f.page.mutate('/test',{}):f.page[operation]());
+  assert.equal(f.failures.length,1);assert.equal(f.page.data.loading,false);
+  assert.equal(f.page.data.busy,false);assert.equal(f.page.data.loadingMore,false);
+});
+for(const late of ['success','error','401'])test('同账号双刷新旧能力'+late+'不覆盖新结果',async()=>{
+  const f=setup();let resolve,reject,calls=0;
+  f.api.capabilities=()=>++calls===1?new Promise((r,j)=>{resolve=r;reject=j}):Promise.resolve({wechat:true});
+  const old=f.page.onShow();for(let i=0;i<10&&!resolve;i++)await Promise.resolve();
+  await f.page.refresh();const before=structuredClone(f.page.data);
+  if(late==='success')resolve({wechat:false});
+  else reject(Object.assign(Error('旧能力错误'),late==='401'?{status:401}:{}));
+  await old;assert.deepEqual(f.page.data,before);assert.equal(f.failures.length,0);
+  assert.equal(f.page.data.authorized,true);assert.equal(f.page.data.enabled,true);
+});
+test('同账号新刷新未完成时旧401不能结束其骨架或跳转',async()=>{
+  const f=setup();let firstReject,secondResolve,calls=0;
+  f.api.ensureSession=()=>new Promise((resolve,reject)=>{if(++calls===1)firstReject=reject;else secondResolve=resolve;});
+  const old=f.page.onShow(),fresh=f.page.refresh();f.setSession(null);
+  firstReject(Object.assign(Error('旧401'),{status:401}));await old;
+  assert.equal(f.failures.length,0);assert.equal(f.page.data.loading,true);assert.equal(f.page.data.error,'');
+  f.setSession({token:'fictional-admin',user:{id:1,role:'admin'},team:{id:1}});
+  secondResolve({user:{id:1,role:'admin'},team:{id:1}});await fresh;
+  assert.equal(f.page.data.authorized,true);assert.equal(f.page.data.loading,false);
+});

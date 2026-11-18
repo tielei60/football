@@ -15,7 +15,7 @@
       <input class="input" password maxlength="200" value="{{confirmation}}" placeholder="重复输入新密码" data-field="confirmation" bindinput="input" disabled="{{busy}}"/>
     </view>
     <view wx:if="{{errorSource==='submit' && error}}" class="error" aria-role="alert" aria-live="assertive">{{error}}</view>
-    <button size="mini" class="primary ui-button ui-block" bindtap="submit" disabled="{{busy}}" loading="{{busy}}">修改并重新登录</button>
+    <button size="mini" class="primary ui-button ui-block" bindtap="submit" disabled="{{busy || loading || errorSource==='load'}}" loading="{{busy}}">修改并重新登录</button>
     <button size="mini" class="ui-button ui-block section password-logout" bindtap="logout" disabled="{{busy}}">退出账号</button>
   </view>
 </view>

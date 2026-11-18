@@ -176,12 +176,44 @@ test('改密加载投影拒绝篡改重复并保留其他源码',()=>{
  }
  assert.equal(normalizePasswordLoad(source+'\nextra'),normalizePasswordLoad(source)+'\nextra');
 });
+const passwordSubmitBlocks=require('./force-password-submit-projection.json');
+function normalizePasswordSubmit(source){
+ for(const {before,after} of passwordSubmitBlocks){
+  assert.equal(source.split(after).length,2,'改密提交归属片段必须唯一且完整');
+  source=source.replace(after,before);
+ }
+ return source;
+}
+test('改密提交投影拒绝篡改重复并保留其他源码',()=>{
+ const source=normalizePasswordGate(fs.readFileSync(path.join(root,'pages/force-password/index.js'),'utf8'),'js');
+ for(const {after} of passwordSubmitBlocks){
+  assert.throws(()=>normalizePasswordSubmit(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!'))));
+  assert.throws(()=>normalizePasswordSubmit(source.replace(after,after+after)));
+ }
+ assert.equal(normalizePasswordSubmit(source+'\nextra'),normalizePasswordSubmit(source)+'\nextra');
+});
+const passwordGateBlocks=require('./force-password-load-gate-projection.json');
+function normalizePasswordGate(source,ext){
+ for(const change of passwordGateBlocks.filter(b=>b.ext===ext)){
+  assert.equal(source.split(change.after).length,2,'改密初始化门禁必须唯一且完整');
+  source=source.replace(change.after,change.before);
+ }
+ return source;
+}
+test('改密初始化门禁投影拒绝篡改重复并保留其他源码',()=>{
+ for(const {ext,after} of passwordGateBlocks){
+  const source=fs.readFileSync(path.join(root,'pages/force-password/index.'+ext),'utf8');
+  assert.throws(()=>normalizePasswordGate(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!')),ext));
+  assert.throws(()=>normalizePasswordGate(source.replace(after,after+after),ext));
+  assert.equal(normalizePasswordGate(source+'\nextra',ext),normalizePasswordGate(source,ext)+'\nextra');
+ }
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
-    assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
+    assert.equal(hash(markup(item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
-    if(item==='pages/force-password') businessSource=normalizePasswordLoad(businessSource);
+    if(item==='pages/force-password') businessSource=normalizePasswordLoad(normalizePasswordSubmit(normalizePasswordGate(businessSource,'js')));
     if(item==='pages/system-accounts') businessSource=normalizeSystemAuth(businessSource);
     if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);

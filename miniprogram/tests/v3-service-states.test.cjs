@@ -31,7 +31,7 @@ test('首次改密保留原错误及提交保护，无权限只翻译已知拒�
  const force=read('force-password'),system=read('system-accounts');
  assert.ok(force.includes('error="{{errorSource===\'load\'?error:\'\'}}"'));assert.match(force,/<page-state[^>]*bind:retry="refresh"/);
  assert.ok(force.includes('<view wx:if="{{errorSource===\'submit\' && error}}" class="error" aria-role="alert" aria-live="assertive">{{error}}</view>'));
- assert.match(force,/bindtap="submit" disabled="{{busy}}" loading="{{busy}}"/);
+ assert.match(force,/bindtap="submit" disabled="{{busy \|\| loading \|\| errorSource==='load'}}" loading="{{busy}}"/);
  for(const field of ['currentPassword','newPassword','confirmation']) assert.ok(force.includes('value="{{'+field+'}}"'));
  assert.match(system,/wx:if="{{!loading && error==='仅系统管理员可以管理账号。'}}" class="card access-denied"/);
  assert.match(system,/<page-state wx:else loading="{{loading}}" error="{{error}}" skeleton-type="list" bind:retry="refresh"/);
