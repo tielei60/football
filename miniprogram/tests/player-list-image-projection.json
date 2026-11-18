@@ -1,0 +1,18 @@
+{
+  "js": [
+    {
+      "before": "",
+      "after": "      const imageEpoch = this._epoch;\n"
+    },
+    {
+      "before": "      return { players, status, statusInitialized:true, visible: this.filter(players,status) };\n",
+      "after": "      return { imageEpoch, players, status, statusInitialized:true, visible: this.filter(players,status) };\n"
+    }
+  ],
+  "wxml": [
+    {
+      "before": "data-target=\"list\" data-index=\"{{index}}\"",
+      "after": "data-target=\"list\" data-index=\"{{index}}\" data-id=\"{{item.id}}\" data-src=\"{{item.avatar}}\" data-epoch=\"{{imageEpoch}}\""
+    }
+  ]
+}

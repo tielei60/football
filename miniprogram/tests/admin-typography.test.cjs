@@ -255,9 +255,16 @@ function normalizeVenuesPermission(source,ext){
  }
  return source;
 }
+function normalizePlayerListImage(source,ext){
+ for(const {before,after} of require('./player-list-image-projection.json')[ext]){assert.equal(source.split(after).length,2,'列表图片身份片段必须完整且唯一');source=source.replace(after,before);}return source;
+}
+test('列表图片保护投影拒绝篡改重复并保留额外代码',()=>{
+ for(const ext of ['js','wxml']){const source=fs.readFileSync(path.join(root,'pages/manage-players/index.'+ext),'utf8');for(const {after} of require('./player-list-image-projection.json')[ext]){assert.throws(()=>normalizePlayerListImage(source.replace(after,after.replace(/\S/,'!')),ext));assert.throws(()=>normalizePlayerListImage(source.replace(after,after+after),ext));}assert.equal(normalizePlayerListImage(source+'\nextra',ext),normalizePlayerListImage(source,ext)+'\nextra');}
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+      if(item==='pages/manage-players'&&['js','wxml'].includes(ext))source=normalizePlayerListImage(source,ext);
       if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
       if(item==='pages/match-edit'&&ext==='wxml')for(const {before,after} of require('./match-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'比赛已存在核对入口必须精确且唯一');source=source.replace(after,before);}
       for(const {before,after} of require('./admin-create-persistent-projection.json')[item+'/index.'+ext]||[]){assert.equal(source.split(after).length,2,'阶段40新增恢复入口必须精确唯一');source=source.replace(after,before);}

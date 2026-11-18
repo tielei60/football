@@ -28,12 +28,13 @@ Page({onHide(){a.hide.call(this);},
       });
     }
     return a.load(this, async () => {
+      const imageEpoch = this._epoch;
       const players = (await a.s.api.request("/players")).map((p) => ({
         ...a.s.playerView(p),
         hasAccount: p.hasAccount,
       }));
       const status = this.data.statusInitialized ? this.data.status : !players.some(p=>p.status==="active"&&p.membershipConfirmed!==false)&&players.some(p=>p.membershipConfirmed===false) ? "unconfirmed" : "active";
-      return { players, status, statusInitialized:true, visible: this.filter(players,status) };
+      return { imageEpoch, players, status, statusInitialized:true, visible: this.filter(players,status) };
     });
   },
   filter(rows, status=this.data.status) {

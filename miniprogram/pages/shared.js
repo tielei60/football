@@ -117,9 +117,22 @@ function imageError(event) {
   if (target === "team") this.setData({ "team.crest": "" });
   if (target === "player") this.setData({ "player.avatar": "" });
   if (target === "list") {
-    const index = Number(event.currentTarget.dataset.index);
-    if (Number.isInteger(index) && this.data.visible[index])
-      this.setData({ ["visible[" + index + "].avatar"]: "" });
+    if (this._disposed || this._hidden || this.data.loading || this.data.error) return;
+    const { id, src, epoch } = event.currentTarget.dataset;
+    if (epoch !== this._epoch || !this._filterOwner || this._filterOwner !== api.getSession()?.token) return;
+    if (id == null || typeof src !== "string" || !src) return;
+    // Lists are serialized separately by setData. Update both projections by
+    // identity + image source, never by an index that can change after filtering.
+    const patch = {};
+    for (const key of ["players", "visible"]) {
+      const rows = this.data[key];
+      if (!Array.isArray(rows)) continue;
+      rows.forEach((row, index) => {
+        if (row.id === id && row.avatar === src)
+          patch[key + "[" + index + "].avatar"] = "";
+      });
+    }
+    if (Object.keys(patch).length) this.setData(patch);
   }
 }
 function hide() {
