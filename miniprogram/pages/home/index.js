@@ -56,7 +56,7 @@ Page({
           : null,
         recent: matches
           .filter((m) => m.status === "completed")
-          .sort((a, b) => b.date.localeCompare(a.date))
+          .sort((a, b) => (b.date + (b.kickoff || "")).localeCompare(a.date + (a.kickoff || "")))
           .slice(0, 3)
           .map((m) => ({ ...s.matchView(m, session.user.playerId), ...resultView(m) })),
       };
