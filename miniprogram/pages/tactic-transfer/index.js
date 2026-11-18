@@ -14,7 +14,7 @@ function writeGuard(key,taskName){wx.setStorageSync(key,{taskName,createdAt:Date
 function clearGuard(key,taskName){if(readGuard(key)?.taskName===taskName){wx.removeStorageSync(key);if(readGuard(key))throw new Error('无法清除核对记录，请重新打开后核对。');}}
 function name(){return 'native-import-'+Date.now().toString(36)+'-'+Array.from({length:4},()=>Math.random().toString(36).slice(2)).join('');}
 Page({
- data:{loading:true,error:'',admin:false,busy:false,actionError:'',message:'',fileName:'',tacticCount:0,versionCount:0,pending:false,exportReady:false,recoveryBlocked:false},
+ data:{loading:true,error:'',admin:false,busy:false,actionError:'',message:'',fileName:'',tacticCount:0,versionCount:0,pending:false,exportReady:false,recoveryBlocked:false,namedCollection:false,asCopy:false},
  onLoad(){},
  onHide(){ui.abort(this);this._showTurn=(this._showTurn||0)+1;this._hidden=true;this.setData({loading:true});},
  onShow(){this._hidden=false;return this.refresh();},
@@ -28,17 +28,18 @@ Page({
    const session=await s.api.ensureSession(),token=s.api.getSession()?.token;
    if(!owned())return;
    if(session.user.role!=='admin')throw new Error('仅管理员可以导入或导出战术。');
-   if(this._owner&&this._owner!==token){this.cleanup();this._collection=null;this._selection=(this._selection||0)+1;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',busy:false,exportReady:false,pending:false});}
+   if(this._owner&&this._owner!==token){this.setData({namedCollection:false,asCopy:false});this.cleanup();this._collection=null;this._selection=(this._selection||0)+1;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',busy:false,exportReady:false,pending:false});}
    this._owner=token;this._guardKey=guardKey(s.api.getSession());const guard=readGuard(this._guardKey),task=pendingFor(token);
    this.setData({recoveryBlocked:!!guard&&!task});
-   if(task){this._collection=task.collection;this.setData({fileName:task.fileName,tacticCount:task.collection.tactics.length,versionCount:task.collection.versions.length,pending:true});}
+   if(task){this._collection=task.collection;this.setData({namedCollection:typeof task.collection.collectionName==='string'&&task.collection.collectionName.length>0,asCopy:!!task.asCopy,fileName:task.fileName,tacticCount:task.collection.tactics.length,versionCount:task.collection.versions.length,pending:true});}
    if(!task&&this.data.pending){this._collection=null;this.setData({fileName:"",pending:false,message:"上次导入已结束，请到战术列表核对结果。"});}
    this.setData({admin:true});
-  }catch(e){const current=s.api.getSession();if(!e.staleSession&&active()&&(current?.token===requestToken||([401,403].includes(e.status||e.statusCode)&&!current))){this._collection=null;this.cleanup();this.setData({admin:false,fileName:'',tacticCount:0,versionCount:0,message:'',exportReady:false});s.fail(this,e);}}
+  }catch(e){const current=s.api.getSession();if(!e.staleSession&&active()&&(current?.token===requestToken||([401,403].includes(e.status||e.statusCode)&&!current))){this._collection=null;this.cleanup();this.setData({namedCollection:false,asCopy:false,admin:false,fileName:'',tacticCount:0,versionCount:0,message:'',exportReady:false});s.fail(this,e);}}
   finally{if(owned()||(active()&&!s.api.getSession()))this.setData({loading:false});}
  },
  valid(token=this._owner){return !this._disposed&&this._owner===token&&s.api.getSession()?.token===token;},
  ready(){return this.valid()&&this.data.admin&&!this.data.busy&&!this.data.loading&&!this.data.error&&!this._hidden;},
+ toggleCopy(){if(!this.ready()||this.data.pending||this.data.recoveryBlocked||pendingFor(this._owner)||!this.data.namedCollection)return;this.setData({asCopy:!this.data.asCopy});},
  choose(){
   if(!this.ready()||this.data.recoveryBlocked||pendingFor(this._owner))return;
   try{if(readGuard(this._guardKey)){this.setData({recoveryBlocked:true});return;}}catch(e){this.setData({actionError:e.message});return;}
@@ -48,12 +49,12 @@ Page({
   wx.chooseMessageFile({count:1,type:'file',extension:['json'],success:r=>{
    if(!current())return;
    const file=r.tempFiles?.[0];if(!file)return;
-   this._collection=null;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',pending:false,busy:false});
+   this._collection=null;this.setData({namedCollection:false,asCopy:false,fileName:'',tacticCount:0,versionCount:0,message:'',actionError:'',pending:false,busy:false});
    if(!/\.json$/i.test(file.name||'')||!Number.isFinite(file.size)||file.size<=0||file.size>transfer.MAX_BYTES){this.setData({actionError:'请选择不超过 8 MiB 的 JSON 备份。'});return;}
    this.setData({busy:true,actionError:''});
    wx.getFileSystemManager().readFile({filePath:file.path,encoding:'utf8',success:r=>{
     if(!current())return;
-    try{this._collection=transfer.parse(r.data);this.setData({fileName:file.name,tacticCount:this._collection.tactics.length,versionCount:this._collection.versions.length,pending:false,message:'已在本地校验，尚未导入。'});}
+    try{this._collection=transfer.parse(r.data);this.setData({namedCollection:transfer.importName(this._collection)!==undefined,asCopy:false,fileName:file.name,tacticCount:this._collection.tactics.length,versionCount:this._collection.versions.length,pending:false,message:'已在本地校验，尚未导入。'});}
     catch(e){this._collection=null;this.setData({fileName:'',tacticCount:0,versionCount:0,message:'',actionError:e.message});}
    },fail:()=>{if(current())this.setData({actionError:'无法读取文件，请重新选择。'});},
    complete:()=>{if(current())this.setData({busy:false});}});
@@ -61,9 +62,11 @@ Page({
  },
  importFile(){
   if(!this.ready()||this.data.recoveryBlocked||!this._collection)return;
-  const owner=this._owner,collection=this._collection;
-  ui.showModal(this,{title:'追加导入战术',content:'将新增 '+collection.tactics.length+' 套战术及 '+collection.versions.length+' 个历史版本，不覆盖现有模板。是否继续？',success:r=>{
-   if(r.confirm&&this.ready()&&this.valid(owner)&&collection===this._collection)this.executeImport();
+  const owner=this._owner,collection=this._collection,asCopy=this.data.asCopy,task=pendingFor(owner);
+  let named;try{named=transfer.importName(collection)!==undefined;}catch(e){if(!task){this.setData({actionError:e.message});return;}}
+  const mode=task?'将使用原任务核对并重试，不创建新任务。':named&&!asCopy?'将沿用文件导入名称：相同内容不重复新增；名称相同但内容不同将停止并提示核对。':asCopy?'将创建独立副本，即使此前导入过本文件也会追加。':'此文件没有导入名称，将作为新的追加任务导入。';
+  ui.showModal(this,{title:task?'核对并重试导入':asCopy?'导入独立副本':'确认导入战术',content:mode+' 文件包含 '+collection.tactics.length+' 套战术及 '+collection.versions.length+' 个历史版本，不覆盖现有模板。是否继续？',success:r=>{
+   if(r.confirm&&this.ready()&&this.valid(owner)&&collection===this._collection&&asCopy===this.data.asCopy)this.executeImport();
   }});
  },
  async executeImport(){
@@ -71,7 +74,7 @@ Page({
   const owner=this._owner;let task=pendingFor(owner);
   if(task?.inFlight)return;
   if(this.data.pending&&!task){this._collection=null;this.setData({pending:false,fileName:"",message:"上次导入已结束，请到战术列表核对。"});return;}
-  if(!task)task={token:owner,fileName:this.data.fileName,collection:this._collection,collectionName:name(),inFlight:false};
+  if(!task){let originalName;try{originalName=transfer.importName(this._collection);}catch(e){this.setData({actionError:e.message});return;}const asCopy=originalName!==undefined&&this.data.asCopy;task={token:owner,fileName:this.data.fileName,collection:this._collection,collectionName:originalName!==undefined&&!asCopy?originalName:name(),asCopy,inFlight:false};}
   this.setData({busy:true,actionError:'',message:''});
   let dispatched=false;
   try{
@@ -95,7 +98,7 @@ Page({
       :!result.receiptVerification&&result.importedCount===0
        ?'本次未新增战术，无法核验历史内容。请到战术列表核对。'
        :'导入已确认，新增 '+result.importedCount+' 套战术。';
-    this._collection=null;this.setData({fileName:'',pending:false,message});
+    this._collection=null;this.setData({namedCollection:false,asCopy:false,fileName:'',pending:false,message});
    }
   }catch(e){
    const code=e.status||e.statusCode||0;

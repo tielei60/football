@@ -8,8 +8,9 @@ const attributes=s=>Array.from(s.matchAll(/\s((?:(?:wx|bind|catch):?[\w-]+|(?:da
 test('v3 七个战术页业务代码和全部绑定条件保持已审基线',()=>{
  assert.equal(Object.keys(baseline).length,7);
  for(const [page,b] of Object.entries(baseline)) {
-  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
+  assert.equal(hash(page==='tactic-compose'?require('./tactic-workspace-contract.cjs').restoreJS(read(page,'js')):page==='tactic-board'?require('./v3-board-scroll-navigation-contract.cjs').restoreJS(read(page,'js')):page==='tactic-transfer'?require('./tactic-transfer-named-contract.cjs').restoreJS(read(page,'js')):read(page,'js')),b.js,page+' original JS');
   let markup=read(page,'wxml');
+  if(page==='tactic-transfer')markup=require('./tactic-transfer-named-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-compose')markup=require('./tactic-workspace-contract.cjs').restoreMarkup(markup);
   if(page==='tactic-board') {
    // 第八阶段只增加身份文字节点，不更改原操作守卫；精确剔除这三个展示条件。

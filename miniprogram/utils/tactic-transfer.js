@@ -45,6 +45,7 @@ function validate(value){
 }
 // 导入会触发服务端每套50个历史版本的保留策略；本地先拒绝，避免静默丢历史。
 function checkImportVersions(value){const counts=new Map();for(const v of value.versions){const count=(counts.get(v.tacticNumber)||0)+1;counts.set(v.tacticNumber,count);if(count>50)throw new Error('单套战术超过 50 个历史版本，为避免版本丢失，本次未导入。请先保留原备份并拆分整理。');}}
-function parse(content){if(typeof content!=='string'||content.length>MAX_BYTES||bytes(content)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端处理。');let value;try{value=JSON.parse(content.replace(/^\uFEFF/,''));}catch(_){throw new Error('请选择有效的 JSON 战术备份文件。');}validate(value);checkImportVersions(value);return value;}
+function importName(value){if(!Object.prototype.hasOwnProperty.call(value,'collectionName'))return undefined;const name=value.collectionName;if(typeof name!=='string'||!name.trim()||name.length>300)throw new Error('备份中的导入名称须为 1–300 个字符，请检查原文件。');return name;}
+function parse(content){if(typeof content!=='string'||content.length>MAX_BYTES||bytes(content)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端处理。');let value;try{value=JSON.parse(content.replace(/^\uFEFF/,''));}catch(_){throw new Error('请选择有效的 JSON 战术备份文件。');}validate(value);importName(value);checkImportVersions(value);return value;}
 function serialize(value){validate(value);const result=JSON.stringify({tactics:value.tactics,versions:value.versions,exportedAt:value.exportedAt??Date.now()});if(bytes(result)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端导出。');return result;}
-module.exports={MAX_BYTES,bytes,validate,parse,serialize};
+module.exports={MAX_BYTES,bytes,validate,parse,serialize,importName};
