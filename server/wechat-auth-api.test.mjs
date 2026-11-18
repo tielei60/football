@@ -833,3 +833,67 @@ test('HTTP待审核过期后拒绝批准，本人重放只恢复过期元数据�
   assert.equal(f.db.prepare('SELECT count(*) n FROM club_users WHERE player_id=?').get(p.id).n,0);
   assert.equal(f.db.prepare('SELECT count(*) n FROM club_sessions').get().n,sessionCount);
 });
+
+test('并发创建同编号只发一次凭据，不同编号不能重复活动邀请', async t => {
+  const f = await fixture(t), p = await f.player('匿名并发创建');
+  const path = `/players/${p.id}/wechat-invites`;
+  const replies = await Promise.all([1, 2].map(() => f.manage(path, 'POST', { requestId: 'parallel-create' })));
+  assert.deepEqual(replies.map(r => r.status).sort(), [200, 201]);
+  assert.equal(replies[0].body.id, replies[1].body.id);
+  assert.equal(replies.filter(r => r.body.credential).length, 1);
+  assert.equal((await f.manage(path, 'POST', { requestId: 'different-create' })).status, 409);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM wechat_invites_foundation').get().n, 1);
+});
+
+test('身份交换迟到时重新核对认领归属，不覆盖先完成者', async t => {
+  const f = await fixture(t), p = await f.player('匿名竞争认领'), inv = await f.create(p);
+  const hold = f.delay();
+  const late = f.call('/auth/wechat/claim', 'POST', { code: 'fictional-late', credential: inv.credential, requestId: 'late-claim' });
+  await hold.ready;
+  let winner;
+  try { winner = await f.claim(inv, 'fictional-winner'); }
+  finally { hold.release(); }
+  assert.equal((await late).status, 409);
+  const row = f.db.prepare('SELECT * FROM wechat_invites_foundation WHERE id=?').get(inv.id);
+  assert.equal(row.claim_openid, 'fictional-winner');
+  assert.equal(row.revision, winner.revision);
+  assert.equal(row.claim_confirmation_code, winner.confirmationCode);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_wechat_identities').get().n, 0);
+});
+
+test('同微信身份对两个球员并发批准只绑定一个，重复批准不重复建号', async t => {
+  const f = await fixture(t), players = [await f.player('匿名竞争甲'), await f.player('匿名竞争乙')];
+  const invites = [await f.create(players[0]), await f.create(players[1])];
+  const claims = [await f.claim(invites[0]), await f.claim(invites[1])];
+  const approve = n => f.manage(`/players/${players[n].id}/wechat-invites/${invites[n].id}/approve`, 'POST', { revision: claims[n].revision, confirmationCode: claims[n].confirmationCode });
+  const replies = await Promise.all([approve(0), approve(1)]);
+  assert.deepEqual(replies.map(r => r.status).sort(), [200, 409]);
+  const winner = replies.findIndex(r => r.status === 200), loser = 1 - winner;
+  const bindings = f.db.prepare('SELECT w.*,u.player_id FROM club_wechat_identities w JOIN club_users u ON u.id=w.user_id').all();
+  assert.equal(bindings.length, 1);assert.equal(bindings[0].player_id, players[winner].id);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_users WHERE player_id IN (?,?)').get(players[0].id,players[1].id).n, 1);
+  const losing = f.db.prepare('SELECT * FROM wechat_invites_foundation WHERE id=?').get(invites[loser].id);
+  assert.equal(losing.status, 'claimed');assert.equal(losing.revision, claims[loser].revision);
+  assert.equal((await approve(winner)).status, 409);
+  assert.deepEqual(f.db.prepare('SELECT w.*,u.player_id FROM club_wechat_identities w JOIN club_users u ON u.id=w.user_id').all(), bindings);
+  const login = await f.call('/auth/wechat/login','POST',{code:'fictional-identity'});
+  assert.equal(login.status,200);
+  const me = await f.call('/auth/me','GET',undefined,login.body.token);
+  assert.equal(me.body.user.id, bindings[0].user_id);
+});
+
+test('身份交换等待期间邀请到期，迟到首次认领不写入身份或会话', async t => {
+  const f = await fixture(t), p = await f.player('匿名跨到期'), inv = await f.create(p);
+  const sessions = f.db.prepare('SELECT count(*) n FROM club_sessions').get().n;
+  const hold = f.delay();
+  const pending = f.call('/auth/wechat/claim','POST',{code:'fictional-expiring',credential:inv.credential,requestId:'exchange-expiry'});
+  await hold.ready;
+  try { f.db.prepare('UPDATE wechat_invites_foundation SET expires_at=? WHERE id=?').run(Date.now()-1, inv.id); }
+  finally { hold.release(); }
+  assert.equal((await pending).status,409);
+  const row = f.db.prepare('SELECT * FROM wechat_invites_foundation WHERE id=?').get(inv.id);
+  assert.equal(row.revision,inv.revision);assert.equal(row.claim_openid,null);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_wechat_identities').get().n,0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_users WHERE player_id=?').get(p.id).n,0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_sessions').get().n,sessions);
+});
