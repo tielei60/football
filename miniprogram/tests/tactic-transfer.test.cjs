@@ -245,3 +245,21 @@ for(const status of [401,403])test('当前账号真正'+status+'清理会话后�
 test('API确认旧会话失效：换账号再退出后旧401仍不导航',async()=>{
  const h=fixture();await h.page.refresh();let reject;h.api.ensureSession=()=>new Promise((_,r)=>reject=r);const task=h.page.refresh();h.api.getSession=()=>null;reject(Object.assign(Error('旧401'),{status:401,staleSession:true}));await task;assert.equal(h.page.data.error,'');assert.equal(h.events.filter(x=>x[0]==='redirectTo').length,0);
 });
+
+for(const resumed of [false,true])test('导出响应在离页'+(resumed?'再返回':'')+'后不生成过期文件或提示',async()=>{
+ let finish;const h=fixture({request:()=>new Promise(r=>finish=r)});
+ await h.page.refresh();const work=h.page.exportFile();await new Promise(r=>setImmediate(r));
+ h.page.onHide();if(resumed)await h.page.onShow();h.page.setData({message:'当前页面提示'});
+ finish(backup);await work;assert.equal(h.files.size,0);assert.equal(h.page.data.exportReady,false);assert.equal(h.page.data.message,'当前页面提示');assert.equal(h.page.data.busy,false);
+});
+test('导出旧错误在离页再返回后不污染当前提示',async()=>{
+ let fail;const h=fixture({request:()=>new Promise((_,r)=>fail=r)});
+ await h.page.refresh();const work=h.page.exportFile();await new Promise(r=>setImmediate(r));
+ h.page.onHide();await h.page.onShow();h.page.setData({actionError:'当前提示'});
+ fail(Error('过期网络失败'));await work;assert.equal(h.page.data.actionError,'当前提示');assert.equal(h.files.size,0);
+});
+test('导出会话预检期间离页再返回不发出旧导出请求',async()=>{
+ let finish,calls=0;const h=fixture({request:async()=>{calls++;return backup}});await h.page.refresh();
+ h.api.ensureSession=()=>new Promise(r=>finish=r);const work=h.page.exportFile();h.page.onHide();h.api.ensureSession=async()=>session;await h.page.onShow();finish(session);await work;
+ assert.equal(calls,0);assert.equal(h.files.size,0);assert.equal(h.page.data.busy,false);
+});

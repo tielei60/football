@@ -109,18 +109,20 @@ Page({
  },
  async exportFile(){
   if(!this.ready())return;
-  const owner=this._owner;this.setData({busy:true,actionError:'',message:''});
+  const owner=this._owner,showTurn=this._showTurn;
+  const active=()=>this.valid(owner)&&!this._hidden&&showTurn===this._showTurn;
+  this.setData({busy:true,actionError:'',message:''});
   try{
    const account=await s.api.ensureSession();
-   if(!this.valid(owner)||this._hidden||account.user.role!=='admin')return;
+   if(!active()||account.user.role!=='admin')return;
    const result=await s.api.request('/tactic-collections');
-   if(!this.valid(owner))return;
+   if(!active())return;
    const content=transfer.serialize(result);
    const root=wx.env?.USER_DATA_PATH;if(!root)throw new Error('当前客户端无法写入本地文件。');
    this.cleanup();const path=root+'/football-tactics-'+Date.now()+'.json';
    wx.getFileSystemManager().writeFileSync(path,content,'utf8');
    this._exportPath=path;this.setData({exportReady:true,message:'已生成临时备份，离开此页会清理；请点击保存到本机完成另存。'});
-  }catch(e){if(this.valid(owner))this.setData({actionError:e.message});}
+  }catch(e){if(active())this.setData({actionError:e.message});}
   finally{if(this.valid(owner))this.setData({busy:false});}
  },
  saveLocal(){
