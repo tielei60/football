@@ -260,6 +260,18 @@ for (const [item, expected] of Object.entries(baseline)) {
     if(item==='pages/system-accounts') businessSource=normalizeSystemAuth(normalizeSystemCreate(businessSource));
     if(item==='pages/match-edit') businessSource=normalizeMatchAuth(businessSource);
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
+    if(item==='pages/match-roster') {
+      // 阶段34唯一允许项：未知保存回执提示与statusCode兼容；专项控制器测试覆盖网络/502/409/400。
+      // 精确校验已复审新实现，再还原旧片段比对原基线，避免放宽其余名单业务约束。
+      const reviewed = `      const status = error.status || error.statusCode;
+      const conflict = status === 409;
+      const unconfirmed = !status || status >= 500;
+      const patch = { conflict, actionError: conflict ? '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。' : unconfirmed ? '保存结果尚未确认，输入已保留。请返回并重新打开名单核对，勿直接重复保存。' : error.message || '保存未完成，输入已保留。' };`;
+      assert.equal(businessSource.split(reviewed).length, 2, '名单未知回执提示实现变更需复审');
+      businessSource = businessSource.replace(reviewed, `      const conflict = error.status === 409;
+      const patch = { conflict, actionError: conflict ? '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。' : error.message || '保存未完成，输入已保留。' };`);
+    }
+
     if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(normalizeSeasonAuth(businessSource));
     if(item==='pages/manage-player'||item==='pages/manage-season') {
       // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。

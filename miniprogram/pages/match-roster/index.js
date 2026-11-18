@@ -129,8 +129,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         this.setData({ busy: false }); s.fail(this, error); return;
       }
       if (!owned() || (!this._hidden && epoch !== this._epoch && !resumed())) return;
-      const conflict = error.status === 409;
-      const patch = { conflict, actionError: conflict ? '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。' : error.message || '保存未完成，输入已保留。' };
+      const status = error.status || error.statusCode;
+      const conflict = status === 409;
+      const unconfirmed = !status || status >= 500;
+      const patch = { conflict, actionError: conflict ? '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。' : unconfirmed ? '保存结果尚未确认，输入已保留。请返回并重新打开名单核对，勿直接重复保存。' : error.message || '保存未完成，输入已保留。' };
       if (this._hidden) Object.assign(this.data, patch); else { this.setData(patch); if (error.status === 401) s.fail(this, error); }
     } finally { if (owned() && (this._hidden || epoch === this._epoch || resumed())) { this.data.busy = false; if (!this._hidden) this.setData({ busy: false }); } }
   },

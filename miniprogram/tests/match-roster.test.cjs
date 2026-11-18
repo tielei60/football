@@ -105,3 +105,27 @@ test('save settling while return validation is pending cannot leave page busy',a
  let finish,validate;const f=fixture({save:()=>new Promise(r=>finish=r)});await f.page.refresh();f.page._firstShow=false;const work=f.page.save();f.page.onHide();const ensure=f.api.ensureSession;f.api.ensureSession=()=>new Promise(r=>validate=r);const showing=f.page.onShow();
  f.api.ensureSession=ensure;f.api.request=async u=>u==='/players'?players:{...match,revision:4};finish({...match,revision:4});await work;validate({user:{role:'admin'},team:{}});await showing;assert.equal(f.page.data.busy,false);assert.equal(f.page.data.revision,4);
 });
+
+for (const scenario of [
+  { label: '网络无回执', error: Error('offline'), expected: '保存结果尚未确认，输入已保留。请返回并重新打开名单核对，勿直接重复保存。', conflict: false },
+  { label: '502回执', error: Object.assign(Error('Bad Gateway'), { status: 502 }), expected: '保存结果尚未确认，输入已保留。请返回并重新打开名单核对，勿直接重复保存。', conflict: false },
+  { label: 'statusCode服务端错误', error: Object.assign(Error('Server Error'), { statusCode: 500 }), expected: '保存结果尚未确认，输入已保留。请返回并重新打开名单核对，勿直接重复保存。', conflict: false },
+  { label: '409版本冲突', error: Object.assign(Error('conflict'), { status: 409 }), expected: '比赛已被修改，输入已保留。请核对后重新载入，不能直接覆盖。', conflict: true },
+  { label: '400明确校验失败', error: Object.assign(Error('进球超过球队比分'), { status: 400 }), expected: '进球超过球队比分', conflict: false },
+]) test('名单保存结果文案区分：' + scenario.label, async () => {
+  const f = fixture({ save: async () => { throw scenario.error; } });
+  await f.page.refresh();
+  f.page.input(event('a', 'goals', '2'));
+  const original = f.page._originalRows;
+  const draft = JSON.stringify(f.page.data.rows);
+  await f.page.save();
+  assert.equal(f.page.data.actionError, scenario.expected);
+  assert.equal(f.page.data.conflict, scenario.conflict);
+  assert.equal(f.page.data.revision, 3);
+  assert.equal(JSON.stringify(f.page.data.rows), draft);
+  assert.equal(f.page._originalRows, original);
+  assert.equal(f.page.data.busy, false);
+  assert.equal(f.writes.length, 1);
+  assert.equal(f.messages.length, 0);
+  if (scenario.conflict) { await f.page.save(); assert.equal(f.writes.length, 1); }
+});
