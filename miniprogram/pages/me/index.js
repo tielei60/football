@@ -141,7 +141,7 @@ Page({
         if ((e.status || e.statusCode) === 401 && !s.api.getSession())
           s.fail(this, e);
         else if (s.api.getSession()?.token === token)
-          this.setData({ actionError: e.message || "修改失败" });
+          this.setData({ actionError: !(e.status || e.statusCode) || (e.status || e.statusCode) >= 500 ? "修改结果未确认，请退出后使用新密码登录核对；不要直接重复修改。" : e.message || "修改失败" });
       }
     } finally {
       if (this._authAttempt === attempt) {

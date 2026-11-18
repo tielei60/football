@@ -119,7 +119,7 @@ Page({
       if (this.active(owner, turn))
         this.setData({
           errorSource: "submit",
-          error: e.message || "修改结果未确认，请退出后使用新密码核对。",
+          error: !(e.status || e.statusCode) || (e.status || e.statusCode) >= 500 ? "修改结果未确认，请退出后使用新密码登录核对；不要直接重复修改。" : e.message || "修改失败，请核对输入。",
         });
       else if (
         !this._hidden &&

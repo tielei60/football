@@ -429,3 +429,48 @@ test("WeChat simulator metadata permits native requests but not browser origins 
     assert.equal((await f.call("/api/auth/me", {token:login.body.token,headers:{...headers,...extra}})).status,403);
   }
 });
+
+// 真实临时HTTP/SQLite + 小程序生产API/控制器；只丢弃客户端回执，不使用正式账号。
+for (const pageName of ['me', 'force-password']) for (const receipt of ['network','gateway']) test(`${pageName}/${receipt}：改密已落库但回执丢失明确提示核对，不误报失败可重试`, async t => {
+  const { readFileSync } = await import('node:fs');
+  const { runInNewContext } = await import('node:vm');
+  const f = await fixture(t);
+  if (pageName === 'force-password') {
+    const db = new DatabaseSync(f.databasePath);
+    db.prepare('UPDATE club_users SET must_change_password=1 WHERE username=?').run(credentials.username);
+    db.close();
+  }
+  const initial = (await f.login()).body;
+  const storage = new Map([['football.native.session.v1', {...initial,serverOrigin:f.base}]]);
+  let dropped = 0, writes = 0, definition;
+  const routes = [];
+  const wx = {
+    getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),
+    reLaunch:o=>routes.push(o.url),redirectTo:o=>routes.push(o.url),stopPullDownRefresh(){},
+    request(options) {
+      const pathname = new URL(options.url).pathname;
+      f.call(pathname,{method:options.method,body:options.data,token:options.header.Authorization?.replace(/^Bearer /,''),headers:{'X-Football-Client':'native-v1'}}).then(result=>{
+        if(pathname==='/api/auth/password'){writes++;assert.equal(result.status,204);dropped++;if(receipt==='network')options.fail({errMsg:'request:fail simulated response loss'});else options.success({statusCode:502,data:{message:'模拟网关丢失上游回执'}});}
+        else options.success({statusCode:result.status,data:result.body});
+      },()=>options.fail({errMsg:'request:fail'}));
+    },
+  };
+  const ac={module:{exports:{}},wx,require:n=>n==='../config'?{apiBaseUrl:f.base,allowLocalHttp:true}:n==='./media'?{clearImageCache(){}}:{clearAll(){}}};
+  runInNewContext(readFileSync(new URL('../miniprogram/utils/api.js',import.meta.url),'utf8'),ac);
+  const api=ac.module.exports;
+  const sc={module:{exports:{}},wx,require:n=>n.endsWith('/api')?api:n.endsWith('/player-initial')?{playerInitial:()=>''}:{imageSource:v=>v}};
+  runInNewContext(readFileSync(new URL('../miniprogram/pages/shared.js',import.meta.url),'utf8'),sc);
+  runInNewContext(readFileSync(new URL(`../miniprogram/pages/${pageName}/index.js`,import.meta.url),'utf8'),{wx,Page:p=>definition=p,require:n=>n.endsWith('/api')?api:n.includes('/utils/ui')?{abort(){}}:sc.module.exports});
+  const p={...definition,data:structuredClone(definition.data),setData(v){Object.assign(this.data,v);}};
+  if(pageName==='force-password')await p.refresh();
+  const next='fictional-response-loss-new-password';
+  p.setData({loading:false,currentPassword:credentials.password,newPassword:next,confirmation:next});
+  await (pageName==='me'?p.changePassword():p.submit());
+  assert.equal(dropped,1);assert.equal(writes,1);
+  assert.equal((await f.call('/api/auth/me',{token:initial.token})).status,401);
+  assert.equal((await f.login()).status,401);
+  assert.equal((await f.login({...credentials,password:next})).status,200);
+  assert.match(pageName==='me'?p.data.actionError:p.data.error,/修改结果未确认/);
+  assert.match(pageName==='me'?p.data.actionError:p.data.error,/新密码/);
+  assert.equal(p.data.busy,false);assert.deepEqual(routes,[]);
+});
