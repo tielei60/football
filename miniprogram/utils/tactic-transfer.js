@@ -24,7 +24,8 @@ function board(b){
  const d=b.demonstration;keys(d,'demonstrationId title participants stages runs');id(d.demonstrationId);text(d.title,300);
  array(d.participants,5000);array(d.stages,120);array(d.runs,100000);d.participants.forEach(piece);const ids=unique(d.participants,'pieceId');
  for(const stage of d.stages){keys(stage,'stageNumber title note durationSeconds positions');integer(stage.stageNumber);optional(stage,['title','note'],['durationSeconds']);if(stage.durationSeconds<0)fail();array(stage.positions,5000);unique(stage.positions,'pieceId');for(const p of stage.positions){keys(p,'pieceId x y');if(!ids.has(p.pieceId))fail();number(p.x);number(p.y);}}
- for(const r of d.runs){keys(r,'pieceId fromStage bend');if(!ids.has(r.pieceId))fail();integer(r.fromStage);if(r.fromStage>=d.stages.length-1)fail();keys(r.bend,'x y');number(r.bend.x);number(r.bend.y);}
+ // 服务端旧备份可能保留末阶段曲线：无下一帧时不播放，但备份必须保留。
+ for(const r of d.runs){keys(r,'pieceId fromStage bend');if(!ids.has(r.pieceId))fail();integer(r.fromStage);if(r.fromStage>=d.stages.length)fail();keys(r.bend,'x y');number(r.bend.x);number(r.bend.y);}
  }
 }
 function tactic(t){
@@ -42,6 +43,8 @@ function validate(value){
  if(value.exportedAt!==undefined)integer(value.exportedAt);if(value.collectionName!==undefined)text(value.collectionName,300);
  return value;
 }
-function parse(content){if(typeof content!=='string'||content.length>MAX_BYTES||bytes(content)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端处理。');let value;try{value=JSON.parse(content.replace(/^\uFEFF/,''));}catch(_){throw new Error('请选择有效的 JSON 战术备份文件。');}return validate(value);}
+// 导入会触发服务端每套50个历史版本的保留策略；本地先拒绝，避免静默丢历史。
+function checkImportVersions(value){const counts=new Map();for(const v of value.versions){const count=(counts.get(v.tacticNumber)||0)+1;counts.set(v.tacticNumber,count);if(count>50)throw new Error('单套战术超过 50 个历史版本，为避免版本丢失，本次未导入。请先保留原备份并拆分整理。');}}
+function parse(content){if(typeof content!=='string'||content.length>MAX_BYTES||bytes(content)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端处理。');let value;try{value=JSON.parse(content.replace(/^\uFEFF/,''));}catch(_){throw new Error('请选择有效的 JSON 战术备份文件。');}validate(value);checkImportVersions(value);return value;}
 function serialize(value){validate(value);const result=JSON.stringify({tactics:value.tactics,versions:value.versions,exportedAt:value.exportedAt??Date.now()});if(bytes(result)>MAX_BYTES)throw new Error('备份超过 8 MiB，请使用网页端导出。');return result;}
 module.exports={MAX_BYTES,bytes,validate,parse,serialize};

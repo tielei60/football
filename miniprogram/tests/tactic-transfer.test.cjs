@@ -263,3 +263,18 @@ test('导出会话预检期间离页再返回不发出旧导出请求',async()=>
  h.api.ensureSession=()=>new Promise(r=>finish=r);const work=h.page.exportFile();h.page.onHide();h.api.ensureSession=async()=>session;await h.page.onShow();finish(session);await work;
  assert.equal(calls,0);assert.equal(h.files.size,0);assert.equal(h.page.data.busy,false);
 });
+
+test('无损备份兼容服务端支持的末阶段旧曲线，但仍拒绝真正越界引用',()=>{
+ const v=structuredClone(backup);v.tactics[0].board.demonstration={demonstrationId:'legacy',title:'旧演示',participants:[{pieceId:'p',x:1,y:2}],stages:[{stageNumber:0,positions:[{pieceId:'p',x:1,y:2}]}],runs:[{pieceId:'p',fromStage:0,bend:{x:2,y:3}}]};
+ assert.deepEqual(transfer.parse(transfer.serialize(v)),v);
+ v.tactics[0].board.demonstration.runs[0].fromStage=1;assert.throws(()=>transfer.validate(v));
+});
+test('每套战术超过50个历史版本明确拒绝，避免服务端静默裁剪',()=>{
+ const v=structuredClone(backup);v.versions=Array.from({length:50},(_,i)=>({...structuredClone(backup.versions[0]),createdAt:i}));assert.doesNotThrow(()=>transfer.parse(JSON.stringify(v)));
+ v.versions.push({...structuredClone(backup.versions[0]),createdAt:50});assert.throws(()=>transfer.parse(JSON.stringify(v)),/50.*避免.*丢失/);
+});
+test('历史上限按每套统计，导出不裁剪既有数据',()=>{
+ const v=structuredClone(backup);v.tactics.push(structuredClone(v.tactics[0]));v.versions=[0,1].flatMap(tacticNumber=>Array.from({length:50},(_,i)=>({...structuredClone(backup.versions[0]),tacticNumber,createdAt:i})));
+ assert.equal(transfer.parse(JSON.stringify(v)).versions.length,100);
+ v.versions.push({...structuredClone(backup.versions[0]),createdAt:51});assert.equal(JSON.parse(transfer.serialize(v)).versions.length,101);
+});
