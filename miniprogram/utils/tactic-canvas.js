@@ -1,3 +1,4 @@
+const text=require('./tactic-text');
 // Read-only renderer for the public Tactic.board contract. Never mutate the model.
 const WIDTH = 1250, HEIGHT = 826;
 // 纯显示主题；显式模型颜色始终保留，未知历史颜色不能当作默认色覆盖。
@@ -39,7 +40,7 @@ function draw(ctx, board, width, height, stage = -1) {
     else if(m.kind==='rectangle'){ctx.rect(Math.min(x,ex),Math.min(y,ey),w,h);ctx.fill();ctx.stroke();}
     else if(m.kind==='ellipse'&&w&&h){ctx.save();ctx.translate((x+ex)/2,(y+ey)/2);ctx.scale(w/2,h/2);ctx.arc(0,0,1,0,Math.PI*2);ctx.restore();ctx.fill();ctx.stroke();}
     else if(m.kind==='pen'){const points=list(m.path).filter(p=>Array.isArray(p)&&finite(p[0])&&finite(p[1]));points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();}
-    else if(m.kind==='text'){ctx.fillStyle=ctx.strokeStyle;ctx.font=`${14+(m.width||2)*4}px sans-serif`;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.translate(x,y);ctx.rotate(-Math.PI/2);String(m.label||'').split('\n').slice(0,20).forEach((line,i)=>ctx.fillText(line,0,i*32));}
+    else if(m.kind==='text'){ctx.fillStyle=ctx.strokeStyle;const layout=text.layout(m);ctx.font=layout.font;ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.translate(x,y);ctx.rotate(-Math.PI/2);layout.lines.forEach(line=>ctx.fillText(line.text,0,line.baseline));}
     ctx.restore();
   }
   for(const p of content.pieces){
