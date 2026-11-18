@@ -85,3 +85,6 @@
 /* 原生320复验：选择器与加入按钮共享尺寸下限，长候选底边仍对齐。 */
 .add-section .add-row{align-items:flex-end}
 .roster-page .add-row .add-picker,.roster-page .add-row button.add-button[size="mini"]{min-height:52px;box-sizing:border-box}
+
+/* ZIP 17：名单身份、位置和实际出场是字段值，按原图使用正文色。 */
+.roster-page .picker-value { color:var(--ink); }

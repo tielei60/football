@@ -56,3 +56,6 @@
 .readonly-notes{margin-top:28rpx}
 .readonly-season-note{padding:24rpx;border:1rpx solid #d7eafa;border-radius:24rpx;background:var(--sky-soft);color:#356275;font-size:25rpx;line-height:1.6}
 .readonly-notes>.hint{margin-top:20rpx;color:var(--muted);font-size:24rpx;line-height:1.6}
+
+/* ZIP 18：待选队员使用正文色，紫色留给关键操作。 */
+.picker-row .picker-value { color:var(--ink); }

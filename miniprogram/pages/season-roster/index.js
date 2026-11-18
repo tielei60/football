@@ -16,9 +16,24 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   if(this._first){this._first=false;return;}
   const epoch=this._epoch;
   try {
-   await s.api.ensureSession();
+   const session=await s.api.ensureSession();
    if(this._disposed||this._hidden||epoch!==this._epoch)return;
-   if(this._owner!==s.api.getSession()?.token){this.setData({rows:[],players:[],candidates:[],loading:false,error:'登录已变化，请重新打开赛季阵容。'});return;}
+   // 首次加载尚未建立草稿归属，按发起加载时的账号核对，不能误判为切换账号。
+   const owner=this._owner===undefined?this._loadingOwner:this._owner;
+   if(owner!==s.api.getSession()?.token){
+    this._outcome=null;
+    this.setData({admin:false,busy:false,rows:[],players:[],candidates:[],loading:false,error:'登录已变化，请重新打开赛季阵容。'});return;
+   }
+   const admin=session.user.role==='admin';
+   const previousAdmin=this._loadPending?this._loadAdmin:this.data.admin;
+   if(previousAdmin!==undefined&&admin!==previousAdmin){
+    // 权限变化时重新读服务器；旧编辑草稿不能伪装成已保存的只读阵容。
+    this._outcome=null;
+    this.setData({admin:false,busy:false,rows:[],players:[],candidates:[],candidateIndex:0});
+    return this.refresh();
+   }
+   if(this._loadPending)return;
+   if(!this._loaded)return this.refresh();
    if(this._outcome){const outcome=this._outcome;this._outcome=null;this.applyOutcome(outcome);}
    this.setData({loading:false});
   } catch(e){if(!this._disposed&&!this._hidden&&epoch===this._epoch){this.setData({loading:false});s.fail(this,e);}}
@@ -27,8 +42,11 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
  async refresh(){
   if(this.data.busy)return;
   let owner, original;
+  this._loadingOwner=s.api.getSession()?.token;
+  this._loadPending=true;
   const promise=s.load(this,async session=>{
    owner=s.api.getSession()?.token;
+   this._loadAdmin=session.user.role==='admin';
    const [result,players]=await Promise.all([s.api.request('/seasons/'+encodeURIComponent(this.id)+'/roster'),s.api.request('/players')]);
    if(owner!==s.api.getSession()?.token)throw new Error("登录已变化，请重新打开页面");
    const projected=players.map(p=>({id:p.id,name:p.name,number:p.number??null,positions:p.positions||[],status:p.status}));
@@ -40,7 +58,11 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   });
   const epoch=this._epoch;
   await promise;
-  if(!this._disposed&&epoch===this._epoch&&!this.data.error){this._owner=owner;this._original=original;}
+  if(!this._disposed&&epoch===this._epoch){
+   this._loadPending=false;
+   this._loaded=!this.data.error;
+   if(this._loaded){this._owner=owner;this._original=original;}
+  }
   if(this._hidden&&!this._disposed)this.setData({loading:true});
  },
  candidates(rows,players=this.data.players){

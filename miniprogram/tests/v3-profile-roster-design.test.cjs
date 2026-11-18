@@ -39,3 +39,11 @@ test('比赛清除时间在busy禁用时仍有独立弱化视觉',()=>{
  const css=fs.readFileSync(path.join(__dirname,'../pages/match-edit/index.wxss'),'utf8');
  assert.match(css,/clear-kickoff\[size="mini"\]\[disabled\]\{opacity:.5/);
 });
+
+test('17和18选择器字段值遵循原图正文色，不扩大品牌强调',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ for(const [page,selector] of [['match-roster','.roster-page .picker-value'],['season-roster','.picker-row .picker-value']]){
+  const css=fs.readFileSync(path.join(__dirname,'../pages',page,'index.wxss'),'utf8');
+  assert.ok(css.includes(selector+' { color:var(--ink); }'));
+ }
+});

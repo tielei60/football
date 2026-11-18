@@ -116,12 +116,27 @@ test('球场回执投影拒绝重复、篡改，并保留额外业务代码',()=
   const extra='\n// 额外代码仍受旧基线保护\n';
   assert.equal(normalizeVenueReceipts(source+extra),normalizeVenueReceipts(source)+extra);
 });
+function normalizeSeasonReturn(source) {
+  for (const {before,after} of require('./season-roster-return-projection.json')) {
+    assert.equal(source.split(after).length,2,'赛季返回权限变更必须精确且唯一');
+    source=source.replace(after,before);
+  }
+  return source;
+}
+test('赛季返回权限投影拒绝重复与篡改并保留未批准代码',()=>{
+  const source=fs.readFileSync(path.join(root,'pages/season-roster/index.js'),'utf8');
+  assert.throws(()=>normalizeSeasonReturn(source+source));
+  assert.throws(()=>normalizeSeasonReturn(source.replace("const admin=session.user.role==='admin';",'const admin=true;')));
+  const extra='\n// 其它业务代码继续冻结\n';
+  assert.equal(normalizeSeasonReturn(source+extra),normalizeSeasonReturn(source)+extra);
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
     assert.equal(hash(markup(read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
     if(item==='pages/manage-venue') businessSource=normalizeVenueReceipts(businessSource);
+    if(item==='pages/season-roster') businessSource=normalizeSeasonReturn(businessSource);
     if(item==='pages/manage-player'||item==='pages/manage-season') {
       // 仅归一化这一条已专项验证的原生标题调用，不重置业务基线。
       const subject=item==='pages/manage-player'?'球员':'赛季';
