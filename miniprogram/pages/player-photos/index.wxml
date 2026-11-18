@@ -21,11 +21,11 @@
 <view wx:if="{{admin}}" class="photo-actions-main">
 <button data-id="{{item.id}}" bindtap="saveCaption" disabled="{{busy||conflict||uncertain||recoveryBlocked||item.draft===item.caption}}" class="ui-button" size="mini">保存说明</button>
 <button data-id="{{item.id}}" bindtap="cover" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked||coverPhotoId===item.id)}}" class="ui-button" size="mini">设为封面</button>
+<button class="danger ui-button" data-id="{{item.id}}" bindtap="remove" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked)}}" size="mini">移除</button>
 </view>
 <view wx:if="{{admin}}" class="photo-actions-secondary">
 <button data-id="{{item.id}}" data-delta="-1" bindtap="move" disabled="{{busy||conflict||uncertain||recoveryBlocked||index===0}}" class="ui-button" size="mini">上移</button>
 <button data-id="{{item.id}}" data-delta="1" bindtap="move" disabled="{{busy||conflict||uncertain||recoveryBlocked||index===photos.length-1}}" class="ui-button" size="mini">下移</button>
-<button class="danger ui-button" data-id="{{item.id}}" bindtap="remove" disabled="{{loading || (busy||conflict||uncertain||recoveryBlocked)}}" size="mini">移除</button>
 </view>
 </view>
 <view wx:if="{{!photos.length}}" class="card empty">还没有出场照片</view>

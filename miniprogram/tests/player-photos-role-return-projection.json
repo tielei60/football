@@ -1,0 +1,18 @@
+[
+  {
+    "before": "    if (!this._loaded) return this.refresh();\n    const epoch = this._epoch;\n    try {\n      await s.api.ensureSession();\n      if (\n        this._disposed ||\n        this._hidden ||\n",
+    "after": "    if (!this._loaded) return this.refresh();\n    const epoch = this._epoch;\n    try {\n      const session = await s.api.ensureSession();\n      if (\n        this._disposed ||\n        this._hidden ||\n"
+  },
+  {
+    "before": "        });\n        return;\n      }\n      if (this._needsRefresh) {\n        this._needsRefresh = false;\n        return this.refresh();\n",
+    "after": "        });\n        return;\n      }\n      const admin = session.user.role === \"admin\";\n      if (admin !== this.data.admin) {\n        this._imageEpoch = (this._imageEpoch || 0) + 1;\n        this._roleRefreshPending = true;\n        this.setData({ admin });\n      }\n      if (this._roleRefreshPending) {\n        // 先撤掉管理入口；已发起的请求结束后再重读，避免覆盖上传回执。\n        if (this.data.busy) {\n          this.setData({ loading: false });\n          return;\n        }\n        return this.refresh();\n      }\n      if (this._needsRefresh) {\n        this._needsRefresh = false;\n        return this.refresh();\n"
+  },
+  {
+    "before": "  },\n  async refresh(preserve = true) {\n    if (this.data.busy) return;\n    this._imageEpoch = (this._imageEpoch || 0) + 1;\n    const token = s.api.getSession()?.token,\n      showTurn = this._showTurn;\n",
+    "after": "  },\n  async refresh(preserve = true) {\n    if (this.data.busy) return;\n    this._roleRefreshPending = false;\n    this._imageEpoch = (this._imageEpoch || 0) + 1;\n    const token = s.api.getSession()?.token,\n      showTurn = this._showTurn;\n"
+  },
+  {
+    "before": "        !this._disposed &&\n        epoch === this._epoch &&\n        this._writeAttempt === attempt\n      )\n        this.setData({ busy: false });\n    }\n  },\n  captionInput(e) {\n",
+    "after": "        !this._disposed &&\n        epoch === this._epoch &&\n        this._writeAttempt === attempt\n      ) {\n        this.setData({ busy: false });\n        if (this._roleRefreshPending && !this._hidden &&\n            token === this._owner && token === s.api.getSession()?.token)\n          await this.refresh();\n      }\n    }\n  },\n  captionInput(e) {\n"
+  }
+]

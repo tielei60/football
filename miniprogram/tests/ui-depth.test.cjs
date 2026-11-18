@@ -6,9 +6,40 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const baseline = require('./ui-v3-core-contract.json');
 const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+// 仅反向投影已独立审查的照片角色恢复片段，其他源码仍进入原始 SHA。
+const photoRoleBlocks = require('./player-photos-role-return-projection.json');
+function normalizePhotoRoleReturn(source) {
+  for (const { before, after } of photoRoleBlocks) {
+    assert.equal(source.split(after).length, 2, '照片角色恢复片段必须完整且唯一');
+    source = source.replace(after, before);
+  }
+  return source;
+}
+test('照片角色恢复投影拒绝篡改和重复片段，保留未授权额外源码', () => {
+  const source = read('pages/player-photos/index.js');
+  for (const { after } of photoRoleBlocks) {
+    assert.throws(() => normalizePhotoRoleReturn(source.replace(after, after.replace(/\S/, c => c === '!' ? '?' : '!'))));
+    assert.throws(() => normalizePhotoRoleReturn(source.replace(after, after + after)));
+  }
+  const extra = '\n// 额外源码仍必须参加原始哈希核验\n';
+  assert.equal(normalizePhotoRoleReturn(source + extra), normalizePhotoRoleReturn(source) + extra);
+});
+// AI 认证恢复仅允许本轮审查的精确改动，不重置原业务 SHA。
+const aiAuthBlocks=require('./player-ai-auth-projection.json');
+function normalizeAiAuth(source){
+ for(const {before,after} of aiAuthBlocks){assert.equal(source.split(after).length,2,'AI认证恢复片段必须完整且唯一');source=source.replace(after,before);}
+ return source;
+}
+test('AI认证恢复投影拒绝篡改重复且保留其他源码',()=>{
+ const source=read('pages/player-ai/index.js');
+ for(const {after} of aiAuthBlocks){assert.throws(()=>normalizeAiAuth(source.replace(after,after.replace(/\S/,'!'))));assert.throws(()=>normalizeAiAuth(source.replace(after,after+after)));}
+ assert.equal(normalizeAiAuth(source+'\nextra'),normalizeAiAuth(source)+'\nextra');
+});
 test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
   for (const [p,sha] of Object.entries(baseline.immutable)) {
-    const source=p==='components/business-dialog/index.js'?require('./v3-dialog-projection-normalize.cjs')(read(p)):read(p);
+    let source=p==='components/business-dialog/index.js'?require('./v3-dialog-projection-normalize.cjs')(read(p)):read(p);
+    if(p==='pages/player-photos/index.js') source=normalizePhotoRoleReturn(source);
+    if(p==='pages/player-ai/index.js') source=normalizeAiAuth(source);
     assert.equal(crypto.createHash('sha256').update(source).digest('hex'),sha,p);
   }
   for (const [p,attrs] of Object.entries(baseline.bindings)) {

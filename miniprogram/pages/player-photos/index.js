@@ -118,7 +118,7 @@ Page({
     if (!this._loaded) return this.refresh();
     const epoch = this._epoch;
     try {
-      await s.api.ensureSession();
+      const session = await s.api.ensureSession();
       if (
         this._disposed ||
         this._hidden ||
@@ -140,6 +140,20 @@ Page({
           error: "登录已变化，请重新打开照片集。",
         });
         return;
+      }
+      const admin = session.user.role === "admin";
+      if (admin !== this.data.admin) {
+        this._imageEpoch = (this._imageEpoch || 0) + 1;
+        this._roleRefreshPending = true;
+        this.setData({ admin });
+      }
+      if (this._roleRefreshPending) {
+        // 先撤掉管理入口；已发起的请求结束后再重读，避免覆盖上传回执。
+        if (this.data.busy) {
+          this.setData({ loading: false });
+          return;
+        }
+        return this.refresh();
       }
       if (this._needsRefresh) {
         this._needsRefresh = false;
@@ -184,6 +198,7 @@ Page({
   },
   async refresh(preserve = true) {
     if (this.data.busy) return;
+    this._roleRefreshPending = false;
     this._imageEpoch = (this._imageEpoch || 0) + 1;
     const token = s.api.getSession()?.token,
       showTurn = this._showTurn;
@@ -575,8 +590,12 @@ Page({
         !this._disposed &&
         epoch === this._epoch &&
         this._writeAttempt === attempt
-      )
+      ) {
         this.setData({ busy: false });
+        if (this._roleRefreshPending && !this._hidden &&
+            token === this._owner && token === s.api.getSession()?.token)
+          await this.refresh();
+      }
     }
   },
   captionInput(e) {

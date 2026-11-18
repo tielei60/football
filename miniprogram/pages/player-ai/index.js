@@ -93,6 +93,23 @@ Page({
       t.owner === this._owner
     );
   },
+  authFailure(t, error) {
+    // API 会在当前请求 401 后清空会话；仅接管本页当前回执，旧账号和旧视图不得跳转。
+    if (
+      (error.status || error.statusCode) !== 401 || error.staleSession === true ||
+      this._hidden || this._disposed || t.view !== this._view ||
+      t.owner !== this._owner || s.api.getSession()
+    ) return false;
+    if (this._scope) cache.dispose(this._scope);
+    this._scope = null;
+    this._image = null;
+    this._imageEpoch = (this._imageEpoch || 0) + 1;
+    this.setData({ loading: false, busy: false, admin: false, enabled: false,
+      preview: "", candidates: [], hasSelectedImage: false, job: null });
+    // 持久化核对记录不删除，重新登录后仍使用原请求编号核对。
+    s.fail(this, error);
+    return true;
+  },
   ready() {
     return (
       this.data.admin &&
@@ -247,13 +264,15 @@ Page({
         try {
           await this.loadJob();
         } catch (e) {
-          if (view === this._view && !this._hidden)
+          if (this.authFailure({ view, token, owner: this._owner }, e)) return;
+          if (view === this._view && !this._hidden && token === s.api.getSession()?.token)
             this.setData({
               actionError: e.message || "任务读取失败，可核对或删除私有素材",
             });
         }
       } else this.setData({ job: null, candidates: [] });
     } catch (e) {
+      if (this.authFailure({ view, token, owner: this._owner }, e)) return;
       if (
         !this._hidden &&
         !this._disposed &&
@@ -430,6 +449,7 @@ Page({
       if (!this.current(t)) return;
       await work(t);
     } catch (e) {
+      if (this.authFailure(t, e)) return;
       if (this.current(t))
         this.setData({
           actionError:
@@ -609,6 +629,7 @@ Page({
           ],
         });
       } catch (e) {
+        if (this.authFailure(t, e)) return;
         if (current())
           this.setData({ actionError: e.message || "候选读取失败" });
       }
@@ -683,6 +704,7 @@ Page({
       if (this._record.jobId) await this.loadJob();
       else this.setData({ job: null, candidates: [] });
     } catch (e) {
+      if (this.authFailure(t, e)) return;
       if (this.current(t))
         this.setData({
           canResetAdoption:
@@ -786,6 +808,7 @@ Page({
             pending.kind === "sourceDelete" ? "DELETE" : "POST",
           );
         } catch (e) {
+          if (this.authFailure(t, e)) return;
           if (this.current(t))
             this.setData({ actionError: e.message || "重试结果未确认" });
         } finally {

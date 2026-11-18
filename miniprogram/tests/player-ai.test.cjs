@@ -17,6 +17,7 @@ function fixture(options = {}) {
     role = "admin",
     definition,
     selected;
+  const failures = [];
   const store = options.store || new Map(),
     calls = [],
     modals = [],
@@ -114,7 +115,7 @@ function fixture(options = {}) {
         id.endsWith("/ui")
           ? ui
           : id.endsWith("/shared")
-            ? { api, fail() {} }
+            ? { api, fail(page,error) { failures.push(error);page.setData({error:error.message}); } }
             : id.endsWith("/player-photo-cache")
               ? cache
               : {},
@@ -135,6 +136,7 @@ function fixture(options = {}) {
   p.onLoad({ id: "p1" });
   return {
     p,
+    failures,
     api,
     cap,
     calls,
@@ -646,3 +648,54 @@ test("同候选重新加载后旧src/epoch错误不禁用新预览",async()=>{co
 
 test("锁定素材旧风格已移除不伪称新首项风格",async()=>{const h=fixture();await prepare(h);assert.equal(h.p.data.preparedStyleLabel,'紫色卡片');h.cap.styles=[{id:'new-style',label:'另一风格'}];await h.p.refresh();assert.equal(h.p.data.preparedStyleLabel,'原风格已不可用');assert.equal(h.p._record.styleId,'purple');});
 test("采用确认框打开后图片报错，确认不得提交",async()=>{const h=fixture();await generate(h);const c=h.p.data.candidates[0];const e={currentTarget:{dataset:{id:c.id,revision:c.revision,src:c.src,epoch:c.imageEpoch}}};h.p.adopt(e);h.p.candidateError(e);const before=h.calls.length;await h.confirm();assert.equal(h.calls.length,before);assert.equal(h.p._record.adoption,undefined);});
+
+// 阶段21：只模拟认证回执，不上传照片或请求真实生成服务。
+for (const phase of ['refresh', 'perform', 'recover', 'retry']) {
+  test(`AI ${phase} 当前401清会话后结束等待并转认证恢复`, async () => {
+    const h=fixture(); let failures=0;
+    if(phase!=='refresh') await h.p.onShow();
+    h.api.ensureSession=async()=>{h.api.getSession=()=>null;throw Object.assign(Error('登录已过期'),{status:401});};
+    h.api.request=async()=>{h.api.getSession=()=>null;throw Object.assign(Error('登录已过期'),{status:401});};
+    if(phase==='refresh') await h.p.onShow();
+    if(phase==='perform') await h.p.perform(()=>{failures++;});
+    if(phase==='recover'||phase==='retry') {
+      h.p._record.pending={kind:'job',requestId:'same-request',payload:{}};
+      h.p.setData({pending:true});
+      if(phase==='recover') await h.p.recover();
+      else {h.p.retryPending();await h.confirm();}
+      assert.equal(h.p._record.pending.requestId,'same-request');
+    }
+    assert.equal(h.p.data.loading,false);assert.equal(h.p.data.busy,false);
+    assert.equal(h.p.data.admin,false);assert.match(h.p.data.error,/登录已过期/);
+    assert.equal(h.failures.length,1);assert.equal(failures,0);
+  });
+}
+for(const kind of ['new-account','stale','hidden']) test(`AI 旧401不影响${kind}`,async()=>{
+ const h=fixture();await h.p.onShow();const d=deferred();h.api.ensureSession=()=>d.promise;
+ const task=h.p.perform(()=>assert.fail('不得执行'));
+ if(kind==='new-account')h.setToken('ownerB');else if(kind==='hidden')h.p.onHide();
+ else h.api.getSession=()=>null;
+ d.reject(Object.assign(Error('旧登录过期'),{status:401,staleSession:kind==='stale'}));await task;
+ assert.equal(h.failures.length,0);assert.equal(h.p.data.error,'');
+});
+test('AI 操作请求401清理私有预览但保留持久核对记录',async()=>{
+ const h=fixture();await h.p.onShow();h.p._image='private-image';h.p.setData({preview:'/private',candidates:[{src:'/private'}]});
+ const record={version:1,pending:{kind:'job',requestId:'kept-id',payload:{}}};
+ h.store.set(h.p._key,record);
+ await h.p.perform(async()=>{h.api.getSession=()=>null;throw Object.assign(Error('会话过期'),{statusCode:401});});
+ assert.equal(h.failures.length,1);assert.equal(h.p.data.preview,'');assert.equal(h.p.data.candidates.length,0);assert.equal(h.p._image,null);
+ assert.equal(h.store.get(h.p._key).pending.requestId,'kept-id');
+});
+test('AI刷新已有任务遇401不吞掉认证恢复',async()=>{
+ const h=fixture();await h.p.onShow();h.p.persist({version:1,jobId:'job1'});
+ const request=h.api.request;h.api.request=async(url,...args)=>{
+ if(url.endsWith('/jobs/job1')) {h.api.getSession=()=>null;throw Object.assign(Error('任务会话过期'),{status:401});}
+ return request(url,...args);
+ };
+ await h.p.onShow();assert.equal(h.failures.length,1);assert.equal(h.p.data.loading,false);assert.equal(h.p.data.admin,false);assert.match(h.p.data.error,/会话过期/);
+});
+test('AI候选图片GET401也结束poll忙碌并认证恢复',async()=>{
+ const h=fixture();await generate(h);const request=h.api.request;
+ h.api.request=async(url,...args)=>{if(url.includes('/candidates/')){h.api.getSession=()=>null;throw Object.assign(Error('图片会话过期'),{status:401});}return request(url,...args);};
+ await h.p.poll();assert.equal(h.failures.length,1);assert.equal(h.p.data.busy,false);assert.equal(h.p.data.candidates.length,0);
+});

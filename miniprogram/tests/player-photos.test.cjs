@@ -557,3 +557,17 @@ test('同账号隐藏后返回，原排序迟到未知仍锁定核对',async()=>
  assert.equal(h.page.data.conflict,true);assert.match(h.page.data.actionError,/核对/);
  h.api.request=original;await h.page.refresh();assert.equal(h.page.data.conflict,false);
 });
+
+test('超过2MB的选图在读取和上传前拒绝',async()=>{
+ let selected,reads=0;const h=fixture({}, {chooseMedia:o=>selected=o,getFileSystemManager:()=>({readFile(){reads++;}})});
+ await h.page.refresh();h.page.choose();selected.success({tempFiles:[{size:2097153,tempFilePath:'wxfile://oversize'}]});
+ assert.match(h.page.data.actionError,/2 MB/);assert.equal(reads,0);assert.equal(h.posts.length,0);assert.equal(h.page.data.preview,'');
+});
+test('声明小文件但读到超限字节仍拒绝，不写预览',async()=>{
+ let selected;const h=fixture({}, {chooseMedia:o=>selected=o,getFileSystemManager:()=>({readFile:o=>o.success({data:'iVBORw0KGgo'+'A'.repeat(2800000)})})});
+ await h.page.refresh();h.page.choose();selected.success({tempFiles:[{size:20,tempFilePath:'wxfile://oversize-body'}]});
+ assert.match(h.page.data.actionError,/2 MB/);assert.equal(h.page.data.preview,'');assert.equal(h.posts.length,0);
+});
+test('9张容量不发起新的上传请求',async()=>{
+ const h=fixture();await h.page.refresh();h.page.setData({photos:Array.from({length:9},(_,id)=>({id,caption:'',draft:''}))});image(h.page);await h.page.upload();assert.equal(h.posts.length,0);assert.equal(h.storage.size,0);
+});
