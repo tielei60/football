@@ -416,8 +416,16 @@ const onRestoreFile = async (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
   try {
-    const count = await store.importBackup(JSON.parse(await file.text()));
-    alert(`恢复成功，共导入 ${count} 套战术（追加，不覆盖现有）`);
+    const result = await store.importBackup(JSON.parse(await file.text()));
+    if (result.receiptVerification === "legacy-unverified") {
+      alert("发现旧导入记录，无法核验与本次文件是否一致。请核对服务器战术；本次未新增，未确认完整恢复。");
+      return;
+    }
+    if (result.listRefreshFailed) {
+      alert(`导入已确认（新增 ${result.importedCount} 套），但列表刷新失败。请刷新战术列表核对，不要重复恢复。`);
+      return;
+    }
+    alert(result.importedCount ? `恢复成功，共导入 ${result.importedCount} 套战术（追加，不覆盖现有）` : "相同内容已导入，本次未新增");
   } catch (error) {
     reportError(error);
   } finally {

@@ -41,10 +41,19 @@ async function reload() {
 async function migrate() {
   importing.value = true;
   try {
-    const count = await migrateLegacyTactics();
-    await useTacticsStore().refresh();
+    const result = await migrateLegacyTactics();
+    let listRefreshFailed = false;
+    try { await useTacticsStore().refresh(); } catch { listRefreshFailed = true; }
+    if (result.receiptVerification === "legacy-unverified") {
+      ElMessage.warning("发现旧导入记录，无法核验与本次内容是否一致。请核对服务器战术；本机数据已保留，本次未新增。");
+      return;
+    }
     legacyCount.value = 0;
-    ElMessage.success(count ? `已导入 ${count} 套本机战术` : "本机战术已导入，无重复新增");
+    if (listRefreshFailed) {
+      ElMessage.warning(`导入已确认（新增 ${result.importedCount} 套），但列表刷新失败。请刷新战术列表核对，不要重复导入。`);
+      return;
+    }
+    ElMessage.success(result.importedCount ? `已导入 ${result.importedCount} 套本机战术` : "相同内容已导入，本次未新增");
   } catch (error) {
     ElMessage.error((error as Error).message);
   } finally {

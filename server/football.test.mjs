@@ -854,3 +854,34 @@ test("invalid formation metadata is rejected without changing the desk edition",
     assert.equal((await app.request("/api/coaching-desk")).body.edition, 0);
   }
 });
+
+test("导入HTTP透传已核验重试和旧收据状态，异内容409不写库", async (t) => {
+  const app = await fixture(t);
+  const input = { collectionName: "receipt-http-test", tactics: [tactic], versions: [] };
+  const first = await app.request("/api/tactic-collections", "POST", input);
+  assert.equal(first.status, 201);
+  assert.equal(first.body.repeated, false);
+  assert.equal(first.body.receiptVerification, "verified");
+  const second = await app.request("/api/tactic-collections", "POST", input);
+  assert.equal(second.status, 200);
+  assert.equal(second.body.repeated, true);
+  assert.equal(second.body.receiptVerification, "verified");
+  assert.equal(second.body.importedCount, 0);
+  assert.deepEqual(second.body.tacticIds, first.body.tacticIds);
+  const changed = { ...input, tactics: [{ ...tactic, title: "不同内容" }] };
+  const previous = (await app.request("/api/tactics")).body;
+  assert.equal((await app.request("/api/tactic-collections", "POST", changed)).status, 409);
+  assert.deepEqual((await app.request("/api/tactics")).body, previous);
+  // 仅本测试专属库模拟迁移后的旧收据；真实旧表迁移另有独立测试。
+  const database = new DatabaseSync(app.databasePath);
+  try {
+    database.prepare("UPDATE tactic_collections SET payload_hash=NULL WHERE collection_name=?").run(input.collectionName);
+  } finally { database.close(); }
+  const legacy = await app.request("/api/tactic-collections", "POST", changed);
+  assert.equal(legacy.status, 200);
+  assert.equal(legacy.body.repeated, true);
+  assert.equal(legacy.body.receiptVerification, "legacy-unverified");
+  assert.equal(legacy.body.importedCount, 0);
+  assert.deepEqual(legacy.body.tacticIds, first.body.tacticIds);
+  assert.deepEqual((await app.request("/api/tactics")).body, previous);
+});

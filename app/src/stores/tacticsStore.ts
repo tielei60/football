@@ -1,7 +1,7 @@
 import { nextTick, ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { type BoardSnapshot, type MatchInfo, type TacticRecord, type VersionRecord } from "@/db";
-import { apiRequest } from "@/services/tacticsApi";
+import { apiRequest, collectionImportResult, type CollectionImportResult } from "@/services/tacticsApi";
 import {
   toBoard,
   toTactic,
@@ -437,15 +437,20 @@ export const useTacticsStore = defineStore("tactics", () => {
     return JSON.stringify(await apiRequest<TacticCollection>("/api/tactic-collections"));
   };
 
-  // 整库恢复：追加导入（不覆盖现有），返回导入套数
-  const importBackup = async (payload: unknown): Promise<number> => {
-    const result = await apiRequest<{ importedCount: number }>("/api/tactic-collections", {
+  // 整库恢复：追加导入（不覆盖现有），返回导入数量及收据内容核验结果
+  const importBackup = async (payload: unknown): Promise<CollectionImportResult> => {
+    const result = collectionImportResult(await apiRequest<CollectionImportResult>("/api/tactic-collections", {
       method: "POST",
       body: readCollection(payload),
-    });
-    currentId.value = null;
-    await refresh();
-    return result.importedCount;
+    }));
+    if (result.receiptVerification === "verified") currentId.value = null;
+    try {
+      await refresh();
+    } catch {
+      // POST 已返回收据；列表读取失败不能冒充导入失败并引导重复写入。
+      result.listRefreshFailed = true;
+    }
+    return result;
   };
 
   const clearPrint = () => {

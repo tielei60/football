@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import { db } from "@/db";
-import { toBoard, toTactic, type TacticCollection } from "./tacticLanguage";
+import { readCollection } from "./tacticLanguage";
 
 export class TacticsApiError extends Error {
   constructor(
@@ -36,12 +36,29 @@ export async function apiRequest<T>(path: string, options: { method?: string; bo
   }
 }
 
+export interface CollectionImportResult {
+  importedCount: number;
+  receiptVerification: "verified" | "legacy-unverified";
+  listRefreshFailed?: boolean;
+}
+
+// 旧服务返回零新增但没有内容校验标记时，不能推断本次文件已经完整导入。
+export function collectionImportResult(result: {
+  importedCount: number;
+  receiptVerification?: CollectionImportResult["receiptVerification"];
+}): CollectionImportResult {
+  return {
+    importedCount: result.importedCount,
+    receiptVerification: result.receiptVerification ?? (result.importedCount > 0 ? "verified" : "legacy-unverified"),
+  };
+}
+
 export async function inspectLegacyTactics(): Promise<number> {
   if (!(await Dexie.exists("berlin-garden-8v8"))) return 0;
   return db.tactics.count();
 }
-export async function migrateLegacyTactics(): Promise<number> {
-  if (!(await inspectLegacyTactics())) return 0;
+export async function migrateLegacyTactics(): Promise<CollectionImportResult> {
+  if (!(await inspectLegacyTactics())) return { importedCount: 0, receiptVerification: "verified" };
   const tactics = await db.tactics.toArray();
   const versions = await db.versions.toArray();
   const numbers = new Map(tactics.map((t, i) => [t.id, i]));
@@ -51,21 +68,21 @@ export async function migrateLegacyTactics(): Promise<number> {
     collectionName = `browser-tactics-${crypto.randomUUID()}`;
     localStorage.setItem(nameKey, collectionName);
   }
-  const collection: TacticCollection = {
+  const collection = readCollection({
     collectionName,
-    tactics: tactics.map(toTactic),
+    tactics,
     versions: versions
       .filter((v) => numbers.has(v.tacticId))
       .map((v) => ({
         tacticNumber: numbers.get(v.tacticId)!,
         note: v.note,
-        board: toBoard(v.snapshot),
+        snapshot: v.snapshot,
         createdAt: v.createdAt,
       })),
-  };
-  const result = await apiRequest<{ importedCount: number }>("/api/tactic-collections", {
+  });
+  const result = await apiRequest<CollectionImportResult>("/api/tactic-collections", {
     method: "POST",
     body: collection,
   });
-  return result.importedCount;
+  return collectionImportResult(result);
 }

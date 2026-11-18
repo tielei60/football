@@ -278,3 +278,34 @@ test('历史上限按每套统计，导出不裁剪既有数据',()=>{
  assert.equal(transfer.parse(JSON.stringify(v)).versions.length,100);
  v.versions.push({...structuredClone(backup.versions[0]),createdAt:51});assert.equal(JSON.parse(transfer.serialize(v)).versions.length,101);
 });
+
+for(const [result,message]of[
+ [{importedCount:0,repeated:true,receiptVerification:'legacy-unverified'},'历史导入记录已存在，本次未重复导入。请到战术列表核对内容，勿重复选择同一备份。'],
+ [{importedCount:0,repeated:true,receiptVerification:'verified'},'此前导入已确认，本次未重复新增战术。'],
+ [{importedCount:1,repeated:false,receiptVerification:'verified'},'导入已确认，新增 1 套战术。'],
+ [{importedCount:0,repeated:true},'本次未新增战术，无法核验历史内容。请到战术列表核对。'],
+ [{importedCount:0},'本次未新增战术，无法核验历史内容。请到战术列表核对。'],
+ [{importedCount:1},'导入已确认，新增 1 套战术。'],
+])test('导入收据提示区分验证状态：'+JSON.stringify(result),async()=>{
+ const store=new Map(),requests=[],h=fixture({request:async(p,m,d)=>{requests.push(d);return result;}},persistentStorage(store));
+ await h.page.refresh();selected(h.page);await h.page.executeImport();
+ assert.equal(h.page.data.message,message);assert.equal(h.page.data.pending,false);assert.equal(h.page.data.fileName,'');assert.equal(h.page._collection,null);assert.equal(store.size,0);
+ await h.page.executeImport();assert.equal(requests.length,1);
+});
+test('首次同名异内容409不显示成功、不自动重复导入',async()=>{
+ const store=new Map(),requests=[],h=fixture({request:async(p,m,d)=>{requests.push(d);throw Object.assign(Error('同名导入内容不一致'),{status:409});}},persistentStorage(store));
+ await h.page.refresh();selected(h.page);await h.page.executeImport();
+ assert.equal(requests.length,1);assert.equal(h.page.data.message,'');assert.equal(h.page.data.actionError,'同名导入内容不一致');assert.equal(h.page.data.pending,false);assert.equal(store.size,0);
+ await h.page.refresh();assert.equal(requests.length,1);
+});
+test('未知结果后409仍保留同一任务和防重复收据，后续已验证重复成功才解除',async()=>{
+ const store=new Map(),requests=[],h=fixture({request:async(p,m,d)=>{requests.push(structuredClone(d));throw Error('响应丢失');}},persistentStorage(store));
+ await h.page.refresh();selected(h.page);await h.page.executeImport();const guard=JSON.stringify([...store]);
+ h.page.onUnload();const next=h.newPage();await next.refresh();
+ h.api.request=async(p,m,d)=>{requests.push(structuredClone(d));throw Object.assign(Error('同名导入内容不一致'),{status:409});};await next.executeImport();
+ assert.equal(next.data.pending,true);assert.equal(next.data.message,'');assert.match(next.data.actionError,/结果未确认/);assert.equal(JSON.stringify([...store]),guard);assert.deepEqual(requests[1],requests[0]);
+ next.choose();assert.equal(requests.length,2);
+ h.api.request=async(p,m,d)=>{requests.push(structuredClone(d));return {importedCount:0,repeated:true,receiptVerification:'verified'};};await next.executeImport();
+ assert.deepEqual(requests[2],requests[0]);assert.equal(next.data.message,'此前导入已确认，本次未重复新增战术。');assert.equal(next.data.pending,false);assert.equal(store.size,0);assert.equal(next._collection,null);
+ await next.executeImport();assert.equal(requests.length,3);
+});

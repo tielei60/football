@@ -87,7 +87,16 @@ Page({
    clearGuard(task.guardKey,task.collectionName);
    if(pending===task)pending=null;
    task.result=result;
-   if(this.valid(owner)){this._collection=null;this.setData({fileName:'',pending:false,message:'导入已确认，新增 '+result.importedCount+' 套战术。'});}
+   if(this.valid(owner)){
+    const message=result.receiptVerification==='legacy-unverified'
+     ?'历史导入记录已存在，本次未重复导入。请到战术列表核对内容，勿重复选择同一备份。'
+     :result.receiptVerification==='verified'&&result.repeated
+      ?'此前导入已确认，本次未重复新增战术。'
+      :!result.receiptVerification&&result.importedCount===0
+       ?'本次未新增战术，无法核验历史内容。请到战术列表核对。'
+       :'导入已确认，新增 '+result.importedCount+' 套战术。';
+    this._collection=null;this.setData({fileName:'',pending:false,message});
+   }
   }catch(e){
    const code=e.status||e.statusCode||0;
    if(dispatched&&code>=400&&code<500&&!task.hadUncertain){

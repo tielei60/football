@@ -80,7 +80,7 @@ export interface TacticVersion {
 }
 export interface TacticCollection {
   tactics: Tactic[];
-  versions: { tacticNumber: number; note: string; board: Board; createdAt: number }[];
+  versions: { tacticNumber: number; note: string; board: Board; createdAt?: number }[];
   exportedAt?: number;
   collectionName?: string;
 }
@@ -251,17 +251,25 @@ export function fromVersion(v: TacticVersion): VersionRecord {
   return { id: v.versionId, tacticId: v.tacticId, note: v.note, snapshot: fromBoard(v.board), createdAt: v.createdAt };
 }
 
+// 旧快照缺演示 ID 时使用文件内稳定标识，避免每次恢复生成随机 ID 干扰具名收据。
+function importAnimation(value: BoardSnapshot["animation"], fallbackId: string): BoardSnapshot["animation"] {
+  return value && typeof value === "object" && (typeof value.id !== "string" && typeof value.id !== "number") ? { ...value, id: fallbackId } : value;
+}
+
 export function readCollection(payload: unknown): TacticCollection {
   if (!payload || typeof payload !== "object" || !("tactics" in payload) || !Array.isArray(payload.tactics)) {
     throw new Error("不是有效的战术库备份文件");
   }
   const data = payload as {
+    collectionName?: string;
     tactics: (Tactic & TacticRecord)[];
     versions?: (TacticCollection["versions"][number] & VersionRecord & { tacticKey: number })[];
   };
   return {
-    tactics: data.tactics.map((t) => {
-      if (t.board) return toTactic(fromTactic(t));
+    ...(data.collectionName === undefined ? {} : { collectionName: data.collectionName }),
+    tactics: data.tactics.map((t, index) => {
+      // 标准备份直接交服务端验证，不能经运行时水合补时间或过滤历史曲线。
+      if (t.board) return { ...t };
       if (!t.snapshot) throw new Error("备份中的战术板内容不完整");
       return toTactic({
         ...t,
@@ -272,16 +280,17 @@ export function readCollection(payload: unknown): TacticCollection {
         thumb: t.thumb ?? null,
         snapshot: {
           ...t.snapshot,
+          animation: importAnimation(t.snapshot.animation, `legacy-tactic-${index}`),
           items: Array.isArray(t.snapshot.items) ? t.snapshot.items : [],
           drawings: Array.isArray(t.snapshot.drawings) ? t.snapshot.drawings : [],
         },
       });
     }),
-    versions: (data.versions ?? []).map((v) => ({
+    versions: (data.versions ?? []).map((v, index) => ({
       tacticNumber: v.tacticNumber ?? v.tacticKey,
       note: v.note ?? "",
-      board: v.board ? toBoard(fromBoard(v.board)) : toBoard(v.snapshot),
-      createdAt: v.createdAt ?? Date.now(),
+      board: v.board ?? toBoard({ ...v.snapshot, animation: importAnimation(v.snapshot?.animation, `legacy-version-${index}`) }),
+      createdAt: v.createdAt,
     })),
     exportedAt: Date.now(),
   };

@@ -897,8 +897,8 @@ export function createFootballServer({
         if (method === "GET")
           return send(response, 200, store.exportCollection());
         if (method === "POST") {
-          const { repeated, ...collection } = store.importCollection(body());
-          return send(response, repeated ? 200 : 201, collection);
+          const collection = store.importCollection(body());
+          return send(response, collection.repeated ? 200 : 201, collection);
         }
       } else {
         const route = /^\/api\/tactics\/([1-9]\d*)(\/versions)?$/.exec(

@@ -504,12 +504,25 @@ export function openFootballStore(databasePath) {
       note TEXT NOT NULL, portrait TEXT, field_piece_id TEXT
     ) STRICT;
     CREATE TABLE IF NOT EXISTS tactic_collections (
-      collection_name TEXT PRIMARY KEY, tactic_ids TEXT NOT NULL, imported_at INTEGER NOT NULL
+      collection_name TEXT PRIMARY KEY, tactic_ids TEXT NOT NULL, imported_at INTEGER NOT NULL, payload_hash TEXT
     ) STRICT;
     CREATE TABLE IF NOT EXISTS app_migrations (
       migration_name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL
     ) STRICT;
   `);
+  // 旧导入收据没有原始内容，不能从当前可编辑战术或首次重试推断哈希。
+  // 在写锁内重新检查，兼容多个进程同时启动；旧收据保持 NULL。
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    if (!database.prepare("PRAGMA table_info(tactic_collections)").all()
+      .some((column) => column.name === "payload_hash")) {
+      database.exec("ALTER TABLE tactic_collections ADD COLUMN payload_hash TEXT");
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
   // Existing SQLite tables cannot drop NOT NULL in place. Copy every legacy
   // field in one transaction before swapping tables; history and IDs stay intact.
   if (
@@ -1042,14 +1055,28 @@ export function openFootballStore(databasePath) {
           ? null
           : string(request.collectionName, "战术集名称", 300);
       if (collectionName === "") reject("战术集名称不能为空。");
+      // 固定原始请求内容，忽略导出时间与请求名；键排序但不改变数组顺序。
+      let payloadHash = null;
+      if (collectionName !== null) {
+        try {
+          payloadHash = createHash("sha256")
+            .update(canonicalJson({ tactics: request.tactics, versions: request.versions })).digest("hex");
+        } catch {
+          reject("战术集内容过深或无法序列化，请检查备份文件。");
+        }
+      }
       return transaction(() => {
         if (collectionName !== null) {
           const previous = prepare(
-            "SELECT tactic_ids FROM tactic_collections WHERE collection_name = ?",
+            "SELECT tactic_ids, payload_hash FROM tactic_collections WHERE collection_name = ?",
           ).get(collectionName);
           if (previous) {
+            if (previous.payload_hash !== null && previous.payload_hash !== payloadHash)
+              throw new FootballError(409, "此导入请求名称已用于不同内容，请核对原任务，勿重复导入。");
             const tacticIds = JSON.parse(previous.tactic_ids);
-            return { repeated: true, importedCount: 0, tacticIds };
+            return { repeated: true, importedCount: 0, tacticIds,
+              receiptVerification: previous.payload_hash === null ? "legacy-unverified" : "verified" };
+
           }
         }
         const tacticIds = request.tactics.map((tactic) =>
@@ -1072,9 +1099,10 @@ export function openFootballStore(databasePath) {
         }
         if (collectionName !== null)
           prepare(
-            "INSERT INTO tactic_collections (collection_name, tactic_ids, imported_at) VALUES (?, ?, ?)",
-          ).run(collectionName, JSON.stringify(tacticIds), Date.now());
-        return { repeated: false, importedCount: tacticIds.length, tacticIds };
+            "INSERT INTO tactic_collections (collection_name, tactic_ids, imported_at, payload_hash) VALUES (?, ?, ?, ?)",
+          ).run(collectionName, JSON.stringify(tacticIds), Date.now(), payloadHash);
+        return { repeated: false, importedCount: tacticIds.length, tacticIds,
+          ...(collectionName === null ? {} : { receiptVerification: "verified" }) };
       });
     },
   };

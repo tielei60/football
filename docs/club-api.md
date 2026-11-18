@@ -39,6 +39,16 @@
 
 旧有 `/api/tactics`、`/api/coaching-desk`、`/api/tactic-collections` 及战术版本接口保持原请求/响应约定；读取需认证，写入仅管理员。旧战术板资源属于原始球队，其他球队身份不能访问。所有俱乐部业务表均按球队隔离。
 
+### 战术备份导入收据
+
+POST `/api/tactic-collections` 可携带 `collectionName` 作为同一导入任务的重试标识，不是按文件名覆盖战术。新建命名收据保存原始 `tactics`、`versions` 的规范化内容摘要；对象键顺序和顶层 `exportedAt` 不影响摘要，数组顺序与内容变化仍参与比较。
+
+- 首次成功返回 201；相同名称、相同内容重试返回 200、`repeated:true`、`importedCount:0` 和原 `tacticIds`，不重复写入。命名新收据的 `receiptVerification` 为 `verified`。
+- 相同名称、不同内容返回 409，全部业务记录和收据不变。不要自动换新名称重试，应先核对原任务。
+- 升级前无摘要的历史收据仍防止重复导入，返回 `receiptVerification:legacy-unverified`；仅说明历史导入记录存在，不能确认本次文件与旧内容相同。客户端应提示到战术列表核对，不应声称内容已验证。不会根据当前可编辑战术或第一次重试回填摘要。
+- 导入后原战术被编辑或删除，也不会因重试重建或覆盖。未携带名称的旧接口仍是追加导入，不提供防重复保证。
+- 升级仅为 `tactic_collections` 增加可空 `payload_hash`，保留旧记录和 ID；同一事务完成新增战术、历史与收据，失败回滚。
+
 ### 系统账号与首次改密
 
 - GET `/api/system/accounts`：本队账号列表，仅系统管理员。
