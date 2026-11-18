@@ -4,13 +4,13 @@ const {runPage}=require('./ui-fixture.cjs');
 const source=fs.readFileSync(require.resolve('../pages/manage-venue/index.js'),'utf8');
 function deferred(){let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j});return{promise,resolve,reject};}
 function setup(){
- let definition,token='A';const events=[],requests=[],saving=deferred(),choosing=deferred();
+ let definition,token='A';const storage=new Map();const events=[],requests=[],saving=deferred(),choosing=deferred();
  const venue={id:7,revision:2,name:'隔离球场',address:'地址',status:'active',latitude:30,longitude:120};
- const shared={api:{getSession:()=>({token}),request:async(...args)=>{requests.push(args);return args[1]?saving.promise:venue;}},
+ const shared={api:{getSession:()=>({token,serverOrigin:'https://club.example',user:{id:token==='A'?1:2},team:{id:1}}),request:async(...args)=>{requests.push(args);return args[1]?saving.promise:venue;}},
  load:async(page,work)=>page.setData(await work({user:{role:'admin'}})),unload(){this._disposed=true;},
  fail(page,e){events.push(['fail',e.status]);}};
  runPage(source,{Page:d=>definition=d,require:n=>n.includes('location')?{choose:()=>choosing.promise,markers:v=>v.latitude?[{latitude:v.latitude}]:[]}:shared,
- wx:{navigateBack(){events.push(['back']);},showToast(){events.push(['toast']);},showModal(o){o.success({confirm:true});}}});
+ wx:{getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),navigateBack(){events.push(['back']);},showToast(){events.push(['toast']);},showModal(o){o.success({confirm:true});}}});
  function page(){return{...definition,data:structuredClone(definition.data),_ownerToken:token,setData(p){for(const[k,v]of Object.entries(p)){if(k.startsWith('form.'))this.data.form[k.slice(5)]=v;else this.data[k]=v;}}};}
  const p=page();p.data.form.name=venue.name;
  return{p,page,events,requests,saving,choosing,venue,setToken:v=>token=v};

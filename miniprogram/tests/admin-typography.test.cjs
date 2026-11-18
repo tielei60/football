@@ -114,6 +114,10 @@ test('账号筛选重置归一化不接受篡改或重复片段', () => {
   assert.equal(normalizeRosterAccountFilters(source + extra), normalizeRosterAccountFilters(source) + extra);
 });
 function normalizeVenueReceipts(source) {
+  // 阶段38持久核对guard仅精确逆投影，原业务基线继续冻结。
+  for(const {before,after} of require('./venue-persistent-guard-projection.json')) {
+    assert.equal(source.split(after).length,2,'球场持久核对实现变更需复审');source=source.replace(after,before);
+  }
   for (const {before,after} of require('./venue-late-receipt-projection.json')) {
     assert.equal(source.split(after).length, 2, '球场回执精确变更块必须唯一且完整');
     source=source.replace(after,before);
@@ -251,7 +255,9 @@ function normalizeVenuesPermission(source,ext){
 }
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
-    const read = ext => fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+    const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+      if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
+      return source; };
     assert.equal(hash(markup(item==='pages/manage-venues'?normalizeVenuesPermission(read('wxml'),'wxml'):item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');
     if(item==='pages/manage-venues') businessSource=normalizeVenuesPermission(businessSource,'js');

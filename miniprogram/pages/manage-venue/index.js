@@ -1,5 +1,20 @@
 const ui=require('../../utils/ui');
 let pendingCreate = null;
+// 仅持久化核对标识，不保存名称、地址、坐标或登录令牌。
+function venueGuardKey() {
+  const session=s.api.getSession(),origin=session?.serverOrigin;
+  if(!origin||!Number.isSafeInteger(session?.user?.id)||!Number.isSafeInteger(session?.team?.id))throw new Error('无法确认球场管理账号，请重新登录。');
+  return 'football.native.venue-create-guard.v1:'+encodeURIComponent(origin)+':'+session.user.id+':'+session.team.id;
+}
+function readVenueGuard(key) {
+  const value=wx.getStorageSync(key);
+  if(!value)return null;
+  if(typeof value!=='object'||typeof value.taskId!=='string'||!value.taskId)throw new Error('球场核对记录无法读取，请先检查本地存储。');
+  return value;
+}
+function clearVenueGuard(key,taskId) {
+  if(readVenueGuard(key)?.taskId===taskId){wx.removeStorageSync(key);if(readVenueGuard(key))throw new Error('无法清除球场核对提醒，请重新打开核对。');}
+}
 const s = require("../shared");
 const location = require("../../utils/location");
 // 页面隐藏不等于卸载：地图返回需要接收结果，但旧页面不能触发导航。
@@ -71,6 +86,8 @@ Page({
       if (known?.id) {
         this.id = known.id;
       }
+      this._guardKey=venueGuardKey();
+      const guard=!this.id?readVenueGuard(this._guardKey):null;
       const draft = !this.id && pendingCreate ? pendingCreate.form : null;
       const v = this.id
         ? await s.api.request("/venues/" + encodeURIComponent(this.id))
@@ -80,8 +97,8 @@ Page({
         editing: !!this.id,
         revision: v.revision ?? null,
         conflict: false,
-        uncertain: !!draft,
-        actionError: draft ? "上次添加结果未确认，请先返回球场列表核对。" : "",
+        uncertain: !!draft || !!guard,
+        actionError: draft || guard ? "上次添加结果未确认，请先返回球场列表核对。" : "",
         form: {
           name: v.name,
           fieldNumber: v.fieldNumber || "",
@@ -138,20 +155,31 @@ Page({
   checkList() {
     wx.navigateBack();
   },
-  confirmAbsent() {
+  confirmAbsent() { this.confirmRecovery(false); },
+  confirmExists() { this.confirmRecovery(true); },
+  confirmRecovery(exists) {
+    if(this.data.busy||this._disposed||this._hidden)return;
+    let key,guard;
+    try{key=venueGuardKey();guard=readVenueGuard(key);}catch(e){this.setData({actionError:e.message});return;}
     ui.showModal(this,{
-      title: "确认未创建球场",
-      content: "请先核对球场列表。仅在确认没有上次添加的球场后继续，避免重复。",
+      title: exists ? "确认球场已存在" : "确认未创建球场",
+      content: exists ? "确认已在列表找到上次添加的球场？仅解除核对提醒，不会创建、删除或修改球场。" : "请先核对球场列表。仅在确认没有上次添加的球场后继续，避免重复。",
       success: (r) => {
         if (
           r.confirm &&
-          !this._disposed &&
+          !this._disposed && !this._hidden &&
           this._ownerToken === s.api.getSession()?.token
         ) {
-          if(pendingCreate?.result?.id){this.refresh();return;}
           if(pendingCreate?.inFlight){this.setData({actionError:'上次请求仍在处理中，请稍后核对列表。'});return;}
-          pendingCreate = null;
-          this.setData({ uncertain: false, actionError: "" });
+          if(pendingCreate?.result?.id&&!exists){this.refresh();return;}
+          try {
+            if(key!==venueGuardKey()||key!==this._guardKey)throw new Error('登录状态已变化，请重新打开球场。');
+            if(readVenueGuard(key)?.taskId!==guard?.taskId)throw new Error('核对任务已变化，请重新打开球场核对。');
+            if(guard)clearVenueGuard(key,guard.taskId);
+            pendingCreate = null;
+            this.setData({ uncertain: false, actionError: "" });
+            if(exists){wx.navigateBack();}
+          } catch(e){this.setData({actionError:e.message});}
         }
       },
     });
@@ -174,15 +202,25 @@ Page({
     const creating = !this.id;
     this.setData({ busy: true, actionError: "" });
     const attempt = !this.id ? {token:this._ownerToken,form:{...this.data.form},inFlight:true} : null;
-    if(attempt)pendingCreate=attempt;
+    let dispatched=false;
     try {
+      if(attempt){
+        const key=venueGuardKey();this._guardKey=key;
+        if(readVenueGuard(key)){this.setData({uncertain:true,actionError:'上次添加结果未确认，请先返回球场列表核对。'});return;}
+        const taskId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+        wx.setStorageSync(key,{taskId,createdAt:Date.now()});
+        if(readVenueGuard(key)?.taskId!==taskId)throw new Error('无法保存球场核对记录，未发起添加。');
+        attempt.guardKey=key;attempt.taskId=taskId;pendingCreate=attempt;
+      }
       const payload = { ...this.data.form, name: this.data.form.name.trim() };
       if (this.id) payload.revision = this.data.revision;
+      dispatched=true;
       const result = await s.api.request(
         this.id ? "/venues/" + encodeURIComponent(this.id) : "/venues",
         this.id ? "PUT" : "POST",
         payload,
       );
+      if(attempt&&result?.id)clearVenueGuard(attempt.guardKey,attempt.taskId);
       // 已成功的新建保留回执，旧页面卸载后重新进入也不能再次 POST。
       if (attempt && pendingCreate === attempt) attempt.result = result;
       complete(this, operation, () => {
@@ -198,7 +236,11 @@ Page({
       });
     } catch (e) {
       operation.expired = e.status === 401 && !e.staleSession && !s.api.getSession()?.token;
-      const uncertain = creating && (!e.status || e.status >= 500);
+      const code=e.status||e.statusCode;
+      let uncertain = creating && dispatched && (e.staleSession === true || !code || code >= 500);
+      if(attempt&&dispatched&&!uncertain){
+        try{clearVenueGuard(attempt.guardKey,attempt.taskId);}catch(_){uncertain=true;}
+      }
       if(!uncertain && attempt && pendingCreate===attempt)pendingCreate=null;
       complete(this, operation, () => {
         this.setData({
@@ -214,6 +256,7 @@ Page({
       });
     } finally {
       if(attempt)attempt.inFlight=false;
+      if(current(this,operation)&&!this._venueReceipt)this.setData({busy:false});
     }
   },
 });

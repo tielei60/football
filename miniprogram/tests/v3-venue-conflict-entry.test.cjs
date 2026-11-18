@@ -4,7 +4,10 @@ const root=path.resolve(__dirname,'..'),read=(e)=>fs.readFileSync(path.join(root
 test('球场冲突提供显式返回核对，未知结果继续沿用原核对分支',()=>{
  const w=read('wxml'),tag=w.match(/<button[^>]*class="ui-button ui-block venue-reconcile"[^>]*>/)?.[0];assert.ok(tag);
  for(const attr of ['wx:if="{{conflict&&!uncertain}}"','disabled="{{loading || busy}}"','bindtap="checkList"','size="mini"'])assert.ok(tag.includes(attr),attr);
- assert.match(w,/<view wx:if="{{uncertain}}" class="uncertain-actions"><button disabled="{{loading}}" bindtap="checkList">返回球场列表核对<\/button><button disabled="{{loading}}" class="ghost" bindtap="confirmAbsent">/);
+ // 三个入口及顺序必须完整：查列表、确认已存在、确认未创建，均不可遗漏。
+ const recovery='<view wx:if="{{uncertain}}" class="uncertain-actions"><button disabled="{{loading}}" bindtap="checkList">返回球场列表核对</button><button disabled="{{loading || busy}}" class="ghost" bindtap="confirmExists">已核对，球场已存在</button><button disabled="{{loading}}" class="ghost" bindtap="confirmAbsent">已核对，确认未创建</button></view>';
+ assert.equal(w.split(recovery).length,2,'未知结果核对分支必须完整且唯一');
+ for(const handler of ['confirmExists','confirmAbsent'])assert.equal(w.split('bindtap="'+handler+'"').length,2,handler+'入口必须唯一');
  assert.match(w,/disabled="{{loading \|\| \(busy\|\|conflict\|\|uncertain\)}}">保存球场/);
  assert.match(read('wxss'),/button\.venue-reconcile\[size="mini"\]\{min-height:44px/);
 });

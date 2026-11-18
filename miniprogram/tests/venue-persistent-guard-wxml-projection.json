@@ -1,0 +1,6 @@
+[
+  {
+    "before": "<button disabled=\"{{loading}}\" class=\"ghost\" bindtap=\"confirmAbsent\">已核对，确认未创建</button>",
+    "after": "<button disabled=\"{{loading || busy}}\" class=\"ghost\" bindtap=\"confirmExists\">已核对，球场已存在</button><button disabled=\"{{loading}}\" class=\"ghost\" bindtap=\"confirmAbsent\">已核对，确认未创建</button>"
+  }
+]

@@ -18,7 +18,7 @@
   </view>
   <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
   <button wx:if="{{conflict&&!uncertain}}" class="ui-button ui-block venue-reconcile" size="mini" disabled="{{loading || busy}}" bindtap="checkList">返回球场列表核对</button>
-  <view wx:if="{{uncertain}}" class="uncertain-actions"><button disabled="{{loading}}" bindtap="checkList">返回球场列表核对</button><button disabled="{{loading}}" class="ghost" bindtap="confirmAbsent">已核对，确认未创建</button></view>
+  <view wx:if="{{uncertain}}" class="uncertain-actions"><button disabled="{{loading}}" bindtap="checkList">返回球场列表核对</button><button disabled="{{loading || busy}}" class="ghost" bindtap="confirmExists">已核对，球场已存在</button><button disabled="{{loading}}" class="ghost" bindtap="confirmAbsent">已核对，确认未创建</button></view>
   <button id="venue-save" size="mini" class="primary venue-save" bindtap="save" loading="{{busy}}" disabled="{{loading || (busy||conflict||uncertain)}}">保存球场</button>
   <view class="hint">停用不影响历史比赛。地图选点由微信处理，取消选择不会更改原位置。</view>
  </block>
