@@ -1,0 +1,6 @@
+[
+  {
+    "before": "        const found = accounts.find((x) => x.username === p.username);",
+    "after": "        // SQLite NOCASE 仅折叠 ASCII A-Z，不能使用 Unicode toLowerCase。\n        const accountKey = (name) => name.replace(/[A-Z]/g, (c) => c.toLowerCase());\n        const found = accounts.find((x) => accountKey(x.username) === accountKey(p.username));"
+  }
+]

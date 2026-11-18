@@ -96,7 +96,9 @@ Page({
         })),
       });
       if (p && !p.inFlight) {
-        const found = accounts.find((x) => x.username === p.username);
+        // SQLite NOCASE 仅折叠 ASCII A-Z，不能使用 Unicode toLowerCase。
+        const accountKey = (name) => name.replace(/[A-Z]/g, (c) => c.toLowerCase());
+        const found = accounts.find((x) => accountKey(x.username) === accountKey(p.username));
         if (found) {
           pendingCreate = null;
           this.setData({
