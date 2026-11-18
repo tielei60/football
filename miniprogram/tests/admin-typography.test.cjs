@@ -260,6 +260,7 @@ for (const [item, expected] of Object.entries(baseline)) {
     const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
       if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
       if(item==='pages/match-edit'&&ext==='wxml')for(const {before,after} of require('./match-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'比赛已存在核对入口必须精确且唯一');source=source.replace(after,before);}
+      for(const {before,after} of require('./admin-create-persistent-projection.json')[item+'/index.'+ext]||[]){assert.equal(source.split(after).length,2,'阶段40新增恢复入口必须精确唯一');source=source.replace(after,before);}
       return source; };
     assert.equal(hash(markup(item==='pages/manage-venues'?normalizeVenuesPermission(read('wxml'),'wxml'):item==='pages/force-password'?normalizePasswordGate(read('wxml'),'wxml'):read('wxml'),item)),expected.wxml,'事件、条件、输入约束与数据定位必须保持');
     let businessSource=read('js');

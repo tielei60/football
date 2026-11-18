@@ -103,9 +103,9 @@ async function act(page, work, done, creating = false) {
     }
   } catch (e) {
     if (!page._disposed && token() === owner && dispatched) page._adminRefresh = true;
-    if (visible(page, epoch, turn) && (token() === owner || ((e.status || e.statusCode) === 401 && !token()))) {
+    if (!e.staleSession && visible(page, epoch, turn) && (token() === owner || ((e.status || e.statusCode) === 401 && !token()))) {
       const code = e.status || e.statusCode || 0;
-      const uncertain = dispatched && creating && (code === 0 || code >= 500);
+      const uncertain = !!e.createGuardPending || (dispatched && creating && !e.createNotDispatched && (e.staleSession === true || code === 0 || code >= 500));
       page.setData({
         conflict: code === 409,
         uncertain,
@@ -184,7 +184,22 @@ function unload() {
 }
 module.exports = { s, load, input, reload, act, choosePicture, unload, hide, show };
 
-// Session-only ledger: never persisted or passed to setData.
+// 表单和照片仅内存保留；跨运行只存无个人资料的核对标识。
+function createGuardKey(kind) {
+  const session=s.api.getSession();
+  if(!['player','season'].includes(kind)||!session?.serverOrigin||!Number.isSafeInteger(session?.user?.id)||!Number.isSafeInteger(session?.team?.id))throw new Error('无法确认创建账号，请重新登录。');
+  return 'football.native.admin-create-guard.v1:'+encodeURIComponent(session.serverOrigin)+':'+session.user.id+':'+session.team.id+':'+kind;
+}
+function readCreateGuard(key) {
+  const value=wx.getStorageSync(key);if(!value)return null;
+  if(typeof value!=='object'||typeof value.taskId!=='string'||!value.taskId)throw new Error('创建核对记录无法读取，请检查本地存储。');
+  return value;
+}
+function clearCreateGuard(key,taskId) {
+  if(readCreateGuard(key)?.taskId===taskId){wx.removeStorageSync(key);if(readCreateGuard(key))throw new Error('无法清除创建核对提醒，请重新打开核对。');}
+}
+function validCreatedId(kind,id){return kind==='season'?Number.isSafeInteger(id)&&id>0:typeof id==='string'&&id.trim().length>0;}
+// 同一登录可恢复私有草稿，但草稿绝不持久化。
 let pendingOwner;
 const pendingCreates = new Map();
 function ledger() {
@@ -196,8 +211,10 @@ function ledger() {
   return pendingCreates;
 }
 function restoreCreate(page) {
+  if(page.id||!page.createKind)return {};
+  const guard=readCreateGuard(createGuardKey(page.createKind));
   const entry = ledger().get(page.createKind);
-  if (page.id || !entry) return {};
+  if(!entry)return guard?{uncertain:true,actionError:'上次创建结果待核对，请先到列表检查，勿重复新建。'}:{};
   if (entry.result) {
     page.id = entry.result.id;
     page._imageData = undefined;
@@ -217,49 +234,69 @@ function acknowledgeCreate(page, result) {
 async function createRequest(page, path, payload) {
   const entries = ledger();
   if (entries.has(page.createKind)) throw Object.assign(new Error("请先核对创建结果"), { status: 503 });
+  let entry;
+  const token = pendingOwner;
+  let dispatched=false;
+  try {
   const view = { form: JSON.parse(JSON.stringify(page.data.form)) };
   if (page.createKind === "player") {
     Object.assign(view, { status: page.data.status, membershipConfirmed: page.data.membershipConfirmed,
       membershipIndex: page.data.membershipIndex, initial: page.data.initial, avatar: page.data.avatar, positionOptions: page.data.positionOptions,
       feet: page.data.feet, footIndex: page.data.footIndex });
   }
-  const entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };
-  const token = pendingOwner;
-  entries.set(page.createKind, entry);
-  try {
+  entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };
+    entry.guardKey=createGuardKey(page.createKind);
+    if(readCreateGuard(entry.guardKey))throw Object.assign(new Error('上次创建结果待核对，请先到列表检查。'),{status:503,createGuardPending:true});
+    entry.taskId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    wx.setStorageSync(entry.guardKey,{taskId:entry.taskId,createdAt:Date.now()});
+    if(readCreateGuard(entry.guardKey)?.taskId!==entry.taskId)throw new Error('无法保存创建核对记录，未发起创建。');
+    entries.set(page.createKind, entry);
+    dispatched=true;
     const result = await s.api.request(path, "POST", payload);
+    if(!validCreatedId(page.createKind,result?.id))throw new Error('创建响应编号异常，请先到列表核对。');
+    clearCreateGuard(entry.guardKey,entry.taskId);
     if (s.api.getSession()?.token === token && entries.get(page.createKind) === entry)
       entry.result = { id: result.id, revision: result.revision };
     return result;
   } catch (e) {
     const code = e.status || e.statusCode || 0;
-    if (code >= 400 && code < 500 && s.api.getSession()?.token === token &&
-        entries.get(page.createKind) === entry) entries.delete(page.createKind);
+    if(!dispatched)e.createNotDispatched=true;
+    if(dispatched&&code>=400&&code<500&&!e.staleSession){
+      try{clearCreateGuard(entry.guardKey,entry.taskId);if(entries.get(page.createKind)===entry)entries.delete(page.createKind);}
+      catch(storageError){throw storageError;}
+    }
     throw e;
   } finally {
-    entry.inFlight = false;
+    if(entry)entry.inFlight = false;
   }
 }
-function confirmNotCreated() {
-  if (this.data.busy || !this.data.uncertain || this.id) return;
-  if (ledger().get(this.createKind)?.result) { return this.refresh(); }
-  if (ledger().get(this.createKind)?.inFlight) {
-    ui.showToast(this,{ title: "请求仍在处理中", icon: "none" });
-    return;
-  }
-  const token = s.api.getSession()?.token;
+function confirmNotCreated(){return confirmCreateRecovery.call(this,false);}
+function confirmCreated(){return confirmCreateRecovery.call(this,true);}
+function confirmCreateRecovery(exists) {
+  if(this.data.busy||!this.data.uncertain||this.id||this.data.id||this._hidden||this._disposed||!this.data.authorized)return;
+  const owner=token();if(owner!==this._ownerToken)return;
+  const entry=ledger().get(this.createKind);
+  if(entry?.result)return this.refresh();
+  if(entry?.inFlight){ui.showToast(this,{title:'请求仍在处理中',icon:'none'});return;}
+  let key,guard;
+  try{key=createGuardKey(this.createKind);guard=readCreateGuard(key);}catch(e){this.setData({actionError:e.message});return;}
   ui.showModal(this,{
-    title: "确认列表中未创建",
-    content: "请先到列表检查刚才提交的记录。只有确认不存在，才继续重新提交；否则可能产生重复记录。",
-    confirmText: "确认不存在",
-    success: (r) => {
-      if (!r.confirm || this._disposed || token !== s.api.getSession()?.token) return;
-      if (ledger().get(this.createKind)?.result) { this.refresh(); return; }
-      if (ledger().get(this.createKind)?.inFlight) return;
-      ledger().delete(this.createKind);
-      this.setData({ uncertain: false, actionError: "" });
-    },
+    title:exists?'确认记录已存在':'确认列表中未创建',
+    content:exists?'确认已在列表找到上次创建的记录？仅解除提醒，不会创建、修改或删除记录。':'请先到列表检查。仅确认不存在时继续，避免重复创建。',
+    confirmText:exists?'已核对存在':'确认不存在',
+    success:r=>{
+      if(!r.confirm||this._disposed||this._hidden||this.data.busy||this.id||this.data.id||!this.data.uncertain||!this.data.authorized||owner!==token()||owner!==this._ownerToken)return;
+      const current=ledger().get(this.createKind);
+      if(current!==entry||current?.inFlight||current?.result)return;
+      try{
+        if(key!==createGuardKey(this.createKind)||readCreateGuard(key)?.taskId!==guard?.taskId)throw new Error('核对任务已变化，请重新打开核对。');
+        if(guard)clearCreateGuard(key,guard.taskId);
+        ledger().delete(this.createKind);this.setData({uncertain:false,actionError:''});
+        if(exists)this.backToList();
+      }catch(e){this.setData({actionError:e.message});}
+    }
   });
 }
+module.exports.confirmCreated=confirmCreated;
 module.exports.createRequest = createRequest;
 module.exports.confirmNotCreated = confirmNotCreated;

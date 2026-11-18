@@ -3,6 +3,7 @@ const a = require("../manage-team/admin");
 Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){a.hide.call(this);},
   createKind: "season",
   confirmNotCreated: a.confirmNotCreated,
+  confirmCreated: a.confirmCreated,
   data: {
     loading: true,
     error: "",

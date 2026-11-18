@@ -39,6 +39,7 @@ Page({
   openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
   createKind: "player",
   confirmNotCreated: a.confirmNotCreated,
+  confirmCreated: a.confirmCreated,
   data: {
     loading: true,
     error: "",

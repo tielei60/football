@@ -21,8 +21,10 @@ function setup(name, overrides = {}, wxOverrides = {}) {
     },
     ...overrides,
   };
+  const storage=new Map(),get=api.getSession;api.getSession=()=>{const v=get();return v?{...v,serverOrigin:v.serverOrigin||"https://club.example",user:{id:1,...v.user},team:{id:1,...v.team}}:v;};
   const wx = new Proxy(
     {
+      getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),
       stopPullDownRefresh() {},
       showModal(options) {
         options.success({ confirm: true });
@@ -418,7 +420,7 @@ test("late team load cannot replace newer form or revision", async () => {
 });
 
 for (const kind of ["player", "season"]) {
-  test(kind + " uncertain creation survives new page but not new login", async () => {
+  test(kind + " uncertain reminder survives new page and same-account new login without private draft", async () => {
     let token = "login-A";
     let calls = 0;
     const h = setup("manage-" + kind, {
@@ -448,7 +450,8 @@ for (const kind of ["player", "season"]) {
     token = "login-B";
     const other = h.newPage();
     await other.refresh();
-    assert.equal(other.data.uncertain, false);
+    assert.equal(other.data.uncertain, true);
+    assert.match(other.data.actionError,/核对/);
     assert.equal(other.data.form.name, "");
   });
 }
@@ -573,7 +576,7 @@ test('hidden uncertain create preserves ledger on return',async()=>{
  await h.page.onShow();assert.equal(h.page.data.uncertain,true);assert.equal(h.page.data.form.name,'Demo');
 });
 for(const kind of ['season','player']) test(kind+' unknown draft clears when original page changes account',async()=>{
- let owner='A';const h=setup('manage-'+kind,{getSession:()=>({...session,token:owner}),request:async()=>{throw new Error('offline');}});
+ let owner='A';const h=setup('manage-'+kind,{getSession:()=>({...session,user:{...session.user,id:owner==='A'?1:2},token:owner}),request:async()=>{throw new Error('offline');}});
  await h.page.refresh();h.page.setData({'form.name':'A secret',...(kind==='season'?{'form.startDate':'2026-01-01','form.endDate':'2026-12-31'}:{})});
  await h.page.save();assert.equal(h.page.data.uncertain,true);
  h.page.onHide();owner='B';await h.page.onShow();

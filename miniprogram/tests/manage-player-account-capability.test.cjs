@@ -8,17 +8,17 @@ const root = path.join(__dirname, '..');
 const plain = value => JSON.parse(JSON.stringify(value));
 function harness({status = 'active', reply, error} = {}) {
   let token = 'fixture-owner', modal, def;
-  const requests = [], titles = [];
+  const requests = [], titles = [], storage=new Map();
   const ui = {showModal(_page, options) { modal = options; }, showToast() {}, abort() {}};
   const shared = {api: {
-    getSession: () => ({token}),
+    getSession: () => ({token,serverOrigin:'https://club.example',user:{id:1},team:{id:1}}),
     ensureSession: async () => ({user: {role: 'admin'}}),
     request: async (...args) => { requests.push(plain(args)); if (error) throw error; return typeof reply === 'function' ? reply() : reply; },
   }, safeSetData(page, data) {page.setData(data);}, fail() {}, unload() {}};
   const exported = {exports: {}};
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/manage-team/admin.js'), 'utf8'), {
     module: exported, require: name => name === '../../utils/ui' ? ui : shared,
-    wx: {stopPullDownRefresh() {}},
+    wx: {getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),stopPullDownRefresh() {}},
   });
   vm.runInNewContext(fs.readFileSync(path.join(root, 'pages/manage-player/index.js'), 'utf8'), {
     Page(value) {def = value;}, require: name => name === '../manage-team/admin' ? exported.exports : name === '../../utils/ui' ? ui : {playerInitial: () => '匿'},
