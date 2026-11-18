@@ -64,6 +64,13 @@ export function createWechatInviteStore(
     }
   };
   const q = (sql) => db.prepare(sql);
+  // 确认元数据不等于停用账号；只约束新的邀请/认领/批准，历史查询与撤销保持。
+  // 独立旧表没有该列时沿用已确认语义；主应用迁移默认值为1。
+  const requireConfirmed = (teamId, playerId) => {
+    const player = q("SELECT * FROM club_players WHERE team_id=? AND id=?").get(teamId, playerId);
+    if (player?.membership_confirmed === 0)
+      fail(409, "球员成员状态尚未确认，请先确认后再邀请或批准。");
+  };
   const auth = (actor, target) => {
     const result = sync(authorize, {
       actor,
@@ -169,6 +176,7 @@ export function createWechatInviteStore(
             fail(409, "请求编号已经用于其他邀请。");
           return { ...view(old), credentialUnavailable: true };
         }
+        requireConfirmed(teamId, playerId);
         if (
           q(
             "SELECT id FROM wechat_invites_foundation WHERE app_id=? AND team_id=? AND player_id=? AND status IN ('pending','claimed')",
@@ -272,7 +280,8 @@ export function createWechatInviteStore(
           // 同一服务端验证身份可在丢响应/重启后恢复，不改变初次申请及版本。
           if (r.claim_openid !== identity.openid)
             fail(409, "邀请已有待审核申请。");
-        } else
+        } else {
+          requireConfirmed(r.team_id, r.player_id);
           q(
             "UPDATE wechat_invites_foundation SET status='claimed',claim_openid=?,claim_request_id=?,claim_confirmation_code=?,revision=revision+1 WHERE id=?",
           ).run(
@@ -281,6 +290,7 @@ export function createWechatInviteStore(
             randomBytes(4).toString("hex").toUpperCase(),
             r.id,
           );
+        }
         // 认领者只得到自身申请状态；不发业务session，不返回球员/球队资料。
         return {
           id: r.id,
@@ -379,6 +389,7 @@ export function createWechatInviteStore(
         )
           fail(409, "当前邀请状态不允许此操作。");
         if (action === "approve") {
+          requireConfirmed(r.team_id, r.player_id);
           if (
             typeof confirmationCode !== "string" ||
             !/^[A-F0-9]{8}$/.test(confirmationCode) ||

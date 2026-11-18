@@ -774,3 +774,62 @@ test('invite card code requires an active matching invitation and administrator'
   assert.equal((await f.manage(`/players/${p.id}/wechat-invites/${inv.id}/revoke`, 'POST', { revision: inv.revision })).status, 200);
   assert.equal((await f.manage(path, 'POST', { credential: inv.credential })).status, 409);
 });
+
+test('未确认成员即使status为active也不能创建微信邀请', async t => {
+  const f=await fixture(t),p=await f.player('匿名未确认成员');
+  const saved=await f.manage(`/players/${p.id}`,'PUT',{...p,membershipConfirmed:false,status:'active'});
+  assert.equal(saved.status,200);assert.equal(saved.body.membershipConfirmed,false);assert.equal(saved.body.status,'active');
+  const invite=await f.manage(`/players/${p.id}/wechat-invites`,'POST',{requestId:'unconfirmed-invite-test'});
+  assert.equal(invite.status,409);
+});
+
+for(const stage of ['pending','claimed'])test(`成员取消确认后${stage}不允许继续认领/批准，仍可查询撤销`,async t=>{
+  const f=await fixture(t),p=await f.player('匿名门禁成员'),inv=await f.create(p);
+  const claim=stage==='claimed'?await f.claim(inv):null;
+  const saved=await f.manage(`/players/${p.id}`,'PUT',{...p,status:'active',membershipConfirmed:false});assert.equal(saved.status,200);
+  const revision=f.db.prepare('SELECT revision FROM wechat_invites_foundation WHERE id=?').get(inv.id).revision;
+  const attempt=stage==='pending'?await f.call('/auth/wechat/claim','POST',{code:'fictional-blocked',credential:inv.credential,requestId:'blocked-claim-test'}):await f.manage(`/players/${p.id}/wechat-invites/${inv.id}/approve`,'POST',{revision:claim.revision,confirmationCode:claim.confirmationCode});
+  assert.equal(attempt.status,409);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_wechat_identities').get().n,0);
+  assert.equal(f.db.prepare('SELECT revision FROM wechat_invites_foundation WHERE id=?').get(inv.id).revision,revision);
+  if(stage==='claimed'){
+    const restored=await f.call('/auth/wechat/claim','POST',{code:'fictional-identity',credential:inv.credential,requestId:'unconfirmed-self-recovery'});
+    assert.equal(restored.status,202);assert.equal(restored.body.id,inv.id);assert.equal(restored.body.confirmationCode,claim.confirmationCode);assert.equal(restored.body.token,undefined);
+    assert.equal((await f.call('/auth/wechat/claim','POST',{code:'fictional-outsider',credential:inv.credential,requestId:'unconfirmed-other-recovery'})).status,409);
+    assert.equal(f.db.prepare('SELECT revision FROM wechat_invites_foundation WHERE id=?').get(inv.id).revision,revision);
+  }
+  const list=await f.manage(`/players/${p.id}/wechat-invites`);assert.equal(list.status,200);
+  const revoked=await f.manage(`/players/${p.id}/wechat-invites/${inv.id}/revoke`,'POST',{revision});assert.equal(revoked.status,200);assert.equal(revoked.body.status,'revoked');
+});
+
+test('确认元数据不擅自停用既有绑定；已确认成员可正常邀请，旧创建重放无凭据',async t=>{
+  const f=await fixture(t),p=await f.player('匿名已绑定成员');
+  const {i}=await f.bind(p);
+  const auth=await f.call('/auth/wechat/login','POST',{code:'fictional-identity'});assert.equal(auth.status,200);
+  const saved=await f.manage(`/players/${p.id}`,'PUT',{...p,status:'active',membershipConfirmed:false});assert.equal(saved.status,200);
+  assert.equal((await f.call('/auth/me','GET',undefined,auth.body.token)).status,200);
+  assert.equal((await f.call('/auth/wechat/login','POST',{code:'fictional-identity'})).status,200);
+  const replay=await f.manage(`/players/${p.id}/wechat-invites`,'POST',{requestId:'test-create-1'});assert.equal(replay.status,200);assert.equal(replay.body.id,i.id);assert.equal(replay.body.credential,undefined);
+  const binding=await f.manage(`/players/${p.id}/wechat-binding`);assert.equal(binding.body.bound,true);
+  const other=await f.player('匿名待确认转确认');
+  let row=(await f.manage(`/players/${other.id}`,'PUT',{...other,membershipConfirmed:false})).body;
+  row=(await f.manage(`/players/${other.id}`,'PUT',{...row,membershipConfirmed:true})).body;
+  assert.equal(row.membershipConfirmed,true);await f.create(row);
+});
+
+test('HTTP待审核过期后拒绝批准，本人重放只恢复过期元数据，不创建绑定或会话',async t=>{
+  const f=await fixture(t),p=await f.player('匿名过期申请'),inv=await f.create(p),claim=await f.claim(inv);
+  f.db.prepare('UPDATE wechat_invites_foundation SET expires_at=? WHERE id=?').run(Date.now()-1,inv.id);
+  const sessionCount=f.db.prepare('SELECT count(*) n FROM club_sessions').get().n;
+  const result=await f.manage(`/players/${p.id}/wechat-invites/${inv.id}/approve`,'POST',{revision:claim.revision,confirmationCode:claim.confirmationCode});assert.equal(result.status,409);
+  const before=f.db.prepare('SELECT * FROM wechat_invites_foundation WHERE id=?').get(inv.id);
+  assert.equal(before.status,'expired');assert.equal(before.revision,claim.revision+1);
+  const recovery=await f.call('/auth/wechat/claim','POST',{code:'fictional-identity',credential:inv.credential,requestId:'expired-replay-new-request'});
+  assert.equal(recovery.status,202);assert.equal(recovery.body.status,'expired');assert.equal(recovery.body.token,undefined);
+  assert.equal((await f.call('/auth/wechat/claim','POST',{code:'fictional-outsider',credential:inv.credential,requestId:'expired-outsider-request'})).status,409);
+  assert.equal((await f.call('/auth/wechat/login','POST',{code:'fictional-identity'})).status,403);
+  assert.deepEqual(f.db.prepare('SELECT * FROM wechat_invites_foundation WHERE id=?').get(inv.id),before);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_wechat_identities').get().n,0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_users WHERE player_id=?').get(p.id).n,0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM club_sessions').get().n,sessionCount);
+});
