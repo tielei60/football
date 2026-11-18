@@ -112,8 +112,8 @@ Page({
   async changePassword() {
     if (this.data.busy || this.data.session?.user.passwordEnabled === false)
       return;
-    if (this.data.newPassword.length < 10) {
-      this.setData({ actionError: "新密码至少 10 个字符" });
+    if (this.data.newPassword.length < 10 || this.data.newPassword.length > 200) {
+      this.setData({ actionError: "新密码须为 10–200 个字符" });
       return;
     }
     const viewEpoch = this._viewEpoch || 0;
