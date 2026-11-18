@@ -42,10 +42,18 @@ test('比赛相册投影拒绝篡改重复并保留其他代码',()=>{
  const source=read('pages/match-media/index.js');for(const {after} of matchMediaBlocks){assert.throws(()=>normalizeMatchMedia(source.replace(after,after.replace(/\S/,'!'))));assert.throws(()=>normalizeMatchMedia(source.replace(after,after+after)));}
  assert.equal(normalizeMatchMedia(source+'\nextra'),normalizeMatchMedia(source)+'\nextra');
 });
+// 球员照片入口仅反向投影本轮独立复查的身份保护，原始业务哈希不变。
+const detailContextBlocks=require('./player-detail-context-projection.json');
+function normalizeDetailContext(source){for(const {before,after} of detailContextBlocks){assert.equal(source.split(after).length,2,'球员照片上下文片段必须完整且唯一');source=source.replace(after,before);}return source;}
+test('球员照片上下文投影拒绝篡改重复并保留其他代码',()=>{
+ const source=read('pages/player-detail/index.js');for(const {after} of detailContextBlocks){assert.throws(()=>normalizeDetailContext(source.replace(after,after.replace(/\S/,'!'))));assert.throws(()=>normalizeDetailContext(source.replace(after,after+after)));}
+ assert.equal(normalizeDetailContext(source+'\nextra'),normalizeDetailContext(source)+'\nextra');
+});
 test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
   for (const [p,sha] of Object.entries(baseline.immutable)) {
     let source=p==='components/business-dialog/index.js'?require('./v3-dialog-projection-normalize.cjs')(read(p)):read(p);
     if(p==='pages/player-photos/index.js') source=normalizePhotoRoleReturn(source);
+    if(p==='pages/player-detail/index.js') source=normalizeDetailContext(source);
     if(p==='pages/player-ai/index.js') source=normalizeAiAuth(source);
     if(p==='pages/match-media/index.js') source=normalizeMatchMedia(source);
     assert.equal(crypto.createHash('sha256').update(source).digest('hex'),sha,p);

@@ -1,0 +1,18 @@
+[
+  {
+    "before": " openPhotos(){if(this._disposed||this._hidden||this.data.loading||this.data.error||this.data.busy||!this.id)return;wx.navigateTo({url:'/pages/player-photos/index?id='+encodeURIComponent(this.id)});},\n",
+    "after": "  openPhotos() {\n    const loaded = this._photoContext;\n    const current = s.api.getSession();\n    if (this._disposed || this._hidden || this.data.loading || this.data.error || this.data.busy ||\n        !loaded || !current || !current.token || loaded.token !== current.token ||\n        loaded.origin !== current.serverOrigin || loaded.userId !== current.user.id ||\n        loaded.teamId !== current.team.id || loaded.playerId !== this.id ||\n        this.data.player?.id !== loaded.playerId) return;\n    wx.navigateTo({url:'/pages/player-photos/index?id='+encodeURIComponent(loaded.playerId)});\n  },\n"
+  },
+  {
+    "before": "    return s.load(this, async () => {\n",
+    "after": "    this._photoContext = null;\n    return s.load(this, async (session) => {\n      const epoch = this._epoch;\n      const playerId = this.id;\n      const current = s.api.getSession();\n      if (!current || !current.token || current.user.id !== session.user.id || current.team.id !== session.team.id)\n        throw Object.assign(new Error('登录状态已改变，请重新加载。'), {staleSession:true});\n      const context = {token:current.token,origin:current.serverOrigin,userId:current.user.id,teamId:current.team.id,playerId};\n"
+  },
+  {
+    "before": "      const p = players.find((p) => p.id === this.id);\n",
+    "after": "      const p = players.find((p) => p.id === playerId);\n"
+  },
+  {
+    "before": "      const r = stats.players.find((p) => p.playerId === this.id);\n",
+    "after": "      const r = stats.players.find((p) => p.playerId === playerId);\n      // Navigation belongs to the identity and player that produced this view.\n      // Keep credentials private, never put them through setData.\n      const latest = s.api.getSession();\n      if (!latest || latest.token !== context.token || latest.serverOrigin !== context.origin ||\n          latest.user.id !== context.userId || latest.team.id !== context.teamId)\n        throw Object.assign(new Error('登录状态已改变，请重新加载。'), {staleSession:true});\n      if (epoch === this._epoch && !this._disposed) this._photoContext = context;\n"
+  }
+]
