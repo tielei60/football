@@ -42,9 +42,12 @@ test('访客报名：官方模板与 V3 样式在 320/375/430px 不横溢，身�
         const b = el.getBoundingClientRect();
         return { left:b.left,right:b.right,height:b.height };
       }));
-      assert.equal(targets.length, label==='profile'?4:3);
+      assert.equal(targets.length, label==='profile'?5:3);
       for (const a of targets) assert.ok(a.height >= 43.9 && a.left >= 0 && a.right <= width + 0.1, JSON.stringify({label,width,a}));
-      if (label === 'profile') assert.ok(await page.getByText('确认信息并报名').isVisible());
+      if (label === 'profile') {
+        assert.ok(await page.getByText('确认信息并报名').isVisible());
+        assert.ok(await page.getByText('重新微信登录，核对报名').isVisible());
+      }
       await page.close();
     }
   } finally { await browser.close(); }
