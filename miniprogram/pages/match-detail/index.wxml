@@ -41,7 +41,7 @@
       <view class="attendance-summary"><text class="signup-count-yes">参加 {{match.signupCountLabel}}</text><text class="signup-count-maybe">待定 {{match.maybeCount}}</text><text class="signup-count-no">请假 {{match.noCount}}</text></view>
       <view wx:for="{{replyGroups}}" wx:for-item="group" wx:for-index="groupIndex" wx:key="response" class="reply-group">
         <view class="reply-group-heading {{group.response==='yes'?'reply-group-heading-yes':''}}">{{group.label}} <text class="reply-group-count">{{group.players.length}}</text></view>
-        <view class="reply-grid"><view wx:for="{{group.players}}" wx:for-item="player" wx:for-index="playerIndex" wx:key="playerId" class="reply-player"><view class="reply-avatar {{!player.avatar?'player-placeholder':''}}"><image wx:if="{{player.avatar}}" class="reply-avatar-image" src="{{player.avatar}}" mode="aspectFill" data-group="{{groupIndex}}" data-index="{{playerIndex}}" binderror="replyImageError"/><text wx:else>{{player.initial}}</text></view><text class="reply-name">{{player.name}}</text></view></view>
+        <view class="reply-grid"><view wx:for="{{group.players}}" wx:for-item="player" wx:for-index="playerIndex" wx:key="playerId" class="reply-player"><view class="reply-avatar {{!player.avatar?'player-placeholder':''}}"><image wx:if="{{player.avatar}}" class="reply-avatar-image" src="{{player.avatar}}" mode="aspectFill" data-group="{{groupIndex}}" data-index="{{playerIndex}}" binderror="replyImageError"/><text wx:else>{{player.initial}}</text><text wx:if="{{player.guest}}" class="guest-player-badge" aria-label="访客球员">客</text></view><text class="reply-name">{{player.name}}</text></view></view>
       </view>
       <view wx:if="{{!replies.length}}" class="section-empty">还没有报名回应</view>
     </view>

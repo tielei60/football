@@ -1,3 +1,4 @@
+import { migrateGuestMatches, createGuestMatchStore } from "./guest-match-store.mjs";
 import {
   migrateWechatIdentity,
   revokeWechatPlayer,
@@ -185,6 +186,7 @@ const userView = (r) => ({
   mustChangePassword: r.must_change_password === 1,
   accountEnabled: r.account_enabled !== 0,
   accountRevision: r.account_revision,
+  membershipKind: r.membership_kind || "member",
 });
 
 export function createClubStore(
@@ -254,6 +256,7 @@ export function createClubStore(
   `),
   );
   migrateWechatIdentity(database);
+  migrateGuestMatches(database);
   tx(() => {
     const columns = new Set(
       q("PRAGMA table_info(club_users)")
@@ -480,6 +483,8 @@ export function createClubStore(
       preferredFoot: r.preferred_foot,
       status: r.status,
       membershipConfirmed: Boolean(r.membership_confirmed),
+      membershipKind: r.membership_kind || "member",
+      nickname: r.nickname || "",
       note: r.note,
       avatar: r.avatar,
       avatarOriginKind: r.avatar_origin_kind ?? null,
@@ -518,10 +523,14 @@ export function createClubStore(
           preferredFoot: "",
           status: "active",
           membershipConfirmed: true,
+          membershipKind: "member",
+          nickname: "",
           note: "",
           avatar: null,
         };
     const p = { ...old, ...input };
+    if (input.membershipKind !== undefined && input.membershipKind !== old.membershipKind) fail(400, "身份变更请使用临时球员转正操作。");
+    p.nickname = text(p.nickname, 100);
     p.name = text(p.name, 200, true);
     p.number = integer(p.number);
     p.positions = positions(p.positions);
@@ -557,6 +566,7 @@ export function createClubStore(
       q("UPDATE club_players SET membership_confirmed=? WHERE team_id=? AND id=?").run(
         p.membershipConfirmed ? 1 : 0, teamId, id,
       );
+      q("UPDATE club_players SET nickname=? WHERE team_id=? AND id=?").run(p.nickname,teamId,id);
       if (p.avatar !== old.avatar)
         q(
           "UPDATE club_players SET avatar_origin_kind=NULL WHERE team_id=? AND id=?",
@@ -711,7 +721,7 @@ export function createClubStore(
     return issueSession(u, transport);
   }
   function issueSession(u, transport = "cookie", binding = null) {
-    u = q("SELECT * FROM club_users WHERE id=?").get(u.id);
+    u = q("SELECT u.*,p.membership_kind FROM club_users u LEFT JOIN club_players p ON p.id=u.player_id AND p.team_id=u.team_id WHERE u.id=?").get(u.id);
     if (!u || u.account_enabled !== 1) fail(403, "此账户已停用。");
     const now = Date.now();
     const token = `${transport === "native" ? "native_" : ""}${randomBytes(32).toString("hex")}`;
@@ -739,7 +749,7 @@ export function createClubStore(
     if (typeof token !== "string" || !tokenPattern.test(token))
       fail(401, "请先登录。");
     const u = q(
-      "SELECT u.* FROM club_sessions s JOIN club_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? AND (s.auth_method='password' OR EXISTS (SELECT 1 FROM club_wechat_identities w WHERE w.id=s.wechat_identity_id AND w.user_id=u.id AND w.revoked_at IS NULL AND w.revision=s.wechat_revision AND w.app_id=? AND ?=1))",
+      "SELECT u.*,p.membership_kind FROM club_sessions s JOIN club_users u ON u.id=s.user_id LEFT JOIN club_players p ON p.id=u.player_id AND p.team_id=u.team_id WHERE s.token_hash=? AND s.expires_at>? AND (s.auth_method='password' OR EXISTS (SELECT 1 FROM club_wechat_identities w WHERE w.id=s.wechat_identity_id AND w.user_id=u.id AND w.revoked_at IS NULL AND w.revision=s.wechat_revision AND w.app_id=? AND ?=1))",
     ).get(
       tokenHash(token),
       Date.now(),
@@ -919,6 +929,7 @@ export function createClubStore(
         input.role === undefined
           ? target.role
           : oneOf(input.role, ["admin", "player"]);
+      if (role === "admin" && target.player_id && getPlayer(target.team_id,target.player_id).membershipKind === "guest") fail(409, "请先将临时球员转正，再调整管理员权限。");
       const enabled =
         input.enabled === undefined
           ? target.account_enabled === 1
@@ -1099,8 +1110,9 @@ export function createClubStore(
               })),
           }
         : {}),
+      shareToken: includeTacticSnapshots && r.status === "published" && u.membership_kind !== "guest" ? guestMatches.shareLink(u,id).shareToken : null,
       rsvps: q(
-        "SELECT player_id AS playerId,response FROM club_rsvps WHERE match_id=?",
+        "SELECT r.player_id AS playerId,r.response,p.membership_kind AS membershipKind FROM club_rsvps r JOIN club_players p ON p.id=r.player_id AND p.team_id=r.team_id WHERE r.match_id=?",
       ).all(id),
       roster: q(
         "SELECT player_id AS playerId,position,selection,appeared,goals,assists,player_snapshot,snapshot_captured_at,snapshot_source FROM club_roster WHERE match_id=?",
@@ -1679,8 +1691,10 @@ export function createClubStore(
     issueSession,
     getPlayer,
   });
+  const guestMatches = createGuestMatchStore(database, {provider:wechatProvider,appId:wechatAppId,authenticate,issueSession,getPlayer,getTeam});
   return {
     wechat,
+    guestMatches,
     assertTacticDeletable,
     ...venues,
     ...catalogs,

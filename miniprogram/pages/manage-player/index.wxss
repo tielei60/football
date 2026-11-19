@@ -52,3 +52,8 @@
 .service-envelope{position:relative;border:2px solid var(--brand);border-radius:5rpx;height:28rpx!important;overflow:hidden}
 .service-envelope::after{content:"";position:absolute;left:18%;top:-45%;width:58%;height:75%;border:2px solid var(--brand);border-top:0;border-left:0;transform:rotate(45deg)}
 .page .player-service-card button.player-service-entry[size="mini"][disabled]{opacity:.5;color:var(--muted)}
+
+.player-identity-card .identity-heading{gap:20rpx;align-items:center;flex-wrap:wrap;margin-bottom:12rpx}
+.player-identity-card .field-label{margin:0}
+.identity-value{color:var(--brand-ink);font-size:28rpx;font-weight:600}
+.player-identity-card .promote-player{margin-top:20rpx;min-height:44px;white-space:normal}

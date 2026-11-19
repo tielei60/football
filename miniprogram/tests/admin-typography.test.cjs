@@ -278,7 +278,7 @@ test('球员双入口投影拒绝守卫篡改和重复，保留其他模板内�
 });
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
-    const read = ext => { let source=normalizeClub(item+'/index.'+ext,fs.readFileSync(path.join(root,item,'index.'+ext),'utf8'));
+    const read = ext => { let source=normalizeClub(item+'/index.'+ext,require('./guest-player-ui-projection.cjs').normalize(item+'/index.'+ext,fs.readFileSync(path.join(root,item,'index.'+ext),'utf8')));
       source=require('./signup-self-binding-projection.cjs').normalize(item+'/index.'+ext,source);
       if(item==='pages/manage-player'&&ext==='wxml')source=normalizePlayerServiceCard(source);
       if(item==='pages/manage-players'&&['js','wxml'].includes(ext))source=normalizePlayerListImage(source,ext);

@@ -58,9 +58,9 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           : 0,
         players,
         team: s.teamView(session.team),
-        activeCount: players.filter(p => p.membershipConfirmed !== false && p.status === "active").length,
-        inactiveCount: players.filter(p => p.membershipConfirmed !== false && p.status === "inactive").length,
-        unconfirmedCount: players.filter(p => p.membershipConfirmed === false).length,
+        activeCount: players.filter(p => p.membershipKind !== "guest" && p.membershipConfirmed !== false && p.status === "active").length,
+        inactiveCount: players.filter(p => p.membershipKind !== "guest" && p.membershipConfirmed !== false && p.status === "inactive").length,
+        unconfirmedCount: players.filter(p => p.membershipKind !== "guest" && p.membershipConfirmed === false).length,
         positions,
         visible: this.filter(
           players,

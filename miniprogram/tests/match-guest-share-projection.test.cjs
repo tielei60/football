@@ -1,0 +1,3 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {normalize,changes}=require('./match-guest-share-projection.cjs');
+for(const [file,blocks] of Object.entries(changes))test(file+' 访客分享精确投影不吞权限变更',()=>{const source=fs.readFileSync(path.join(__dirname,'..',file),'utf8');for(const {after} of blocks){assert.throws(()=>normalize(file,source.replace(after,after+after)));assert.throws(()=>normalize(file,source.replace(after,after.replace(/\S/,'MUTATED'))));}assert.equal(normalize(file,source+'\nextra'),normalize(file,source)+'\nextra');});

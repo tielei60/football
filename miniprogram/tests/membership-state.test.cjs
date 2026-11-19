@@ -46,3 +46,16 @@ for (const name of ['players', 'manage-players']) test(name+' 切换账号清空
  if(name==='players'){assert.equal(h.p.data.selectedPosition,'');assert.equal(h.p.data.positionIndex,0);}
  else assert.equal(h.p.data.searchHasText,false);
 });
+
+test('正式球员数字不包含临时球员，临时名单保持可见且转正后只增正式人数', async()=>{
+ const guest=[{id:'guest-active',name:'临客甲',status:'active',membershipKind:'guest',membershipConfirmed:true},
+ {id:'guest-inactive',name:'临客乙',status:'inactive',membershipKind:'guest',membershipConfirmed:true},
+ {id:'guest-unknown',name:'临客丙',status:'inactive',membershipKind:'guest',membershipConfirmed:false}];
+ const h=listingPage('players',[...rows,...guest]);await h.p.refresh();
+ assert.equal(h.p.data.activeCount,1);assert.equal(h.p.data.inactiveCount,1);assert.equal(h.p.data.unconfirmedCount,2);
+ assert.equal(h.p.data.visible.map(x=>x.id).sort().join(','),'c,guest-active');
+ h.p.changeTab({currentTarget:{dataset:{status:'unconfirmed'}}});assert.equal(h.p.data.visible.length,3);
+ h.p.search({detail:{value:'无结果'}});assert.equal(h.p.data.visible.length,0);assert.equal(h.p.data.activeCount,1);
+ h.setRows([...rows,...guest.map(p=>p.id==='guest-active'?{...p,membershipKind:'member'}:p)]);await h.p.refresh();
+ assert.equal(h.p.data.activeCount,2);assert.equal(h.p.data.inactiveCount,1);assert.equal(h.p.data.unconfirmedCount,2);assert.equal(h.p.data.players.length,7);
+});

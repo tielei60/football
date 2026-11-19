@@ -222,7 +222,7 @@ test("native RSVP persists once and retains player/admin and team visibility", a
       body: { response, playerId: "forged" },
     });
     assert.equal(r.status, 200);
-    assert.deepEqual(r.body.rsvps, [{ playerId: player.id, response }]);
+    assert.deepEqual(r.body.rsvps, [{ playerId: player.id, response, membershipKind: "member" }]);
   }
   assert.equal(
     (await f.call(`/api/matches/${draft.id}`, { token })).status,

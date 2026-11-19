@@ -1,0 +1,4 @@
+/* 临时身份仅以小钟图标标记，不挤占姓名；无障碍名称由模板提供。 */
+.temporary-player-marker{position:relative;display:inline-block;flex:none;box-sizing:border-box;width:28rpx;height:28rpx;min-width:14px;min-height:14px;border:1.5px solid var(--brand-ink);border-radius:50%;background:var(--brand-soft);vertical-align:middle}
+.temporary-player-marker::before{content:"";position:absolute;left:calc(50% - .75px);top:20%;width:1.5px;height:35%;border-radius:1px;background:var(--brand-ink)}
+.temporary-player-marker::after{content:"";position:absolute;left:50%;top:calc(50% - .75px);width:28%;height:1.5px;border-radius:1px;background:var(--brand-ink)}

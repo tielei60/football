@@ -55,6 +55,7 @@ test('球员照片上下文投影拒绝篡改重复并保留其他代码',()=>{
 test('V3 重设计保留原业务处理及模板事件、权限条件、提交禁用与对象标识',()=>{
   for (const [p,sha] of Object.entries(baseline.immutable)) {
     let source=p==='components/business-dialog/index.js'?require('./v3-dialog-projection-normalize.cjs')(read(p)):read(p);
+    source=require('./match-guest-share-projection.cjs').normalize(p,source);
     source=require('./signup-self-binding-projection.cjs').normalize(p,source);
     if(p==='pages/player-photos/index.js') source=normalizePhotoRoleReturn(source);
     if(p==='pages/player-detail/index.js') source=normalizeDetailContext(source);
@@ -124,8 +125,8 @@ test('V3 核心视觉结构存在，数据仍绑定接口结果而非设计示�
     assert.ok(read(`pages/${page}/index.wxml`).includes(selector),page);
     assert.doesNotMatch(read(`pages/${page}/index.wxml`),/林远|周泽|绿茵联队|11月22日/);
   }
-  assert.match(read('pages/players/index.js'),/activeCount: players\.filter\(p => p\.membershipConfirmed !== false && p\.status === "active"\)/);
-  assert.match(read('pages/players/index.js'),/unconfirmedCount: players\.filter\(p => p\.membershipConfirmed === false\)/);
+  assert.match(read('pages/players/index.js'),/activeCount: players\.filter\(p => p\.membershipKind !== "guest" && p\.membershipConfirmed !== false && p\.status === "active"\)/);
+  assert.match(read('pages/players/index.js'),/unconfirmedCount: players\.filter\(p => p\.membershipKind !== "guest" && p\.membershipConfirmed === false\)/);
   assert.match(read('pages/me/index.wxml'),/player && player\.number!==null && player\.number!==undefined/);
   assert.match(read('pages/statistics/index.wxml'),/stats\.team\.matches - stats\.team\.scoredMatches/);
 });

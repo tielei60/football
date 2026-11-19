@@ -284,6 +284,7 @@ export function createWechatIdentityStore(
           getPlayer(user.team_id, user.player_id).status !== "active"
         )
           fail(403, "该球员账户不可用。");
+        if (getPlayer(user.team_id,user.player_id).membershipKind === "guest") fail(403, "临时球员请从比赛分享入口登录。");
         return issueSession(user, "native", binding);
       });
     },

@@ -1,3 +1,4 @@
+@import "../players/temporary-player.wxss";
 /* UI v3：管理页共享视觉由 app.wxss 令牌与品牌横幅提供。 */
 .admin-header { gap:16rpx; flex-wrap:wrap; margin:24rpx 0; }
 .field-label { font-size:26rpx; font-weight:500; color:var(--muted); margin-bottom:12rpx; }
@@ -38,3 +39,5 @@
 .managed-player-list .player-number-note{display:inline-block;max-width:100%;margin-left:0;padding-left:8rpx;box-sizing:border-box;word-break:keep-all;overflow-wrap:anywhere;vertical-align:baseline}
 .player-chevron{font-size:36rpx;color:var(--ink);flex:none;line-height:1}
 @media(max-width:340px){.managed-player-list>.card.row{gap:12rpx}.managed-player-list .account-status{margin-left:auto}}
+
+.managed-player-list .temporary-player-marker{margin-left:10rpx;margin-right:4rpx}

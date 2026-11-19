@@ -12,6 +12,10 @@
     {
       "before": "  onHide(){ui.abort(this);return s.hide.apply(this,arguments);},",
       "after": "  onHide(){ui.abort(this);this.setData({moreUpcoming:[]});return s.hide.apply(this,arguments);},"
+    },
+    {
+      "before": "        playerCount: players.filter((p) => p.status === \"active\" && p.membershipConfirmed !== false).length,\n        unconfirmedCount: players.filter((p) => p.membershipConfirmed === false).length,",
+      "after": "        playerCount: players.filter((p) => p.membershipKind !== \"guest\" && p.status === \"active\" && p.membershipConfirmed !== false).length,\n        unconfirmedCount: players.filter((p) => p.membershipKind !== \"guest\" && p.membershipConfirmed === false).length,"
     }
   ]
 }

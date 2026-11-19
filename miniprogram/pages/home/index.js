@@ -49,8 +49,8 @@ Page({
       return {
         team: s.teamView(session.team),
         roleLabel: session.user.role === "admin" ? "管理端" : session.user.role === "player" ? "球员端" : "",
-        playerCount: players.filter((p) => p.status === "active" && p.membershipConfirmed !== false).length,
-        unconfirmedCount: players.filter((p) => p.membershipConfirmed === false).length,
+        playerCount: players.filter((p) => p.membershipKind !== "guest" && p.status === "active" && p.membershipConfirmed !== false).length,
+        unconfirmedCount: players.filter((p) => p.membershipKind !== "guest" && p.membershipConfirmed === false).length,
         stats: { team: { matches: stats.team.matches, wins: stats.team.wins } },
         next: upcoming[0]
           ? s.matchView(upcoming[0], session.user.playerId)

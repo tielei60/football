@@ -52,6 +52,8 @@ Page({
     id: "",
     revision: null,
     status: "active",
+    membershipKind: "member",
+    promoteConfirming: false,
     membershipConfirmed: true,
     membershipOptions: ["状态未确认", "在队", "已归档"],
     membershipIndex: 1,
@@ -135,6 +137,7 @@ Page({
         wechatEnabled,
         revision: p?.revision || null,
         status: p?.status || "active",
+        membershipKind: p?.membershipKind === "guest" ? "guest" : "member",
         membershipConfirmed: p?.membershipConfirmed !== false,
         membershipIndex: p?.membershipConfirmed === false ? 0 : p?.status === "inactive" ? 2 : 1,
         hasAccount: !!p?.hasAccount,
@@ -255,6 +258,48 @@ Page({
       },
       !this.id,
     );
+  },
+  async promote() {
+    const canPromote = () => this._ownerToken === a.s.api.getSession()?.token &&
+      this.data.authorized && !this._hidden && !this._disposed && !this.data.loading &&
+      !this.data.error && !this.data.busy && !this.data.conflict && !this.data.uncertain &&
+      this.id && this.data.membershipKind === "guest" && this.data.status === "active";
+    if (!canPromote() || this._promotionPrompt) return;
+    const stamp = { id: this.id, revision: this.data.revision, owner: this._ownerToken,
+      epoch: this._epoch, view: this._adminView || 0 };
+    const current = () => !this._hidden && !this._disposed && this.id === stamp.id &&
+      this._epoch === stamp.epoch && (this._adminView || 0) === stamp.view &&
+      this._ownerToken === stamp.owner && a.s.api.getSession()?.token === stamp.owner;
+    this._promotionPrompt = stamp;
+    this.setData({ promoteConfirming: true });
+    try {
+      const decision = await ui.showModal(this, {
+        title: "转为正式球员",
+        content: "确认将该临时球员转为正式球员？原球员身份、照片和比赛历史均保留，账号需重新登录。未保存的资料修改不会提交。",
+        confirmText: "确认转正",
+      });
+      if (!decision?.confirm || !current() || !canPromote() || this.data.revision !== stamp.revision) return;
+      await a.act(this, async () => {
+        const player = await a.s.api.request(
+          "/players/" + encodeURIComponent(stamp.id) + "/promote", "POST", { revision: stamp.revision },
+        );
+        if (!player || player.id !== stamp.id || player.membershipKind !== "member" ||
+            !Number.isInteger(player.revision) || player.revision < stamp.revision)
+          throw Object.assign(new Error("转正结果未确认"), { status: 503 });
+        return player;
+      }, (player) => {
+        // 转正只提交身份变更，不能用回执覆盖管理员尚未保存的资料或头像。
+        this.setData({ membershipKind: player.membershipKind, revision: player.revision });
+        ui.showToast(this, { title: "已转为正式球员" });
+      }, true);
+      if (current() && this.data.uncertain)
+        this.setData({ actionError: "转正结果未确认，请到球员列表核对后重新打开，勿重复操作。" });
+    } finally {
+      if (this._promotionPrompt === stamp) {
+        this._promotionPrompt = null;
+        if (!this._disposed) this.setData({ promoteConfirming: false });
+      }
+    }
   },
   membership(e) {
     if (this._ownerToken !== a.s.api.getSession()?.token || !this.data.authorized || this._hidden || this._disposed || this.data.loading || this.data.busy || this.data.conflict || this.data.uncertain) return;

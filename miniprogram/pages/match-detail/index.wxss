@@ -139,3 +139,6 @@
 .signup-share-actions{display:flex;gap:16rpx}
 .signup-share-actions button.ui-button[size="mini"]{flex:1;min-width:0;width:0;min-height:44px;margin:0;padding:20rpx 8rpx;font-size:28rpx;white-space:normal}
 .signup-share-later{background:var(--canvas);color:var(--muted)}
+
+.reply-avatar{position:relative;overflow:visible}
+.guest-player-badge{position:absolute;right:-6rpx;bottom:-3rpx;min-width:26rpx;height:26rpx;padding:0 3rpx;border:3rpx solid var(--surface);border-radius:14rpx;background:var(--brand-ink);color:#fff;font-size:18rpx;font-weight:600;line-height:26rpx;text-align:center}

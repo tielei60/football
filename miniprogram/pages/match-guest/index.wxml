@@ -1,0 +1,38 @@
+<view class="page guest-match-page">
+  <page-state skeleton-type="detail" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
+  <block wx:if="{{!loading && !error && match}}">
+    <view class="card guest-match-hero">
+      <view class="guest-eyebrow">比赛邀请 · {{match.statusLabel}}</view>
+      <view class="guest-teams">
+        <view class="guest-team"><image wx:if="{{match.teamCrest}}" src="{{match.teamCrest}}" mode="aspectFit" data-key="teamCrest" binderror="crestError"/><view wx:else class="guest-crest-placeholder" aria-hidden="true">⚽</view><text>{{match.teamName}}</text></view>
+        <text class="guest-versus">VS</text>
+        <view class="guest-team"><image wx:if="{{match.opponentCrest}}" src="{{match.opponentCrest}}" mode="aspectFit" data-key="opponentCrest" binderror="crestError"/><view wx:else class="guest-crest-placeholder" aria-hidden="true">⚽</view><text>{{match.opponent}}</text></view>
+      </view>
+      <view class="guest-time">{{match.dateLabel}} · {{match.kickoff}}</view>
+      <view class="guest-location">{{match.location}}</view>
+      <view wx:if="{{match.competition}}" class="hint">{{match.competition}}</view>
+    </view>
+    <view wx:if="{{match.notice}}" class="card"><view class="section-title">比赛须知</view><text class="guest-notice">{{match.notice}}</text></view>
+    <view class="card">
+      <view class="section-title">我的报名</view>
+      <block wx:if="{{authenticated}}">
+        <view class="guest-response">{{responseLabel}}</view><view wx:if="{{replyPending}}" class="hint">正在核对上一条报名，请稍候。</view>
+        <view wx:if="{{match.canReply}}" class="guest-response-options"><button wx:for="{{['yes','maybe','no']}}" wx:key="*this" class="ui-button {{response===item?'primary':''}}" data-response="{{item}}" bindtap="reply" disabled="{{busy || replyPending || (item==='yes' && match.canJoin===false)}}" size="mini">{{item==='yes'?'参加':item==='maybe'?'待定':'请假'}}</button></view>
+        <view wx:else class="hint">本场比赛当前不接受报名调整。</view><view wx:if="{{match.canReply && match.canJoin===false}}" class="hint">已停止新增参加报名，仍可更新为待定或请假。</view>
+        <button wx:if="{{member}}" class="ui-button ui-block guest-member" bindtap="openMember" size="mini">进入球队比赛详情</button>
+      </block>
+      <block wx:elif="{{profileRequired}}">
+        <view class="hint">真实姓名用于本场报名，也可能显示在队员转发的比赛卡片中；头像与昵称用于本场比赛及球队管理。</view>
+        <button class="guest-avatar-button ui-button" open-type="chooseAvatar" bindchooseavatar="chooseAvatar" disabled="{{busy}}" size="mini" aria-label="选择微信头像"><image wx:if="{{avatarPath}}" src="{{avatarPath}}" mode="aspectFill" binderror="avatarError"/><text wx:else>选择头像</text></button>
+        <view class="field"><text class="field-label">真实姓名</text><input class="input" value="{{realName}}" bindinput="realName" maxlength="40" placeholder="请输入本人真实姓名" disabled="{{busy}}"/></view>
+        <view class="field"><text class="field-label">微信昵称</text><input class="input" type="nickname" value="{{nickname}}" bindinput="nickname" bindblur="nickname" maxlength="80" placeholder="填写微信昵称" disabled="{{busy}}"/></view>
+        <button class="primary ui-button ui-block" bindtap="register" loading="{{busy}}" disabled="{{busy}}" size="mini">确认信息并报名</button>
+        <button class="ui-button ui-block guest-member" bindtap="restartLogin" disabled="{{busy}}" size="mini">重新微信登录，核对报名</button>
+      </block>
+      <button wx:else class="primary ui-button ui-block" bindtap="login" loading="{{busy}}" disabled="{{busy}}" size="mini">{{match.canRegister?'微信登录并报名':'微信登录查看我的报名'}}</button>
+      <view wx:if="{{!match.canRegister && !authenticated}}" class="hint">本场比赛暂不接受新访客报名；已有报名可登录查看。</view>
+      <view wx:if="{{actionError}}" class="error" aria-role="alert">{{actionError}}</view>
+    </view>
+  </block>
+</view>
+<business-dialog id="business-dialog"/>

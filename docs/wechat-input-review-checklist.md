@@ -1,4 +1,4 @@
-> 当前版本范围：现有 49 个输入模板实例、7 个 textarea。下方 H14/H15/H20 是已替换/迁移控件的历史证据，不计入当前清单；本次新增与迁移控件只完成静态/控制器检查，未做真机聚焦验证。原编号保留，避免改写历史 320/375 证据引用。
+> 当前版本范围：现有 51 个输入模板实例、7 个 textarea。下方 H14/H15/H20 是已替换/迁移控件的历史证据，不计入当前清单；本次新增与迁移控件只完成静态/控制器检查，未做真机聚焦验证。原编号保留，避免改写历史 320/375 证据引用。
 
 # 微信原生输入聚焦复核清单
 
@@ -172,3 +172,10 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 | 52 | pages/club-catalog/index.wxml | content | textarea，`{{form.content}}`，input handler | 须知模板正文，未实际聚焦验证 |
 
 本次计数变化：45 - 2 个旧手动字段 + 1 个循环字段模板 + 5 个资料模板输入 = 49；须知迁移不改变实例数。textarea 由 4 增至 7，仅增加资料页的三个多行输入。模板枚举不等于运行时控件数量，循环可能展示多份。
+
+## 比赛访客报名增量（未实际聚焦验证）
+
+| 编号 | 模板 | 定位 / 字段 | 类型与绑定 | 验证边界 |
+| --- | --- | --- | --- | --- |
+| 53 | pages/match-guest/index.wxml | 真实姓名 | input，realName | 只在首次登记出现；控制器验证必填，真机聚焦待验 |
+| 54 | pages/match-guest/index.wxml | 微信昵称 | input，type=nickname | 控制器验证必填，真机键盘昵称建议待验 |

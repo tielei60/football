@@ -1,0 +1,20 @@
+{
+  "pages/match-detail/index.js": [
+    {
+      "before": "    if (!this._replyOwner || this._replyOwner !== s.api.getSession()?.token || this._hidden || this._disposed || this.data.loading || this.data.error) return { title: '球队比赛', path: '/pages/home/index' };\n    const match = this.data.match;\n    if (!match || match.status !== \"published\") return { title: \"球队比赛\", path: \"/pages/home/index\" };\n    return {\n      title: `${match.dateLabel.split(' ').pop()} ${match.kickoff || \"时间待定\"} ⚽ 快来报名吧！`,\n      path: `/pages/match-detail/index?id=${encodeURIComponent(this.id)}`,\n      ...(this._shareImage ? { imageUrl: this._shareImage } : {}),\n    };\n",
+      "after": "    if (!this._replyOwner || this._replyOwner !== s.api.getSession()?.token || this._hidden || this._disposed || this.data.loading || this.data.error) return { title: '球队比赛', path: '/pages/home/index' };\n    const match = this.data.match;\n    if (!match || match.status !== \"published\" || !/^[a-f0-9]{64}$/.test(match.shareToken || \"\")) return { title: \"球队比赛\", path: \"/pages/home/index\" };\n    return {\n      title: `${match.dateLabel.split(' ').pop()} ${match.kickoff || \"时间待定\"} ⚽ 快来报名吧！`,\n      path: `/pages/match-guest/index?shareToken=${encodeURIComponent(match.shareToken)}`,\n      ...(this._shareImage ? { imageUrl: this._shareImage } : {}),\n    };\n"
+    },
+    {
+      "before": "  prepareShareCard() {\n    const match = this.data.match, owner = s.api.getSession()?.token, epoch = this._epoch;\n    if (!match || match.status !== 'published' || !owner || this._hidden || this._disposed) return;\n    this._shareImage = '';\n    this.setData({ shareReady: false, shareError: '' });\n",
+      "after": "  prepareShareCard() {\n    const match = this.data.match, owner = s.api.getSession()?.token, epoch = this._epoch;\n    if (!match || match.status !== 'published' || !/^[a-f0-9]{64}$/.test(match.shareToken || '') || !owner || this._hidden || this._disposed) return;\n    this._shareImage = '';\n    this.setData({ shareReady: false, shareError: '' });\n"
+    },
+    {
+      "before": "      const replies = raw.rsvps.map((r) => {\n        const player = byId.get(r.playerId), name = player?.name || \"历史成员\";\n        return { playerId: r.playerId, name, label: s.replies[r.response], response: r.response,\n          avatar: s.assetUrl(player?.avatar), initial: Array.from(name)[0] || '球' };\n      });\n",
+      "after": "      const replies = raw.rsvps.map((r) => {\n        const player = byId.get(r.playerId), name = player?.name || \"历史成员\";\n        return { playerId: r.playerId, guest: player?.membershipKind === 'guest', name, label: s.replies[r.response], response: r.response,\n          avatar: s.assetUrl(player?.avatar), initial: Array.from(name)[0] || '球' };\n      });\n"
+    },
+    {
+      "before": "        .filter(group => group.players.length);\n      const result = {\n        match: { ...match, opponentCrest: s.assetUrl(raw.opponentSnapshot?.logo) },\n        replyPending:false,\n        reconciling:false,\n",
+      "after": "        .filter(group => group.players.length);\n      const result = {\n        match: { ...match, shareToken: /^[a-f0-9]{64}$/.test(raw.shareToken || \"\") ? raw.shareToken : \"\", opponentCrest: s.assetUrl(raw.opponentSnapshot?.logo) },\n        replyPending:false,\n        reconciling:false,\n"
+    }
+  ]
+}

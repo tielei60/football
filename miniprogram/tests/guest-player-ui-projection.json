@@ -1,0 +1,83 @@
+{
+  "sha256": {
+    "pages/shared.js": "15820d55b6b6c13a1d469fed30f1e2966d6c372f6b4fbb072770ad29ef71d36b",
+    "pages/players/index.wxml": "10e7fb61db30bd941c51dbb574a576e03bd65443be28383429c0d598076da2d0",
+    "pages/manage-players/index.wxml": "f8fc947fbd4997d21f59abd5191d742ef8047b92aa806ce0e94a5505942a64a4",
+    "pages/player-detail/index.wxml": "4e17ecee0c540d3e0bac27dad3fe56fc9620bd845271ea569c7c7bf52f16f6f7",
+    "pages/manage-player/index.js": "3f4aaf3d8f6b89432db447da891c5efcbd8b07dca82ee345122369875743cac5",
+    "pages/manage-player/index.wxml": "0120cd13ce1e0fab26f9f0fc8a95b6930a6faeb60ea2133bd94f99a8aec25700",
+    "pages/players/index.js": "b54d67348f91a95ceb169c7badd4f36c5aff6ad33ade3fa33a4a5e720524e171"
+  },
+  "changes": {
+    "pages/shared.js": [
+      {
+        "before": "    status: p.status,\n    membershipConfirmed:",
+        "after": "    status: p.status,\n    membershipKind: p.membershipKind === \"guest\" ? \"guest\" : \"member\",\n    nickname: typeof p.nickname === \"string\" ? p.nickname : \"\",\n    membershipConfirmed:"
+      }
+    ],
+    "pages/players/index.wxml": [
+      {
+        "before": "</text><text>状态待确认</text>",
+        "after": "</text><text>正式球员待确认</text>"
+      },
+      {
+        "before": "</text><text>历史队员</text>",
+        "after": "</text><text>历史正式球员</text>"
+      },
+      {
+        "before": "</text><text>在队球员</text>",
+        "after": "</text><text>在队正式球员</text>"
+      },
+      {
+        "before": "<text class=\"player-name\">{{item.name}}</text>",
+        "after": "<text class=\"player-name\">{{item.name}}</text><view wx:if=\"{{item.membershipKind==='guest'}}\" class=\"temporary-player-marker\" aria-role=\"img\" aria-label=\"临时球员\"/>"
+      }
+    ],
+    "pages/manage-players/index.wxml": [
+      {
+        "before": "<view class=\"bold\">{{item.name}}<text class=\"player-number-note\">",
+        "after": "<view class=\"bold\"><text>{{item.name}}</text><view wx:if=\"{{item.membershipKind==='guest'}}\" class=\"temporary-player-marker\" aria-role=\"img\" aria-label=\"临时球员\"/><text class=\"player-number-note\">"
+      }
+    ],
+    "pages/player-detail/index.wxml": [
+      {
+        "before": "<view class=\"profile-details\">",
+        "after": "<view class=\"profile-details\"><view class=\"profile-detail\"><text class=\"detail-label\">球员身份</text><text class=\"detail-value\">{{player.membershipKind==='guest'?'临时球员':'正式球员'}}</text></view>"
+      }
+    ],
+    "pages/manage-player/index.js": [
+      {
+        "before": "  membership(e) {",
+        "after": "  async promote() {\n    const canPromote = () => this._ownerToken === a.s.api.getSession()?.token &&\n      this.data.authorized && !this._hidden && !this._disposed && !this.data.loading &&\n      !this.data.error && !this.data.busy && !this.data.conflict && !this.data.uncertain &&\n      this.id && this.data.membershipKind === \"guest\" && this.data.status === \"active\";\n    if (!canPromote() || this._promotionPrompt) return;\n    const stamp = { id: this.id, revision: this.data.revision, owner: this._ownerToken,\n      epoch: this._epoch, view: this._adminView || 0 };\n    const current = () => !this._hidden && !this._disposed && this.id === stamp.id &&\n      this._epoch === stamp.epoch && (this._adminView || 0) === stamp.view &&\n      this._ownerToken === stamp.owner && a.s.api.getSession()?.token === stamp.owner;\n    this._promotionPrompt = stamp;\n    this.setData({ promoteConfirming: true });\n    try {\n      const decision = await ui.showModal(this, {\n        title: \"转为正式球员\",\n        content: \"确认将该临时球员转为正式球员？原球员身份、照片和比赛历史均保留，账号需重新登录。未保存的资料修改不会提交。\",\n        confirmText: \"确认转正\",\n      });\n      if (!decision?.confirm || !current() || !canPromote() || this.data.revision !== stamp.revision) return;\n      await a.act(this, async () => {\n        const player = await a.s.api.request(\n          \"/players/\" + encodeURIComponent(stamp.id) + \"/promote\", \"POST\", { revision: stamp.revision },\n        );\n        if (!player || player.id !== stamp.id || player.membershipKind !== \"member\" ||\n            !Number.isInteger(player.revision) || player.revision < stamp.revision)\n          throw Object.assign(new Error(\"转正结果未确认\"), { status: 503 });\n        return player;\n      }, (player) => {\n        // 转正只提交身份变更，不能用回执覆盖管理员尚未保存的资料或头像。\n        this.setData({ membershipKind: player.membershipKind, revision: player.revision });\n        ui.showToast(this, { title: \"已转为正式球员\" });\n      }, true);\n      if (current() && this.data.uncertain)\n        this.setData({ actionError: \"转正结果未确认，请到球员列表核对后重新打开，勿重复操作。\" });\n    } finally {\n      if (this._promotionPrompt === stamp) {\n        this._promotionPrompt = null;\n        if (!this._disposed) this.setData({ promoteConfirming: false });\n      }\n    }\n  },\n  membership(e) {"
+      },
+      {
+        "before": "        status: p?.status || \"active\",",
+        "after": "        status: p?.status || \"active\",\n        membershipKind: p?.membershipKind === \"guest\" ? \"guest\" : \"member\","
+      },
+      {
+        "before": "    membershipConfirmed: true,",
+        "after": "    membershipKind: \"member\",\n    promoteConfirming: false,\n    membershipConfirmed: true,"
+      }
+    ],
+    "pages/manage-player/index.wxml": [
+      {
+        "before": "<view class=\"card\"><view class=\"row portrait-editor\">",
+        "after": "<view wx:if=\"{{id}}\" class=\"card player-identity-card\"><view class=\"between identity-heading\"><text class=\"field-label\">球员身份</text><text class=\"identity-value\">{{membershipKind==='guest'?'临时球员':'正式球员'}}</text></view><block wx:if=\"{{membershipKind==='guest'}}\"><view class=\"hint\">转正后保留原球员身份、照片和比赛历史。</view><view wx:if=\"{{status!=='active'}}\" class=\"hint\">请先恢复为在队状态并保存，再转正。</view><button class=\"ui-button ui-block promote-player\" size=\"mini\" bindtap=\"promote\" disabled=\"{{loading||busy||promoteConfirming||conflict||uncertain||status!=='active'}}\">转为正式球员</button></block></view><view class=\"card\"><view class=\"row portrait-editor\">"
+      }
+    ],
+    "pages/players/index.js": [
+      {
+        "before": "players.filter(p => p.membershipConfirmed === false).length",
+        "after": "players.filter(p => p.membershipKind !== \"guest\" && p.membershipConfirmed === false).length"
+      },
+      {
+        "before": "players.filter(p => p.membershipConfirmed !== false && p.status === \"inactive\").length",
+        "after": "players.filter(p => p.membershipKind !== \"guest\" && p.membershipConfirmed !== false && p.status === \"inactive\").length"
+      },
+      {
+        "before": "players.filter(p => p.membershipConfirmed !== false && p.status === \"active\").length",
+        "after": "players.filter(p => p.membershipKind !== \"guest\" && p.membershipConfirmed !== false && p.status === \"active\").length"
+      }
+    ]
+  }
+}

@@ -162,6 +162,8 @@ function playerView(p) {
     positions: p.positions,
     preferredFoot: p.preferredFoot,
     status: p.status,
+    membershipKind: p.membershipKind === "guest" ? "guest" : "member",
+    nickname: typeof p.nickname === "string" ? p.nickname : "",
     membershipConfirmed: p.membershipConfirmed !== false,
     membershipLabel: p.membershipConfirmed === false ? "状态未确认" : p.status === "active" ? "在队" : "已归档",
     avatar: assetUrl(p.avatar),

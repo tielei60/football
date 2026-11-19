@@ -276,7 +276,7 @@ export function createFootballServer({
         });
       const wechatPreauth =
         method === "POST" &&
-        /^\/api\/auth\/wechat\/(claim|claim-status|login)$/.exec(pathname);
+        /^\/api\/auth\/wechat\/(claim|claim-status|login|match-entry|match-register)$/.exec(pathname);
       // Native credentials are never ambient cookies. A distinct token format
       // prevents browser sessions from being replayed to bypass Origin checks.
       const nativeLogin =
@@ -326,9 +326,16 @@ export function createFootballServer({
             .map((value) => value.trim())
             .find((value) => value.startsWith("football_session="))
             ?.slice("football_session=".length);
+      const publicMatchRoute = /^\/api\/public\/matches\/([a-f0-9]{64})$/.exec(pathname);
+      if (publicMatchRoute && method === "GET") return send(response,200,club.guestMatches.preview(publicMatchRoute[1],clientAddress(request)));
       if (wechatPreauth) {
         if (authorization !== undefined)
           throw new FootballError(400, "登录时请勿携带旧会话。");
+        if (["match-entry","match-register"].includes(wechatPreauth[1])) {
+          const input=await readRequest(request,Math.min(maximumRequestBytes,wechatPreauth[1]==="match-register"?3*1024*1024:16384));
+          const result=await club.guestMatches[wechatPreauth[1]==="match-entry"?"entry":"register"](input,clientAddress(request));
+          return send(response,200,result);
+        }
         const result = await wechatAuth.preauth(
           wechatPreauth[1],
           await readRequest(request, Math.min(maximumRequestBytes, 16384)),
@@ -434,6 +441,14 @@ export function createFootballServer({
       const body = () => parsedBody;
       if (pathname === "/api/auth/me" && method === "GET")
         return send(response, 200, club.sessionView(user));
+      const guestMatchRoute = /^\/api\/guest-matches\/([a-f0-9]{64})(?:\/(rsvp))?$/.exec(pathname);
+      const actor={token,transport:nativeRequest?"native":"cookie"};
+      if (user.must_change_password !== 1 && guestMatchRoute) {
+        if (!guestMatchRoute[2] && method === "GET") return send(response,200,club.guestMatches.own(actor,guestMatchRoute[1]));
+        if (guestMatchRoute[2] === "rsvp" && method === "PUT") return send(response,200,club.guestMatches.rsvp(actor,guestMatchRoute[1],body()));
+        throw new FootballError(405,"比赛入口操作方式不支持。");
+      }
+      if (user.membership_kind === "guest") throw new FootballError(403,"临时球员仅能访问已授权比赛和本人报名。");
       if (pathname === "/api/auth/password" && method === "PUT") {
         club.changePassword(user, body());
         if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
@@ -754,6 +769,8 @@ export function createFootballServer({
           );
         throw new FootballError(405, "球员照片操作方式不支持。");
       }
+      const promoteRoute = /^\/api\/players\/([^/]+)\/promote$/.exec(pathname);
+      if (promoteRoute && method === "POST") return send(response,200,club.guestMatches.promote(actor,promoteRoute[1],body()));
       const playerRoute =
         /^\/api\/players\/([^/]+)(?:\/(account|password))?$/.exec(pathname);
       if (playerRoute) {
@@ -862,6 +879,8 @@ export function createFootballServer({
           );
         throw new FootballError(405, "照片操作方式不支持。");
       }
+      const shareRoute = /^\/api\/matches\/([1-9]\d*)\/share-link$/.exec(pathname);
+      if (shareRoute && method === "POST") return send(response,200,club.guestMatches.shareLink(user,routeId(shareRoute[1])));
       const matchRoute =
         /^\/api\/matches\/([1-9]\d*)(?:\/(rsvp|roster))?$/.exec(pathname);
       if (matchRoute) {

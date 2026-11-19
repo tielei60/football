@@ -516,7 +516,8 @@ test("V3 #10/#11: explicit own-player bind, real admin RSVP three states, share/
   await detail.reply(event("response", "yes"));
   const beforeShare = h.calls.length,
     payload = detail.onShareAppMessage();
-  assert.equal(payload.path, "/pages/match-detail/index?id=" + m.id);
+  assert.match(detail.data.match.shareToken, /^[a-f0-9]{64}$/);
+  assert.equal(payload.path, "/pages/match-guest/index?shareToken=" + detail.data.match.shareToken);
   assert.match(payload.title, /快来报名/);
   assert.equal(detail.data.signupShareOpen, false);
   assert.equal(h.calls.length, beforeShare, "share callback only returns payload, no recipient or outbound request");

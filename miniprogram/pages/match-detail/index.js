@@ -43,16 +43,16 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
     this.dismissSignupShare();
     if (!this._replyOwner || this._replyOwner !== s.api.getSession()?.token || this._hidden || this._disposed || this.data.loading || this.data.error) return { title: '球队比赛', path: '/pages/home/index' };
     const match = this.data.match;
-    if (!match || match.status !== "published") return { title: "球队比赛", path: "/pages/home/index" };
+    if (!match || match.status !== "published" || !/^[a-f0-9]{64}$/.test(match.shareToken || "")) return { title: "球队比赛", path: "/pages/home/index" };
     return {
       title: `${match.dateLabel.split(' ').pop()} ${match.kickoff || "时间待定"} ⚽ 快来报名吧！`,
-      path: `/pages/match-detail/index?id=${encodeURIComponent(this.id)}`,
+      path: `/pages/match-guest/index?shareToken=${encodeURIComponent(match.shareToken)}`,
       ...(this._shareImage ? { imageUrl: this._shareImage } : {}),
     };
   },
   prepareShareCard() {
     const match = this.data.match, owner = s.api.getSession()?.token, epoch = this._epoch;
-    if (!match || match.status !== 'published' || !owner || this._hidden || this._disposed) return;
+    if (!match || match.status !== 'published' || !/^[a-f0-9]{64}$/.test(match.shareToken || '') || !owner || this._hidden || this._disposed) return;
     this._shareImage = '';
     this.setData({ shareReady: false, shareError: '' });
     const active = () => !this._hidden && !this._disposed && this._epoch === epoch && s.api.getSession()?.token === owner;
@@ -117,14 +117,14 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
       const byId = new Map(players.map((p) => [p.id, p]));
       const replies = raw.rsvps.map((r) => {
         const player = byId.get(r.playerId), name = player?.name || "历史成员";
-        return { playerId: r.playerId, name, label: s.replies[r.response], response: r.response,
+        return { playerId: r.playerId, guest: player?.membershipKind === 'guest', name, label: s.replies[r.response], response: r.response,
           avatar: s.assetUrl(player?.avatar), initial: Array.from(name)[0] || '球' };
       });
       const replyGroups = [['yes', '参加'], ['maybe', '待定'], ['no', '请假']]
         .map(([response, label]) => ({ response, label, players: replies.filter(r => r.response === response) }))
         .filter(group => group.players.length);
       const result = {
-        match: { ...match, opponentCrest: s.assetUrl(raw.opponentSnapshot?.logo) },
+        match: { ...match, shareToken: /^[a-f0-9]{64}$/.test(raw.shareToken || "") ? raw.shareToken : "", opponentCrest: s.assetUrl(raw.opponentSnapshot?.logo) },
         replyPending:false,
         reconciling:false,
         cover,

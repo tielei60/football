@@ -9,13 +9,14 @@ function loadPage(file, shared, wx = {}) {
   vm.runInNewContext(fs.readFileSync(path.join(root, file), 'utf8'), { Page: value => { page = value; }, require: name => name.includes('shared') ? shared : name.includes('location') ? { matchVenue: () => ({}) } : {}, wx, Map, Promise, encodeURIComponent });
   return page;
 }
-test('published match shares its own detail path; drafts do not leak details', () => {
+test('published match shares scoped invitation; drafts and missing token do not leak numeric IDs', () => {
   const page = loadPage('pages/match-detail/index.js', {api:{getSession:()=>({token:'owner'})}});
   page._replyOwner='owner';
   page.id = '42'; page.setData = patch => Object.assign(page.data,patch);
-  page.data = { team: { name: '球队' }, match: { status: 'published', dateLabel: '11月18日 周三', kickoff: '20:00', opponent: '对手' } };
+  page.data = { team: { name: '球队' }, match: { shareToken:'a'.repeat(64), status: 'published', dateLabel: '11月18日 周三', kickoff: '20:00', opponent: '对手' } };
   const share = page.onShareAppMessage();
-  assert.equal(share.path, '/pages/match-detail/index?id=42');
+  assert.equal(share.path, '/pages/match-guest/index?shareToken='+'a'.repeat(64));
+  const saved=page.data.match.shareToken; page.data.match.shareToken=''; assert.equal(page.onShareAppMessage().path,'/pages/home/index');page.data.match.shareToken=saved;
   assert.match(share.title, /周三 20:00.*快来报名/);
   page.data.match.status = 'draft';
   assert.equal(page.onShareAppMessage().path, '/pages/home/index');
