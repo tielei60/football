@@ -41,6 +41,9 @@ function resetClubTestDataAttempt(databasePath) {
     database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 0; BEGIN IMMEDIATE;");
     try {
       database.exec(`
+        DELETE FROM club_guest_registration;
+        DELETE FROM club_guest_match_access;
+        DELETE FROM club_match_shares;
         DELETE FROM club_match_tactics;
         DELETE FROM club_match_tactic_snapshots;
         DELETE FROM club_season_roster;
@@ -49,6 +52,7 @@ function resetClubTestDataAttempt(databasePath) {
         DELETE FROM club_matches;
         DELETE FROM club_seasons;
         DELETE FROM club_sessions;
+        DELETE FROM club_wechat_identities WHERE user_id IN (SELECT id FROM club_users WHERE role = 'player');
         DELETE FROM club_users WHERE role = 'player';
         DELETE FROM club_players;
         UPDATE club_teams SET name='我的球队',crest=NULL,revision=1 WHERE id=1;

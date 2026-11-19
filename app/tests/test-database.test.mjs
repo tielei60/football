@@ -46,6 +46,12 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
     INSERT INTO club_users(team_id,username,password_hash,role,player_id) VALUES (1,'previous-player','unused','player','dirty-player');
     INSERT INTO club_sessions(token_hash,user_id,expires_at) SELECT 'previous-player-token',id,9999999999999 FROM club_users WHERE role='player';
     INSERT INTO club_matches(id,team_id,opponent,match_date,status) VALUES (1,1,'Previous opponent','2027-01-01','published');
+    INSERT INTO club_match_shares(match_id,token) VALUES (1,'previous-share');
+    INSERT INTO club_guest_match_access(team_id,match_id,player_id,created_at) VALUES (1,1,'dirty-player',1);
+    INSERT INTO club_guest_registration(token_hash,match_id,app_id,openid,identity_epoch,expires_at)
+      VALUES ('previous-registration',1,'test-app','previous-visitor',1,9999999999999);
+    INSERT INTO club_wechat_identities(app_id,openid,user_id,created_at)
+      SELECT 'test-app','previous-visitor',id,1 FROM club_users WHERE username='previous-player';
     INSERT INTO club_rsvps VALUES (1,1,'dirty-player','yes');
     INSERT INTO club_roster (team_id,match_id,player_id,position,appeared,goals,assists) VALUES (1,1,'dirty-player','中场',1,0,NULL);
     INSERT INTO club_seasons(id,team_id,name,start_date,end_date) VALUES (1,1,'Previous season','2026-08-01','2027-07-31');
@@ -114,6 +120,10 @@ test("temporary fixture cleanup isolates club entities and preserves real admini
     assert.equal(checked.prepare("SELECT count(*) AS n FROM club_users WHERE role='player'").get().n, 0);
     assert.equal(checked.prepare("SELECT count(*) AS n FROM club_users WHERE role='admin'").get().n, 1);
     [
+      "club_match_shares",
+      "club_guest_match_access",
+      "club_guest_registration",
+      "club_wechat_identities",
       "club_match_tactics",
       "club_match_tactic_snapshots",
       "club_season_roster",
