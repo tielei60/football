@@ -261,9 +261,24 @@ function normalizePlayerListImage(source,ext){
 test('列表图片保护投影拒绝篡改重复并保留额外代码',()=>{
  for(const ext of ['js','wxml']){const source=fs.readFileSync(path.join(root,'pages/manage-players/index.'+ext),'utf8');for(const {after} of require('./player-list-image-projection.json')[ext]){assert.throws(()=>normalizePlayerListImage(source.replace(after,after.replace(/\S/,'!')),ext));assert.throws(()=>normalizePlayerListImage(source.replace(after,after+after),ext));}assert.equal(normalizePlayerListImage(source+'\nextra',ext),normalizePlayerListImage(source,ext)+'\nextra');}
 });
+// 阶段71：仅精确还原同卡双入口，继续保留阶段40及原始业务基线断言。
+const playerServiceCard = {before: "<button wx:if=\"{{id}}\" bindtap=\"openPhotos\" disabled=\"{{busy}}\" class=\"ui-button ui-block\" size=\"mini\">管理出场照片</button><button wx:if=\"{{id}}\" bindtap=\"openWechat\" disabled=\"{{busy}}\" class=\"ui-button ui-block\" size=\"mini\">微信邀请与绑定</button>", after: "<view wx:if=\"{{id}}\" class=\"card player-service-card\"><button bindtap=\"openPhotos\" disabled=\"{{busy}}\" class=\"ui-button ui-block player-service-entry\" size=\"mini\"><image src=\"/assets/photos-shortcut.png\" class=\"service-icon\" mode=\"aspectFit\" aria-hidden=\"true\"/><text class=\"service-label\">管理出场照片</text><text class=\"service-chevron\" aria-hidden=\"true\">›</text></button><button bindtap=\"openWechat\" disabled=\"{{busy}}\" class=\"ui-button ui-block player-service-entry\" size=\"mini\"><view class=\"service-icon service-envelope\" aria-hidden=\"true\"/><text class=\"service-label\">微信邀请与绑定</text><text class=\"service-chevron\" aria-hidden=\"true\">›</text></button></view>"};
+function normalizePlayerServiceCard(source){
+ assert.equal(source.split(playerServiceCard.after).length,2,'球员双入口白卡必须完整且唯一');
+ return source.replace(playerServiceCard.after,playerServiceCard.before);
+}
+test('球员双入口投影拒绝守卫篡改和重复，保留其他模板内容',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/manage-player/index.wxml'),'utf8');
+ for(const token of ['wx:if="{{id}}"','disabled="{{busy}}"','bindtap="openPhotos"','bindtap="openWechat"']){
+  assert.throws(()=>normalizePlayerServiceCard(source.replace(playerServiceCard.after,playerServiceCard.after.replace(token,token+'-changed'))));
+ }
+ assert.throws(()=>normalizePlayerServiceCard(source.replace(playerServiceCard.after,playerServiceCard.after+playerServiceCard.after)));
+ assert.equal(normalizePlayerServiceCard(source+'\nextra'),normalizePlayerServiceCard(source)+'\nextra');
+});
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
     const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+      if(item==='pages/manage-player'&&ext==='wxml')source=normalizePlayerServiceCard(source);
       if(item==='pages/manage-players'&&['js','wxml'].includes(ext))source=normalizePlayerListImage(source,ext);
       if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
       if(item==='pages/match-edit'&&ext==='wxml')for(const {before,after} of require('./match-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'比赛已存在核对入口必须精确且唯一');source=source.replace(after,before);}

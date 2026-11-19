@@ -49,3 +49,13 @@ test('17和18选择器字段值遵循原图正文色，不扩大品牌强调',()
   assert.ok(css.includes(selector+' { color:var(--ink); }'));
  }
 });
+
+test('12照片与微信入口归入同一白色卡片且保留事件和禁用条件',()=>{
+ const w=read('manage-player'),css=read('manage-player','wxss');
+ assert.match(w,/<view wx:if="{{id}}" class="card player-service-card">/);
+ for(const event of ['openPhotos','openWechat'])assert.match(w,new RegExp('bindtap="'+event+'" disabled="{{busy}}" class="ui-button ui-block player-service-entry"'));
+ assert.equal((w.match(/class="service-label"/g)||[]).length,2);
+ assert.equal((w.match(/class="service-chevron"/g)||[]).length,2);
+ assert.match(css,/player-service-entry\+ \.player-service-entry\{border-top:1px solid var\(--line\)/);
+ assert.match(css,/min-height:64px/);
+});
