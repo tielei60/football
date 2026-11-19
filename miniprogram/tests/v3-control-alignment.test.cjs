@@ -8,13 +8,14 @@ const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 // Remove comments before adapting page selectors: otherwise a comment between
 // two rules leaves real page-scoped tokens undefined in the HTML fixture.
-const css = (source, width) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/([\d.]+)rpx/g, (_, n) => Number(n) * width / 750 + 'px').replace(/(^|\})\s*page\s*\{/g, '$1 body{');
+const css = (source, width) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/([\d.]+)rpx/g, (_, n) => Number(n) * width / 750 + 'px').replace(/(^|[{}])\s*page\s*\{/g, '$1 body{');
 const picker = text => `<business-picker><div class="picker"><span class="picker-value">${text}</span></div></business-picker>`;
 test('WXSS适配器保留注释后及媒体内page令牌，不因缺失令牌伪造高度回归', () => {
   const converted = css(read('app.wxss'), 430);
-  assert.doesNotMatch(converted, /(?:^|[}])\s*page\s*\{/);
+  assert.doesNotMatch(converted, /(?:^|[{}])\s*page\s*\{/);
   assert.match(converted, /body\{--field-control-height:50\.45333333333333px\}/);
   assert.equal(css('/* first */page{--a:88rpx}/* next */page{--b:1rpx}', 750), ' body{--a:88px} body{--b:1px}');
+  assert.equal(css('@media(max-width:375px){page{--type-body:14px}}.page{padding:4rpx}', 750), '@media(max-width:375px){ body{--type-body:14px}}.page{padding:4px}');
 });
 test('标准输入、选择和动作等高对齐，长字段自然增高，320/375/430及横屏不横向溢出', async () => {
   const { chromium } = require('../../app/node_modules/playwright');
