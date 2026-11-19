@@ -42,3 +42,11 @@ test('首次改密保留原错误及提交保护，无权限只翻译已知拒�
  assert.match(system,/wx:if="{{authorized&&!item.systemAdmin}}"/);
  assert.match(system,/wx:elif="{{item.systemAdmin}}"/);
 });
+
+test('照片生成禁用态采用原图描边星芒，不依赖系统字体实心星形',()=>{
+ const w=read('player-ai'),s=read('player-ai','wxss');
+ assert.match(w,/class="capability-spark-outline"/);
+ assert.doesNotMatch(w,/✦/);
+ assert.match(s,/fill%3D%22none%22/);
+ assert.match(s,/stroke-linejoin%3D%22round%22/);
+});

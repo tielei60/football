@@ -3,7 +3,7 @@
   <block wx:if="{{!loading&&!error&&admin}}">
     <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">头像与出场照生成</view><view class="club-banner-subtitle">{{playerName}}</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
 
-    <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-spark" aria-hidden="true">✦</view><view class="capability-title">生成服务尚未启用</view><view class="capability-caption">照片生成功能暂不可用。原有头像与照片不受影响。</view></view>
+    <view wx:if="{{!enabled}}" class="card capability-disabled"><view class="capability-symbol capability-spark" aria-hidden="true"><view class="capability-spark-outline"/></view><view class="capability-title">生成服务尚未启用</view><view class="capability-caption">照片生成功能暂不可用。原有头像与照片不受影响。</view></view>
     <block wx:else>
 <view class="ai-intro">先选用途与素材，生成后预览，确认采用才会更新球员资料。</view>
       <view wx:if="{{mode==='local-simulation'}}" class="ai-warning">本地模拟，不是真实 AI 生成。仅使用内置几何样本，不上传个人照片。</view>
