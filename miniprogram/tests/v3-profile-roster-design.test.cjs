@@ -14,15 +14,17 @@ test('比赛日期时间统一双行容量，草稿说明移到状态区域且�
  assert.match(w,/class="filter-row date-time-row"/);
  assert.match(css,/\.date-time-row \.picker\{min-height:112rpx;min-height:max\(56px,112rpx\)/);
  const note='草稿仅管理员可见，选择“发布报名”后球员才能报名';assert.equal(w.split(note).length,2);
- assert.ok(w.indexOf(note)>w.indexOf('归属与状态'));
+ assert.ok(w.indexOf(note)>w.indexOf('所属赛季'));
+ assert.ok(w.indexOf(note)<w.indexOf('比赛状态'));
+ assert.equal((w.match(/class="card(?: section)?"/g)||[]).length,2);
+ assert.doesNotMatch(w,/归属与状态/);
  assert.match(w,/wx:if="{{form.kickoff}}"[\s\S]*?bindtap="clearTime"[\s\S]*?disabled="{{loading \|\| \(busy\)}}"/);
  assert.match(css,/clear-kickoff\[size="mini"\]\{display:flex;justify-content:flex-start/);
 });
-test('名单保留对手摘要与历史身份条件，身份提示使用浅底容器',()=>{
+test('名单横幅直接进入添加卡片，保留历史身份与名单数量',()=>{
  const w=read('match-roster'),css=read('match-roster','wxss');
- assert.match(w,/对阵 {{opponent}}/);assert.match(w,/class="identity-note" wx:if="{{item.historical}}"/);
+ assert.doesNotMatch(w,/class="roster-heading"/);assert.match(w,/club-banner-mark[^]*?<\/view>\s*<view class="add-section">/);assert.match(w,/{{rows.length}} 人/);assert.match(w,/class="identity-note" wx:if="{{item.historical}}"/);
  assert.match(w,/迁移时留存身份/);assert.match(w,/保存后将替换本场完整名单/);
- assert.match(css,/\.roster-opponent\{margin-top:0;font-size:28rpx;line-height:1.5\}/);
  assert.match(css,/\.identity-note\{padding:16rpx 20rpx;border-radius:18rpx;background:var\(--canvas\)/);
 });
 test('赛季添加操作上下排列且保留无候选禁用、只读与保存守卫',()=>{

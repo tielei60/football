@@ -1,7 +1,7 @@
 <view class="page roster-page">
   <page-state skeleton-type="form" loading="{{loading}}" error="{{error}}" bind:retry="refresh"/>
   <block wx:if="{{!loading && !error}}">
-    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">比赛名单</view><view class="club-banner-subtitle">报名、名单与实际出场分别记录</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view><view class="roster-heading"><view class="roster-heading-main"><text class="roster-kicker">比赛名单</text><view class="roster-opponent">对阵 {{opponent}}</view></view><view class="roster-total"><text class="roster-total-number">{{rows.length}}</text><text class="roster-total-label">人已加入</text></view></view>
+    <view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">比赛名单</view><view class="club-banner-subtitle">报名、名单与实际出场分别记录</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view>
     <view class="add-section">
       <view class="section-heading"><text class="section-title">添加球员</text><text wx:if="{{candidates.length}}" class="section-note">可继续添加 {{candidates.length}} 人</text></view>
       <view wx:if="{{candidates.length}}" class="field-label candidate-label">可添加球员</view>
