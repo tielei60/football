@@ -25,7 +25,7 @@
 - GET `/api/seasons` -> Season[]
 - POST `/api/seasons` `{name,startDate,endDate}` -> Season（管理员）
 - PUT `/api/seasons/:id` 接受上述字段的部分更新及 `revision` -> Season（管理员）
-  Season = `{id:number,revision:number,name,startDate:'YYYY-MM-DD',endDate:'YYYY-MM-DD'}`。允许任意包含起止日期的时间范围，也允许范围重叠。比赛归属必须显式指定，不根据重叠日期推断。缩小范围导致已分配比赛落在范围外时返回 409。
+  Season = `{id:number,revision:number,name,startDate:'YYYY-MM-DD',endDate:'YYYY-MM-DD',icon:string|null,image:string|null}`。允许任意包含起止日期的时间范围，也允许范围重叠。比赛归属必须显式指定，不根据重叠日期推断。缩小范围导致已分配比赛落在范围外时返回 409。
 
 - GET `/api/matches` -> Match 摘要（不含 tacticSnapshots）；球员仅可见 published/completed/cancelled，管理员还可见 draft
 - POST `/api/matches` 提交 Match 可编辑字段 -> Match（管理员）
@@ -73,7 +73,7 @@ Player、Match 和 Season 均有从 1 开始的整数 revision 字段。更新�
 
 ### 对手交锋记录
 
-统计还返回 `opponents: Array<{opponent:string,matches:number,scoredMatches:number,wins:number,draws:number,losses:number,goalsFor:number|null,goalsAgainst:number|null,goalsForKnownMatches:number,goalsAgainstKnownMatches:number}>`。按去除首尾空白后的对手名称分组，不合并大小写或内部空白差异；范围仅包含已认证球队中显式归属所选赛季，或日期位于所选自然年的已完赛比赛。各字段与球队汇总采用相同的独立比分覆盖规则；完全未知的比分不当作平局或零进球记录。按比赛数降序、再按名称排序。不提供独立对手实体或模糊名称匹配。
+统计还返回 `opponents: Array<{opponent:string,matches:number,scoredMatches:number,wins:number,draws:number,losses:number,goalsFor:number|null,goalsAgainst:number|null,goalsForKnownMatches:number,goalsAgainstKnownMatches:number}>`。按去除首尾空白后的对手名称分组，不合并大小写或内部空白差异；范围仅包含已认证球队中显式归属所选赛季，或日期位于所选自然年的已完赛比赛。各字段与球队汇总采用相同的独立比分覆盖规则；完全未知的比分不当作平局或零进球记录。按比赛数降序、再按名称排序。对手目录仅用于关联与录入；历史统计依然使用比赛所存名称，不按目录 ID 或模糊名称自动合并。
 
 ### 比赛历史快照
 
@@ -233,3 +233,13 @@ GET `/api/tactics/:id/commands` 额外返回 `formations`，为 `{playerCount,id
 ## 原生战术新建目录与收据
 
 管理员目录 `GET /api/tactic-formations`、兼容 `POST /api/tactics` 可选顶层requestId，以及同账号新建收据查询的事务/恢复/删除边界，见[原生战术新建接口](native-tactic-create-api.md)。此组仍遵循既有team1战术资源范围，不表示任意多球队战术已实现。
+
+
+### 赛事、对手与比赛须知模板
+
+- `GET/POST /api/competitions`、`GET/PUT /api/competitions/:id` 管理赛事。字段：`id`、`revision`、`name`、可空的 `logo`、`introduction`、`status`。
+- `GET/POST /api/opponents`、`GET/PUT /api/opponents/:id` 管理对手。除赛事共用字段外，还可填写 `playerSummary` 队员概况。
+- `GET/POST /api/notice-templates`、`GET/PUT /api/notice-templates/:id` 管理比赛须知模板。字段：`id`、`revision`、`title`、`content`、`status`。
+- 以上目录都限制本队管理员读写。更新须带版本号；停用用 `status: 'inactive'`，恢复用 `'active'`，不会删除历史关联。
+- 比赛允许 `competitionId`、`opponentId`、`noticeTemplateId` 为空，不影响旧版自由填写。选新关联时，未传的名称或须知可从目录带入；显式传入的比赛须知（含空串）为本场所存正文。模板、目录更新不回写比赛。赛事、对手只留名称和队徽快照，不向球员返回目录内部介绍或队员概况。
+- 赛季的 `icon` 与 `image` 使用 PNG/JPG 数据地址，每张不超过 2 MiB。更新时未传保留、传 `null` 清空。历史赛季迁移后默认为空，不初始化真实队伍、赛事或报名。

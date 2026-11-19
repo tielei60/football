@@ -5,6 +5,7 @@ import {
 } from "./wechat-identity-store.mjs";
 import { createMatchMediaStore } from "./match-media-store.mjs";
 import { createVenueStore } from "./venue-store.mjs";
+import { createClubCatalogStore } from "./club-catalog-store.mjs";
 import {
   randomBytes,
   randomUUID,
@@ -163,6 +164,14 @@ function validateChangedAvatar(value, allowLocal = false) {
       error.message = error.message.replaceAll("队徽", "头像");
     throw error;
   }
+}
+function validateClubImage(value) {
+  if (
+    value !== null &&
+    (typeof value !== "string" || !/^data:image\/(png|jpeg);base64,/.test(value))
+  )
+    fail(400, "图标和图片仅支持静态 PNG 或 JPG，清除请传 null。");
+  return validateCrest(value);
 }
 const MAX_MATCH_SNAPSHOT_BYTES = 32 * 1024 * 1024;
 const userView = (r) => ({
@@ -378,6 +387,7 @@ export function createClubStore(
     ).run(Date.now());
   });
   const venues = createVenueStore(database);
+  const catalogs = createClubCatalogStore(database, validateClubImage);
   const matchMedia = createMatchMediaStore(database, getMatch);
   function checkRevision(input, current) {
     if (!Number.isSafeInteger(input.revision) || input.revision < 1)
@@ -896,6 +906,8 @@ export function createClubStore(
     name: r.name,
     startDate: r.start_date,
     endDate: r.end_date,
+    icon: r.icon,
+    image: r.image,
   });
   const getSeason = (teamId, id) => {
     const r = q("SELECT * FROM club_seasons WHERE team_id=? AND id=?").get(
@@ -907,10 +919,15 @@ export function createClubStore(
   };
   function saveSeason(teamId, id, input) {
     object(input);
-    const s = { ...(id ? getSeason(teamId, id) : {}), ...input };
+    const s = {
+      ...(id ? getSeason(teamId, id) : { icon: null, image: null }),
+      ...input,
+    };
     s.name = text(s.name, 200, true);
     date(s.startDate);
     date(s.endDate);
+    s.icon = validateClubImage(s.icon);
+    s.image = validateClubImage(s.image);
     if (s.startDate > s.endDate) fail(400, "赛季结束日期不能早于开始日期。");
     return tx(() => {
       if (id) {
@@ -927,13 +944,14 @@ export function createClubStore(
       }
       if (id)
         q(
-          "UPDATE club_seasons SET name=?,start_date=?,end_date=?,revision=revision+1 WHERE id=? AND team_id=?",
-        ).run(s.name, s.startDate, s.endDate, id, teamId);
+          "UPDATE club_seasons SET name=?,start_date=?,end_date=?,icon=?,image=?,revision=revision+1 WHERE id=? AND team_id=?",
+        ).run(s.name, s.startDate, s.endDate, s.icon, s.image, id, teamId);
       else
         id = Number(
           q(
-            "INSERT INTO club_seasons(team_id,name,start_date,end_date) VALUES (?,?,?,?)",
-          ).run(teamId, s.name, s.startDate, s.endDate).lastInsertRowid,
+            "INSERT INTO club_seasons(team_id,name,start_date,end_date,icon,image) VALUES (?,?,?,?,?,?)",
+          ).run(teamId, s.name, s.startDate, s.endDate, s.icon, s.image)
+            .lastInsertRowid,
         );
       return getSeason(teamId, id);
     });
@@ -1003,6 +1021,15 @@ export function createClubStore(
       revision: r.revision,
       opponent: r.opponent,
       competition: r.competition,
+      competitionId: r.competition_id,
+      competitionSnapshot: r.competition_snapshot
+        ? JSON.parse(r.competition_snapshot)
+        : null,
+      opponentId: r.opponent_id,
+      opponentSnapshot: r.opponent_snapshot
+        ? JSON.parse(r.opponent_snapshot)
+        : null,
+      noticeTemplateId: r.notice_template_id,
       format: r.format,
       maxParticipants: r.max_participants,
       side: r.side,
@@ -1076,6 +1103,9 @@ export function createClubStore(
         : {
             opponent: "",
             competition: "",
+            competitionId: null,
+            opponentId: null,
+            noticeTemplateId: null,
             format: null,
             maxParticipants: null,
             side: "unknown",
@@ -1094,8 +1124,9 @@ export function createClubStore(
           }),
       ...input,
     };
-    m.opponent = text(m.opponent, 200, true);
-    m.competition = text(m.competition, 200);
+    for (const field of ["competitionId", "opponentId", "noticeTemplateId"])
+      if (m[field] !== null && (!Number.isSafeInteger(m[field]) || m[field] < 1))
+        fail(400, "请选择有效的赛事、对手或须知模板。");
     if (m.format !== null) oneOf(m.format, [5, 6, 7, 8, 9, 11]);
     if (m.maxParticipants !== null && (!Number.isSafeInteger(m.maxParticipants) || m.maxParticipants < 1 || m.maxParticipants > 10000))
       fail(400, "报名人数须为 1 至 10000 的整数，或留空表示不限。");
@@ -1119,7 +1150,6 @@ export function createClubStore(
     integer(m.homeScore);
     integer(m.awayScore);
     m.analysis = text(m.analysis, 50000);
-    m.notice = text(m.notice, 10000);
     if (
       !Array.isArray(m.tacticIds) ||
       m.tacticIds.length > 100 ||
@@ -1133,6 +1163,32 @@ export function createClubStore(
     return tx(() => {
       const previousMatch = id ? getMatch(u, id) : null;
       if (id) checkRevision(input, previousMatch);
+      // References are conveniences, not live joins. Capture only on an explicit
+      // new association; metadata edits and later catalog changes keep history.
+      const referenceSnapshots = {};
+      for (const [kind, field, textField, sourceField, snapshotField] of [
+        ["competitions", "competitionId", "competition", "name", "competitionSnapshot"],
+        ["opponents", "opponentId", "opponent", "name", "opponentSnapshot"],
+        ["notice-templates", "noticeTemplateId", "notice", "content", null],
+      ]) {
+        const changed = m[field] !== (previousMatch?.[field] ?? null);
+        let snapshot = snapshotField ? previousMatch?.[snapshotField] ?? null : null;
+        if (m[field] === null) snapshot = null;
+        else if (changed || (snapshotField && !snapshot)) {
+          const entry = catalogs.getCatalogEntry(kind, u.team_id, m[field]);
+          if (entry.status !== "active") fail(400, "已停用资料不能用于新的比赛关联。");
+          if (input[textField] === undefined) m[textField] = entry[sourceField];
+          if (snapshotField) {
+            // Match readers only need display identity, not the catalog's
+            // administrator-only introduction or player notes.
+            snapshot = { name: entry.name, logo: entry.logo };
+          }
+        }
+        if (snapshotField) referenceSnapshots[snapshotField] = snapshot;
+      }
+      m.opponent = text(m.opponent, 200, true);
+      m.competition = text(m.competition, 200);
+      m.notice = text(m.notice, 10000);
       if (m.maxParticipants !== null && previousMatch && previousMatch.rsvps.filter(r => r.response === "yes").length > m.maxParticipants)
         fail(409, "报名人数不能小于已参加人数。");
       // Never trust client snapshots. Reusing the same venue retains history;
@@ -1214,6 +1270,21 @@ export function createClubStore(
       );
       q("UPDATE club_matches SET notice=? WHERE id=? AND team_id=?").run(
         m.notice,
+        id,
+        u.team_id,
+      );
+      q(
+        "UPDATE club_matches SET competition_id=?,opponent_id=?,notice_template_id=?,competition_snapshot=?,opponent_snapshot=? WHERE id=? AND team_id=?",
+      ).run(
+        m.competitionId,
+        m.opponentId,
+        m.noticeTemplateId,
+        referenceSnapshots.competitionSnapshot
+          ? JSON.stringify(referenceSnapshots.competitionSnapshot)
+          : null,
+        referenceSnapshots.opponentSnapshot
+          ? JSON.stringify(referenceSnapshots.opponentSnapshot)
+          : null,
         id,
         u.team_id,
       );
@@ -1576,6 +1647,7 @@ export function createClubStore(
     wechat,
     assertTacticDeletable,
     ...venues,
+    ...catalogs,
     ...matchMedia,
     getTeam,
     saveTeam,

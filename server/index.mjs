@@ -24,6 +24,7 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { FootballError, openFootballStore } from "./football-store.mjs";
 import { createClubStore } from "./club-store.mjs";
+import { prepareClubImages } from "./club-catalog-store.mjs";
 
 const appDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../app");
 const contentTypes = {
@@ -385,22 +386,27 @@ export function createFootballServer({
           /^\/api\/(?:tactics(?:\/|$)|tactic-collections$|coaching-desk$|players(?:$|\/[^/]+$))/.test(
             pathname,
           );
+        const clubImageBytes = /^\/api\/seasons(?:\/[1-9]\d*)?$/.test(pathname)
+          ? 6 * 1024 * 1024
+          : /^\/api\/(?:competitions|opponents)(?:\/[1-9]\d*)?$/.test(pathname)
+            ? 3 * 1024 * 1024
+            : 0;
         parsedBody = await readRequest(
           request,
-          (method === "POST" &&
-            /^\/api\/players\/[^/]+\/ai\/sources$/.test(pathname)) ||
-            pathname === "/api/team" ||
-            (method === "POST" &&
-              /^\/api\/players\/[^/]+\/photos$/.test(pathname)) ||
-            (method === "POST" &&
-              /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname))
-            ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
-            : largeBody
-              ? maximumRequestBytes
-              : Math.min(
-                  maximumRequestBytes,
-                  pathname.includes("/wechat-") ? 16384 : 1024 * 1024,
-                ),
+          clubImageBytes
+            ? Math.min(maximumRequestBytes, clubImageBytes)
+            : (method === "POST" &&
+                /^\/api\/players\/[^/]+\/ai\/sources$/.test(pathname)) ||
+                pathname === "/api/team" ||
+                (method === "POST" && /^\/api\/players\/[^/]+\/photos$/.test(pathname)) ||
+                (method === "POST" && /^\/api\/matches\/[1-9]\d*\/photos$/.test(pathname))
+              ? Math.min(maximumRequestBytes, 3 * 1024 * 1024)
+              : largeBody
+                ? maximumRequestBytes
+                : Math.min(
+                    maximumRequestBytes,
+                    pathname.includes("/wechat-") ? 16384 : 1024 * 1024,
+                  ),
         );
       }
       const user = club.authenticate(
@@ -410,6 +416,14 @@ export function createFootballServer({
       const admin = () => {
         if (user.role !== "admin")
           throw new FootballError(403, "此操作需要管理员权限。");
+      };
+      const reauthenticateAdmin = () => {
+        const current = club.authenticate(token, nativeRequest ? "native" : "cookie");
+        if (current.id !== user.id || current.team_id !== user.team_id)
+          throw new FootballError(401, "账户已变更，请重新登录。");
+        if (current.role !== "admin" || current.must_change_password === 1)
+          throw new FootballError(403, "此操作需要有效管理员权限。");
+        return current;
       };
       const routeId = (value) => {
         const id = Number(value);
@@ -459,6 +473,32 @@ export function createFootballServer({
           admin();
           return send(response, 200, club.saveTeam(user.team_id, body()));
         }
+      }
+      const catalogRoute =
+        /^\/api\/(competitions|opponents|notice-templates)(?:\/([1-9]\d*))?$/.exec(pathname);
+      if (catalogRoute) {
+        admin();
+        const [, kind, idText] = catalogRoute;
+        const id = idText ? routeId(idText) : null;
+        if (method === "GET") {
+          const query = new URL(request.url, "http://localhost").searchParams;
+          const summary = query.has("summary");
+          if (summary && (id || kind === "notice-templates" || query.getAll("summary").length !== 1 || query.get("summary") !== "1"))
+            throw new FootballError(400, "资料摘要参数不正确。");
+          return send(
+            response, 200,
+            id ? club.getCatalogEntry(kind, user.team_id, id) : club.listCatalogEntries(kind, user.team_id, { summary }),
+          );
+        }
+        if ((!id && method === "POST") || (id && method === "PUT")) {
+          const previous = id ? club.getCatalogEntry(kind, user.team_id, id) : {};
+          const input = await prepareClubImages(
+            body(), kind === "notice-templates" ? [] : ["logo"], previous,
+          );
+          const current = reauthenticateAdmin();
+          return send(response, id ? 200 : 201, club.saveCatalogEntry(kind, current.team_id, id, input));
+        }
+        throw new FootballError(405, "请使用资料编辑或停用，不支持此操作方式。");
       }
       if (pathname === "/api/venues") {
         if (method === "GET")
@@ -734,10 +774,12 @@ export function createFootballServer({
           return send(response, 200, club.listSeasons(user.team_id));
         if (method === "POST") {
           admin();
+          const input = await prepareClubImages(body(), ["icon", "image"]);
+          const current = reauthenticateAdmin();
           return send(
             response,
             201,
-            club.saveSeason(user.team_id, null, body()),
+            club.saveSeason(current.team_id, null, input),
           );
         }
       }
@@ -758,13 +800,15 @@ export function createFootballServer({
         }
       }
       const seasonRoute = /^\/api\/seasons\/([1-9]\d*)$/.exec(pathname);
-      if (seasonRoute && method === "PUT") {
-        admin();
-        return send(
-          response,
-          200,
-          club.saveSeason(user.team_id, routeId(seasonRoute[1]), body()),
-        );
+      if (seasonRoute) {
+        const id = routeId(seasonRoute[1]);
+        if (method === "GET") return send(response, 200, club.getSeason(user.team_id, id));
+        if (method === "PUT") {
+          admin();
+          const input = await prepareClubImages(body(), ["icon", "image"], club.getSeason(user.team_id, id));
+          const current = reauthenticateAdmin();
+          return send(response, 200, club.saveSeason(current.team_id, id, input));
+        }
       }
       if (pathname === "/api/statistics" && method === "GET")
         return send(
