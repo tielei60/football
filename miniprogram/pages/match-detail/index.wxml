@@ -17,14 +17,14 @@
       <view class="teams">
         <view class="match-team"><view class="team-crest"><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><view wx:else class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{team.name}}</text></view>
         <view class="match-result"><text class="score">{{match.status==='completed'?match.scoreLabel:'VS'}}</text><text class="match-side">{{match.side==='home'?'主场':match.side==='away'?'客场':match.side==='neutral'?'中立场':'主客场待定'}}</text></view>
-        <view class="match-team"><view class="team-crest"><view class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{match.opponent}}</text></view>
+        <view class="match-team"><view class="team-crest"><image wx:if="{{match.opponentCrest}}" src="{{match.opponentCrest}}" mode="aspectFit" data-target="opponent" binderror="opponentImageError"/><view wx:else class="default-crest" aria-hidden="true"><view class="default-ball"><view class="ball-center"/><view class="ball-seam ball-seam-one"/><view class="ball-seam ball-seam-two"/><view class="ball-seam ball-seam-three"/><view class="ball-seam ball-seam-four"/><view class="ball-seam ball-seam-five"/></view></view></view><text class="team-name">{{match.opponent}}</text></view>
       </view>
       <view class="match-hero-time">{{match.dateLabel}} {{match.kickoff || '时间待定'}}</view></view><view class="match-facts">
 
         <view class="fact-row"><text class="fact-label">场地</text><view class="fact-content"><text class="fact-primary">{{venueLocation.valid ? venueLocation.title : (match.location || venueLocation.address || '待定')}}</text><text wx:if="{{venueLocation.valid && venueLocation.address}}" class="fact-subtitle">{{venueLocation.address}}</text><text wx:elif="{{!match.location}}" class="fact-subtitle">{{venueLocation.message}}</text></view><button wx:if="{{venueLocation.valid}}" id="match-open-location" size="mini" class="fact-navigation" disabled="{{loading}}" bindtap="openLocation">导航 ›</button></view>
         <view wx:if="{{notice}}" class="fact-notice"><text class="fact-label">须知</text><text class="prewrap">{{notice}}</text></view>
         <view wx:if="{{admin}}" class="match-management"><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="edit" size="mini">编辑比赛</button><button disabled="{{loading}}" class="ui-button match-management-button" hover-class="match-control-pressed" bindtap="rosterEdit" size="mini">管理名单</button></view>
-        <button disabled="{{loading}}" bindtap="media" class="ui-button match-media-button" hover-class="match-control-pressed" size="mini">须知与相册 ›</button>
+        <button disabled="{{loading}}" bindtap="media" class="ui-button match-media-button" hover-class="match-control-pressed" size="mini">比赛相册 ›</button>
       </view>
     <image wx:if="{{cover}}" class="match-cover" src="{{cover}}" mode="aspectFill" bindtap="media"/>
 
@@ -55,6 +55,7 @@
     <view class="content-section" wx:if="{{match.analysis}}"><view class="section-heading"><text class="section-heading-title">赛后复盘</text></view><view class="prewrap section-copy">{{match.analysis}}</view></view>
     <view class="content-section" wx:if="{{snapshots.length}}"><view class="section-heading"><text class="section-heading-title">战术留档</text></view><view aria-role="button" wx:for="{{snapshots}}" wx:key="id" class="tactic-row" data-id="{{item.id}}" bindtap="tactic"><text>{{item.name}}</text><text class="tactic-source">{{item.source}} ›</text></view></view>
     <view wx:if="{{actionError}}" class="error">{{actionError}}</view>
+    <view wx:if="{{replyUnavailable}}" class="hint reply-unavailable">{{replyUnavailable}}</view>
     <view wx:if="{{canReply}}" class="bottom-space"></view>
     <view wx:if="{{canReply}}" class="fixed-actions">
       <view class="reply-bar-heading"><text class="reply-bar-title">我的报名</text><text class="reply-bar-status">{{replyPending ? (busy ? '正在提交' : reconciling ? '正在核对' : '结果待核对') : (match.response ? '已选择：' + match.responseLabel : '请选择')}}</text></view>
@@ -67,3 +68,11 @@
   </block>
 </view>
 <canvas id="match-share-canvas" type="2d" class="share-canvas"/><business-dialog id="business-dialog"/>
+
+<view wx:if="{{signupShareOpen}}" class="signup-share-layer" catchtouchmove="stopShareOverlay">
+ <view class="signup-share-shade" bindtap="dismissSignupShare" aria-role="button" aria-label="暂不分享，关闭弹层"/>
+ <view class="signup-share-dialog" aria-role="dialog" aria-label="报名成功" aria-modal="true" catchtap="stopShareOverlay">
+  <view class="signup-share-title">报名成功</view><view class="signup-share-copy">分享比赛，邀请队友一起参加。</view>
+  <view class="signup-share-actions"><button class="ui-button signup-share-later" bindtap="dismissSignupShare" size="mini">暂不分享</button><button class="ui-button primary signup-share-confirm" open-type="share" size="mini">分享</button></view>
+ </view>
+</view>

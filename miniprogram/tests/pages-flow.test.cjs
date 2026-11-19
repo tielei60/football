@@ -158,9 +158,9 @@ test("schedule separates drafts and cancelled, groups months in order", () => {
   assert.equal(page.filter(rows, "draft").length, 1);
   assert.equal(page.filter(rows, "past")[0].id, 2);
   const future = page.filter(rows, "upcoming");
-  assert.equal(future[0].id, 4);
-  assert.equal(future[0].monthHeading, "2026年11月");
-  assert.equal(future[1].monthHeading, "2026年12月");
+  assert.equal(future[0].id, 3);
+  assert.equal(future[0].monthHeading, "2026年12月");
+  assert.equal(future[1].monthHeading, "2026年11月");
 });
 test("player search, number and position filter combine", () => {
   const { page } = setup("players");

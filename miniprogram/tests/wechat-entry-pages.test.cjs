@@ -210,7 +210,16 @@ test("new entry markup is narrowly capability-gated and password ability is chec
     /<view wx:if="{{session.user.passwordEnabled!==false}}" class="account-password"/,
   );
   assert.equal((manage.match(/bindtap="openWechat"/g) || []).length, 1);
-  assert.match(manage, /<button wx:if="{{id}}" bindtap="openWechat" disabled="{{busy}}"[^>]*>微信邀请与绑定<\/button>/);
+  // The existing id guard moved to the shared photos/invite card. Keep the
+  // same scope, one invite handler, busy protection and visible wording.
+  const cardStart = '<view wx:if="{{id}}" class="card player-service-card">';
+  assert.equal(manage.split(cardStart).length, 2);
+  const start = manage.indexOf(cardStart);
+  const end = manage.indexOf('<view wx:if="{{id}}" class="card section account-card">', start);
+  assert.ok(end > start);
+  const serviceCard = manage.slice(start, end);
+  assert.equal((serviceCard.match(/bindtap="openWechat"/g) || []).length, 1);
+  assert.match(serviceCard, /<button bindtap="openWechat" disabled="{{busy}}"[^>]*>[\s\S]*?<text class="service-label">微信邀请与绑定<\/text>[\s\S]*?<\/button>/);
   assert.match(manage, /<invite-sheet id="invite-sheet" player="{{id}}"\/>/);
   const sheet=fs.readFileSync(path.join(root,"components/invite-sheet/index.js"),"utf8");
   assert.match(sheet, /!this.ready\(\) \|\| this.data.archived \|\| this.data.unconfirmed \|\| this.data.binding\?\.bound \|\| this.data.activeInvite\?\.status === 'claimed'/);

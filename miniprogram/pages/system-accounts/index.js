@@ -6,6 +6,7 @@ function pending(owner) {
   return pendingCreate;
 }
 Page({
+  openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},
   data: {
     loading: true,
     error: "",
@@ -16,6 +17,7 @@ Page({
     password: "",
     actionError: "",
     uncertain: false,
+    selfAccount: null, selfCandidates: [], selfCandidateIndex: -1,
     canRelease: false,
   },
   onShow() {
@@ -26,7 +28,7 @@ Page({
     ui.abort(this);
     this._hidden = true;
     this._turn = (this._turn || 0) + 1;
-    this.setData({ password: "", accounts: [], authorized: false });
+    this.setData({ password: "", accounts: [], authorized: false, selfAccount:null, selfCandidates:[] });
   },
   onUnload() {
     this.onHide();
@@ -83,6 +85,7 @@ Page({
       this._viewer = session.user.id;
       this.setData({
         authorized: true,
+        selfAccount: accounts.find(x=>x.id===session.user.id)||null, selfCandidates:[], selfCandidateIndex:-1,
         accounts: accounts.map((x) => ({
           id: x.id,
           username: x.username,
@@ -139,6 +142,29 @@ Page({
       !this.data.busy &&
       !this.data.uncertain
     );
+  },
+  async loadSelfCandidates(){
+    if(!this.allowed()||!this.data.selfAccount?.systemAdmin||this.data.selfAccount.playerId)return;
+    const owner=this._owner,turn=this._turn;this.setData({busy:true,actionError:'',selfCandidates:[]});
+    try{const players=await api.request('/players');if(!this.active(owner,turn))return;
+      const occupied=new Set(this.data.accounts.map(x=>x.playerId).filter(Boolean));
+      const candidates=players.filter(p=>p.status==='active'&&p.membershipConfirmed===true&&!occupied.has(p.id)).map(p=>({id:p.id,label:p.name+(p.number!=null?' · '+p.number+'号':'')}));
+      this.setData({selfCandidates:candidates,selfCandidateIndex:-1,actionError:candidates.length?'':'没有可关联的在册球员。已绑定其他账号的球员不可重复关联。'});
+    }catch(e){if(!this.recoverExpired(owner,turn,e)&&this.active(owner,turn))this.setData({actionError:e.message});}
+    finally{if(this.active(owner,turn))this.setData({busy:false});}
+  },
+  selectSelfCandidate(e){if(!this.allowed())return;const i=Number(e.detail.value);if(Number.isInteger(i)&&this.data.selfCandidates[i])this.setData({selfCandidateIndex:i});},
+  async bindSelfPlayer(){
+    if(!this.allowed()||!this.data.selfAccount?.systemAdmin||this.data.selfAccount.playerId)return;
+    const candidate=this.data.selfCandidates[this.data.selfCandidateIndex],account=this.data.selfAccount;
+    if(!candidate)return;const owner=this._owner,turn=this._turn;
+    const answer=await ui.showModal(this,{title:'关联我本人的球员身份',content:'确认“'+candidate.label+'”就是你本人？绑定后此管理员账号将以该球员身份报名。此操作不可在界面撤销或更换，不能绑定他人；完成后需要重新登录。',confirmText:'确认是我本人',cancelText:'取消'});
+    if(!answer.confirm||answer.aborted||!this.allowed()||!this.active(owner,turn)||this.data.selfAccount!==account)return;
+    this.setData({busy:true,actionError:''});
+    const relogin=()=>{if(api.getSession()?.token!==owner)return;api.clearSession();if(!this._hidden&&!this._disposed&&this._turn===turn)wx.reLaunch({url:'/pages/login/index'});};
+    try{await api.request('/system/accounts/self-player','POST',{playerId:candidate.id,revision:account.revision});relogin();}
+    catch(e){const status=e.status||e.statusCode||0;if(!status||status>=500){relogin();return;}if(!this.recoverExpired(owner,turn,e)&&this.active(owner,turn))this.setData({actionError:e.message});}
+    finally{if(this.active(owner,turn))this.setData({busy:false});}
   },
   async create() {
     if (!this.allowed()) return;

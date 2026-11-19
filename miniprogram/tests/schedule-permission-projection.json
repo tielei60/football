@@ -16,6 +16,10 @@
     {
       "before": "  create() {\n    wx.navigateTo({ url: \"/pages/match-edit/index\" });\n  },",
       "after": "  create() {\n    if (this._disposed || this._hidden || this.data.loading || this.data.error || !this.data.admin) return;\n    wx.navigateTo({ url: \"/pages/match-edit/index\" });\n  },"
+    },
+    {
+      "before": "      .sort((a, b) =>\n        tab === \"upcoming\"\n          ? (a.date + a.kickoff).localeCompare(b.date + b.kickoff)\n          : (b.date + b.kickoff).localeCompare(a.date + a.kickoff),\n      )",
+      "after": "      // All tabs use kickoff descending; equal timestamps retain source order.\n      // Unknown kickoff stays after known times on the same date.\n      .sort((a, b) =>\n        (b.date + (b.kickoff || \"\")).localeCompare(a.date + (a.kickoff || \"\")),\n      )"
     }
   ]
 }

@@ -11,7 +11,7 @@ function settleReply(entry,error){
   const status=error?.status||error?.statusCode;
   if(((status>=400&&status<500)||s.api.getSession()?.token!==entry.owner)&&pendingReplies.get(entry.key)===entry)pendingReplies.delete(entry.key);
 }
-Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;this._epoch=(this._epoch||0)+1;this.setData({busy:false,shareReady:false});ui.abort(this);},
+Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;this._epoch=(this._epoch||0)+1;this.setData({busy:false,shareReady:false,signupShareOpen:false});ui.abort(this);},
   data: {
     loading: true,
     error: "",
@@ -31,11 +31,17 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
     hasLocation:false,
     shareReady: false,
     shareError: '',
+    signupShareOpen: false,
+    replyUnavailable: '',
   },
   onLoad(q) {
     this.id = q.id;
   },
+  dismissSignupShare() { this.setData({signupShareOpen:false}); },
+  stopShareOverlay() {},
   onShareAppMessage() {
+    this.dismissSignupShare();
+    if (!this._replyOwner || this._replyOwner !== s.api.getSession()?.token || this._hidden || this._disposed || this.data.loading || this.data.error) return { title: '球队比赛', path: '/pages/home/index' };
     const match = this.data.match;
     if (!match || match.status !== "published") return { title: "球队比赛", path: "/pages/home/index" };
     return {
@@ -77,8 +83,9 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
     if (!this.data.busy) this.refresh();
     else wx.stopPullDownRefresh();
   },
-  onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
+  onUnload(){this.setData({signupShareOpen:false});ui.abort(this);return s.unload.apply(this,arguments);},
   imageError: s.imageError,
+  opponentImageError(){this.setData({"match.opponentCrest":""});},
   replyImageError(e) {
     const group = Number(e.currentTarget.dataset.group), index = Number(e.currentTarget.dataset.index);
     if (Number.isInteger(group) && Number.isInteger(index) && this.data.replyGroups[group]?.players[index])
@@ -87,7 +94,7 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
   async refresh() {
     this._replyOwner = null;
     this._shareImage = '';
-    this.setData({ shareReady: false, shareError: '' });
+    this.setData({ shareReady: false, shareError: '', signupShareOpen:false });
     let loadedOwner = null;
     const expected=(this._epoch||0)+1;
     const pending=pendingReplies.get(replyKey(s.api.getSession()?.token,this.id));
@@ -117,7 +124,7 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
         .map(([response, label]) => ({ response, label, players: replies.filter(r => r.response === response) }))
         .filter(group => group.players.length);
       const result = {
-        match,
+        match: { ...match, opponentCrest: s.assetUrl(raw.opponentSnapshot?.logo) },
         replyPending:false,
         reconciling:false,
         cover,
@@ -126,6 +133,7 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
         venueLocation:location.matchVenue(raw),
         team: { name: session.team.name, crest: s.assetUrl(session.team.crest) },
         admin: session.user.role === "admin",
+        replyUnavailable: session.user.role === 'admin' && !session.user.playerId && match.status === 'published' ? '此账号未关联球员，不能代替他人报名。系统管理员可在“系统账号”的“我的球员身份”中关联本人；普通管理员可使用已关联球员的管理员账号。' : '',
         canReply:
           !!session.user.playerId &&
           match.status === "published",
@@ -201,7 +209,10 @@ Page({onHide(){this._hidden=true;this._shareImage='';this._replyAttempt=null;thi
       if(!owned())return;
       const refreshing=this.refresh();attempt.epoch=this._epoch;
       await refreshing;
-      if(owned()&&!this.data.error)ui.showToast(this,{title:'报名状态已更新',icon:'success'});
+      if(owned()&&!this.data.error) {
+        if(response==='yes' && this.data.canReply && this.data.match?.response==='yes') this.setData({signupShareOpen:true});
+        else ui.showToast(this,{title:'报名状态已更新',icon:'success'});
+      }
     }catch(error){
       settleReply(entry,error);
       const status=error.status||error.statusCode;

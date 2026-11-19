@@ -34,6 +34,22 @@ const statuses = [
   { label: "已完赛", value: "completed" },
   { label: "已取消", value: "cancelled" },
 ];
+const catalogFields = [
+  {kind:'opponents',label:'对手',field:'opponent',required:true,placeholder:'输入对手名称'},
+  {kind:'competitions',label:'赛事',field:'competition',placeholder:'如：日常友谊赛'},
+];
+const catalogConfig = {
+  opponents:{path:'/opponents?summary=1',type:'opponent',reference:'opponentId',empty:'手动填写对手'},
+  competitions:{path:'/competitions?summary=1',type:'competition',reference:'competitionId',empty:'手动填写赛事'},
+  notices:{path:'/notice-templates',type:'notice',reference:'noticeTemplateId',empty:'手动填写须知'},
+};
+const formDefaults={opponent:'',competition:'',notice:'',date:'',kickoff:'',location:'',maxParticipants:'',homeScore:'',awayScore:'',analysis:''};
+function catalogOption(kind,item) {
+  return {id:item.id,name:kind==='notices'?item.title:item.name};
+}
+function emptyCatalogs() {
+  return Object.fromEntries(Object.entries(catalogConfig).map(([kind,spec])=>[kind,[{id:null,name:spec.empty}]]));
+}
 Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);this._hidden=true;this._wasShown=true;this._view=(this._view||0)+1;this._epoch=(this._epoch||0)+1;},
   async onShow(){
     this._hidden=false;
@@ -44,7 +60,9 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     if(this._hidden||this._disposed||(this._view||0)!==view||s.api.getSession()?.token!==owner)return;
     if(this._formToken&&this._formToken!==owner){
       this._saveAttempt=null;
-      this.setData({form:{opponent:'',competition:'',date:'',kickoff:'',location:'',maxParticipants:'',homeScore:'',awayScore:'',analysis:''},savedId:null,busy:false,uncertain:false,conflict:false});
+      this._noticeContents=null;
+      this._catalogOpen=null;
+      this.setData({form:{...formDefaults},catalogs:emptyCatalogs(),catalogIndices:{opponents:0,competitions:0,notices:0},savedId:null,busy:false,uncertain:false,conflict:false});
       return this.refresh();
     }
     const saved=(!this.id&&pendingCreateDraft?.token===owner?pendingCreateDraft.savedId:null)||(op?.owner===owner?op.savedId:null);
@@ -72,17 +90,10 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     sideIndex: 0,
     statusIndex: 0,
     seasonIndex: 0,
-    form: {
-      opponent: "",
-      competition: "",
-      maxParticipants: "",
-      date: "",
-      kickoff: "",
-      location: "",
-      homeScore: "",
-      awayScore: "",
-      analysis: "",
-    },
+    catalogFields,
+    catalogs:emptyCatalogs(),
+    catalogIndices:{opponents:0,competitions:0,notices:0},
+    form: {...formDefaults},
   },
   onLoad(q) {
     this._hidden=false;this._view=0;
@@ -94,6 +105,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   refresh() {
     this._formToken=s.api.getSession()?.token;
     return s.load(this, async (session) => {
+      const refreshEpoch=this._epoch,owner=s.api.getSession()?.token;
       if (session.user.role !== "admin")
         throw new Error("仅管理员可以编辑比赛");
       const privateSession = s.api.getSession();
@@ -116,21 +128,41 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         pendingCreateDraft = null;
       this._guardKey=matchGuardKey();
       const guard=!this.id?readMatchGuard(this._guardKey):null;
-      const seasons = [
-        { id: null, name: "未分配赛季" },
-        ...(await s.api.request("/seasons")),
-      ];
-      const m = this.id
-        ? await s.api.request("/matches/" + encodeURIComponent(this.id))
-        : null;
+      const kinds=Object.keys(catalogConfig);
+      const [allSeasons,m,allVenues,...catalogLists]=await Promise.all([
+        s.api.request('/seasons'),
+        this.id ? s.api.request('/matches/'+encodeURIComponent(this.id)) : null,
+        s.api.request('/venues'),
+        ...kinds.map(kind=>s.api.request(catalogConfig[kind].path)),
+      ]);
+      const seasons=[{id:null,name:'未分配赛季'},...allSeasons.map(({id,name})=>({id,name}))];
+      const catalogs=emptyCatalogs(),catalogIndices={},noticeContents=new Map();
+      kinds.forEach((kind,index)=>{
+        const ref=catalogConfig[kind].reference;
+        const id=m?.[ref]??draft?.[ref]??null;
+        const rows=(Array.isArray(catalogLists[index])?catalogLists[index]:[]).filter(row=>row.status!=='inactive'||row.id===id);
+        for(const row of rows){
+          const option=catalogOption(kind,row);
+          if(kind==='notices')noticeContents.set(row.id,row.content||'');
+          const field=catalogFields.find(entry=>entry.kind===kind)?.field;
+          const saved=field&&(m?.[field]??draft?.form?.[field]);
+          if(row.id===id&&saved&&saved!==row.name)option.name=saved+'（本场留存）';
+          catalogs[kind].push(option);
+        }
+        if(id&&!rows.some(row=>row.id===id)){
+          const field=catalogFields.find(entry=>entry.kind===kind)?.field;
+          catalogs[kind].push({id,name:field?(m?.[field]||draft?.form?.[field]||'历史记录')+'（本场留存）':'历史须知（本场留存）'});
+        }
+        catalogIndices[kind]=Math.max(0,catalogs[kind].findIndex(row=>row.id===id));
+      });
       const venueId=m?.venueId??draft?.venueId??null;
-      const allVenues=await s.api.request('/venues');
       const label=v=>[v.name,v.fieldNumber].filter(Boolean).join(' · ');
       const venues=[{id:null,displayName:'不关联球场 / 手填地点'},...allVenues.filter(v=>v.status==='active'||v.id===venueId).map(v=>({...v,displayName:label(v)}))];
       if(m?.venueId){const index=venues.findIndex(v=>v.id===m.venueId);if(index>0)venues[index]={...venues[index],displayName:label(m.venueSnapshot||venues[index])+'（本场留存）',locationLabel:m.location};}
       if(venueId && !venues.some(v=>v.id===venueId))venues.push({id:venueId,displayName:label(m?.venueSnapshot||{name:'历史球场'})+'（本场留存）',locationLabel:m?.location});
+      if(this._epoch===refreshEpoch&&s.api.getSession()?.token===owner)this._noticeContents=noticeContents;
       return {
-        venues,
+        venues,catalogs,catalogIndices,
         venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),
         draftOwner,
         uncertain: (!!draft&&!draft.savedId)||!!guard,
@@ -146,6 +178,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
           ? {
               opponent: m.opponent,
               competition: m.competition,
+              notice: m.notice || "",
               maxParticipants: m.maxParticipants == null ? "" : String(m.maxParticipants),
               date: m.date,
               kickoff: m.kickoff,
@@ -181,13 +214,52 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
   input(e) {
     if (this.data.busy) return;
     const key = e.currentTarget.dataset.field;
-    this.setData({ ["form." + key]: e.detail.value });
+    if(Object.prototype.hasOwnProperty.call(formDefaults,key))this.setData({ ["form." + key]: e.detail.value });
   },
   pick(e) {
     if (this.data.busy) return;
     const key=e.currentTarget.dataset.field;const index=Number(e.detail.value);
     this.setData({ [key]: index });
     if(key==='venueIndex'&&this.data.venues[index]?.id){const v=this.data.venues[index];this.setData({'form.location':v.locationLabel??[v.name,v.fieldNumber,v.address].filter(Boolean).join(' · ').slice(0,500)});}
+  },
+  changeStatus(e) {
+    const index=statuses.findIndex(item=>item.value===e.detail.value);
+    if(!this.data.busy&&index>=0)this.setData({statusIndex:index});
+  },
+  applyCatalog(kind,index) {
+    const chosen=this.data.catalogs[kind]?.[index];
+    if(!Object.prototype.hasOwnProperty.call(catalogConfig,kind)||!chosen||this.data.busy)return;
+    if(index===this.data.catalogIndices[kind])return;
+    const data={['catalogIndices.'+kind]:index};
+    if(chosen.id){
+      if(kind==='notices'&&this._noticeContents?.has(chosen.id))data['form.notice']=this._noticeContents.get(chosen.id);
+      else if(kind!=='notices')data['form.'+catalogFields.find(item=>item.kind===kind).field]=chosen.name.replace(/（本场留存）$/,'');
+    }
+    this.setData(data);
+  },
+  pickCatalog(e) {
+    this.applyCatalog(e.currentTarget.dataset.kind,Number(e.detail.value));
+  },
+  createCatalog(e) {
+    const kind=e.currentTarget.dataset.kind;
+    if(this.data.busy||this.data.loading||this.data.error||!Object.prototype.hasOwnProperty.call(catalogConfig,kind))return;
+    const owner=s.api.getSession()?.token;
+    if(!owner)return;
+    wx.navigateTo({
+      url:'/pages/club-catalog/index?type='+catalogConfig[kind].type+'&mode=create',
+      events:{saved:item=>{
+        if(this._disposed||s.api.getSession()?.token!==owner||!Number.isSafeInteger(item?.id)||item.id<1||item.status==="inactive")return;
+        const option=catalogOption(kind,item);
+        if(!option.name)return;
+        const list=this.data.catalogs[kind].filter(row=>row.id!==item.id);
+        list.push(option);
+        if(kind==='notices')(this._noticeContents||=new Map()).set(item.id,item.content||'');
+        const index=list.length-1;
+        const field=kind==='notices'?'notice':catalogFields.find(entry=>entry.kind===kind).field;
+        this.setData({['catalogs.'+kind]:list,['catalogIndices.'+kind]:index,['form.'+field]:kind==='notices'?item.content||'':option.name});
+      }},
+      fail:()=>{if(!this._disposed&&!this._hidden&&s.api.getSession()?.token===owner)this.setData({actionError:'未能打开新建页面，请重试。'});},
+    });
   },
   date(e) {
     this.setData({
@@ -277,6 +349,9 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       seasonId: this.data.seasons[this.data.seasonIndex].id,
       venueId: this.data.venues[this.data.venueIndex]?.id??null,
     };
+    for(const [kind,spec] of Object.entries(catalogConfig)){
+      payload[spec.reference]=this.data.catalogs[kind]?.[this.data.catalogIndices[kind]]?.id??null;
+    }
     if (this.id) payload.revision = this.data.revision;
     const submissionToken = s.api.getSession()?.token;
     const operation={owner:submissionToken,view:this._view||0,savedId:null};
@@ -292,6 +367,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       status: payload.status,
       seasonId: payload.seasonId,
       venueId: payload.venueId,
+      opponentId:payload.opponentId,competitionId:payload.competitionId,noticeTemplateId:payload.noticeTemplateId,
       inFlight: true,
       operation,
     } : null;

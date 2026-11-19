@@ -48,10 +48,10 @@ Page({
             ? m.status === "completed" || m.status === "cancelled"
             : m.status === "draft",
       )
+      // All tabs use kickoff descending; equal timestamps retain source order.
+      // Unknown kickoff stays after known times on the same date.
       .sort((a, b) =>
-        tab === "upcoming"
-          ? (a.date + a.kickoff).localeCompare(b.date + b.kickoff)
-          : (b.date + b.kickoff).localeCompare(a.date + a.kickoff),
+        (b.date + (b.kickoff || "")).localeCompare(a.date + (a.kickoff || "")),
       )
       .map((m, i, rows) => ({
         ...m,

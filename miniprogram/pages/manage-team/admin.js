@@ -126,7 +126,7 @@ async function act(page, work, done, creating = false) {
     }
   }
 }
-function choosePicture(page, field) {
+function choosePicture(page, field, onPicture) {
   if (page.data.busy) return;
   const imageEpoch = page._imageEpoch = (page._imageEpoch || 0) + 1;
   const epoch = page._epoch, owner = token();
@@ -158,7 +158,9 @@ function choosePicture(page, field) {
             page.setData({ actionError: "请选择 2 MB 内的 PNG 或 JPG" });
             return;
           }
-          page._imageData = "data:image/" + mime + ";base64," + bytes;
+          const dataUrl = "data:image/" + mime + ";base64," + bytes;
+          if (onPicture) onPicture(dataUrl);
+          else page._imageData = dataUrl;
           page.setData({ [field]: file.tempFilePath, actionError: "" });
         },
         fail() {
@@ -218,12 +220,14 @@ function restoreCreate(page) {
   if (entry.result) {
     page.id = entry.result.id;
     page._imageData = undefined;
+    if(page.createKind==="season")page._mediaChanges={};
     ledger().delete(page.createKind);
     return { ...JSON.parse(JSON.stringify(entry.view)), id: entry.result.id,
       revision: entry.result.revision, uncertain: false, conflict: false,
       actionError: "创建已成功，已恢复记录；继续编辑前可重新载入核对。" };
   }
   page._imageData = entry.image;
+  if(page.createKind==="season")page._mediaChanges={...entry.media};
   return { ...JSON.parse(JSON.stringify(entry.view)), uncertain: true,
     actionError: "创建结果待核对，请先查看列表；确认未创建后才能重新提交。" };
 }
@@ -244,7 +248,12 @@ async function createRequest(page, path, payload) {
       membershipIndex: page.data.membershipIndex, initial: page.data.initial, avatar: page.data.avatar, positionOptions: page.data.positionOptions,
       feet: page.data.feet, footIndex: page.data.footIndex });
   }
+  if(page.createKind==="season"){
+    view.iconPreview=page.data.iconPreview||"";
+    view.imagePreview=page.data.imagePreview||"";
+  }
   entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };
+  if(page.createKind==="season")entry.media={...page._mediaChanges};
     entry.guardKey=createGuardKey(page.createKind);
     if(readCreateGuard(entry.guardKey))throw Object.assign(new Error('上次创建结果待核对，请先到列表检查。'),{status:503,createGuardPending:true});
     entry.taskId=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);

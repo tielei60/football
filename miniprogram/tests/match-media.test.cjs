@@ -68,7 +68,7 @@ function setup(name, overrides = {}, wxOverrides = {}) {
               events.push(["imageSource", value]);
               if (
                 typeof value === "string" &&
-                value.startsWith("data:image/png;base64,")
+                /^data:image\/(?:png|jpeg);base64,/.test(value)
               )
                 return "wxfile://test/avatar.png";
               return "";
@@ -121,38 +121,44 @@ function fixture(overrides={},wx={}){
  return {...h,posts};
 }
 function image(p){p._image="data:image/jpeg;base64,/9j/AAAA";p.setData({preview:"wxfile://picked",caption:"Caption"});}
-test("album operations preserve unsaved notice and selected image",async()=>{
+test("album cover update preserves caption draft and selected image with the original revision",async()=>{
  const h=fixture();await h.page.refresh();image(h.page);
- h.page.input({currentTarget:{dataset:{field:"notice"}},detail:{value:"Draft"}});
+ h.page.input({currentTarget:{dataset:{field:"caption"}},detail:{value:"Draft caption"}});
  await h.page.cover({currentTarget:{dataset:{id:"photo"}}});
- assert.equal(h.page.data.notice,"Draft");assert.equal(h.page.data.preview,"wxfile://picked");
+ assert.equal(h.page.data.caption,"Draft caption");assert.equal(h.page.data.preview,"wxfile://picked");
+ assert.equal(h.page._image,"data:image/jpeg;base64,/9j/AAAA");
+ assert.deepEqual(JSON.parse(JSON.stringify(h.posts)),[{path:'/matches/1/photos/cover',method:'PUT',data:{revision:3,photoId:'photo'}}]);
  assert.ok(h.events.some(e=>e[0]==="enableAlertBeforeUnload"));
 });
-test("save notice uses revision and same input survives reload",async()=>{
+test("album ignores legacy notice input and exposes no duplicate notice editor or save action",async()=>{
  const h=fixture();await h.page.refresh();
- const original=h.api.request;let saved;
- h.api.request=async(path,method,data)=>{if(method){saved=data.notice;return original(path,method,data);}return path.endsWith('/photos')?listing:{...matchInfo,notice:saved??matchInfo.notice};};
- h.page.input({currentTarget:{dataset:{field:"notice"}},detail:{value:"New"}});
- await h.page.saveNotice();
- assert.equal(h.posts[0].data.revision,3);assert.equal(h.posts[0].data.notice,"New");assert.equal(h.page.data.notice,"New");
+ h.page.input({currentTarget:{dataset:{field:"notice"}},detail:{value:"Must not become album state"}});
+ for(const field of ['notice','noticeConflict'])assert.equal(Object.hasOwn(h.page.data,field),false);
+ assert.equal(h.page.saveNotice,undefined);assert.equal(h.posts.length,0);assert.equal(h.page.data.caption,'');
+ const markup=fs.readFileSync(path.join(root,'pages/match-media/index.wxml'),'utf8');
+ assert.doesNotMatch(markup,/match-notice|saveNotice|data-field="notice"|{{notice/);
+ assert.match(markup,/data-field="caption" bindinput="input"/);
 });
-test("unknown upload restores across instances with same requestId and notice",async()=>{
- const h=fixture();await h.page.refresh();image(h.page);h.page.setData({notice:"Draft"});
- const requests=[];
- const original=h.api.request;
- h.api.request=async(p,m,d)=>{if(m==="POST"){requests.push(d);throw new Error("offline");}return original(p,m,d);};
+test("unknown upload restores image and caption across instances with the same receipt and revision",async()=>{
+ const h=fixture();await h.page.refresh();image(h.page);
+ h.page.input({currentTarget:{dataset:{field:'caption'}},detail:{value:'Draft caption'}});
+ const requests=[];const original=h.api.request;
+ h.api.request=async(p,m,d)=>{if(m==="POST"){requests.push(JSON.parse(JSON.stringify(d)));throw new Error("offline");}return original(p,m,d);};
  await h.page.upload();assert.equal(h.page.data.uncertain,true);h.page.onUnload();
  const next=h.newPage();next.id="1";await next.refresh();
- assert.equal(next.data.uncertain,true);assert.equal(next.data.notice,"Draft");assert.ok(next._image);
- await next.upload();assert.equal(requests.length,2);assert.equal(requests[0].requestId,requests[1].requestId);
- assert.equal(JSON.stringify(next.data).includes("base64"),false);
+ assert.equal(next.data.uncertain,true);assert.equal(next.data.caption,"Draft caption");assert.ok(next.data.preview);assert.equal(next._image,h.page._image);
+ await next.upload();assert.equal(requests.length,2);assert.deepEqual(requests[0],requests[1]);
+ assert.equal(requests[0].revision,3);assert.equal(requests[0].caption,'Draft caption');assert.equal(requests[0].dataUrl,h.page._image);
+ assert.equal(Object.hasOwn(requests[0],'notice'),false);assert.equal(JSON.stringify(next.data).includes("base64"),false);
 });
 test("in-flight upload cannot duplicate across pages and settled success does not resubmit",async()=>{
  const h=fixture();await h.page.refresh();image(h.page);
  let finish,calls=0;const original=h.api.request;
  h.api.request=(p,m,d)=>m==="POST"?(calls++,new Promise(r=>finish=r)):original(p,m,d);
- const upload=h.page.upload();await new Promise(r=>setImmediate(r));h.page.onUnload();
- const next=h.newPage();next.id="1";await next.refresh();await next.upload();assert.equal(calls,1);
+ const upload=h.page.upload();await new Promise(r=>setImmediate(r));
+ h.page.input({currentTarget:{dataset:{field:"caption"}},detail:{value:"Blocked while uploading"}});h.page.choose();
+ assert.equal(h.page.data.caption,"Caption");assert.equal(h.events.some(e=>e[0]==="chooseMedia"),false);h.page.onUnload();
+ const next=h.newPage();next.id="1";await next.refresh();assert.equal(next.data.caption,"Caption");assert.ok(next._image);await next.upload();assert.equal(calls,1);
  finish({revision:4});await upload;
  await next.upload();assert.equal(calls,1);assert.equal(next.data.uncertain,false);
 });
@@ -161,34 +167,34 @@ test("different login clears pending and does not expose old image",async()=>{
  const original=h.api.request;
  h.api.request=(p,m,d)=>m==="POST"?Promise.reject(new Error("offline")):original(p,m,d);
  await h.page.upload();h.page.onUnload();h.api.getSession=()=>({...session,token:"B"});
- const next=h.newPage();next.id="1";await next.refresh();assert.equal(next.data.preview,"");assert.equal(next.data.uncertain,false);
+ const next=h.newPage();next.id="1";await next.refresh();assert.equal(next.data.preview,"");assert.equal(next.data.caption,"");assert.equal(next._image,null);assert.equal(next.data.uncertain,false);
 });
-test("409 upload keeps image and notice but requires reload",async()=>{
- const h=fixture();await h.page.refresh();image(h.page);h.page.setData({notice:"Draft"});
+test("409 upload keeps image and caption but requires reload",async()=>{
+ const h=fixture();await h.page.refresh();image(h.page);h.page.setData({caption:"Draft caption"});
  h.api.request=async()=>{throw Object.assign(new Error("stale"),{status:409});};
  await h.page.upload();assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.uncertain,false);
- assert.ok(h.page._image);assert.equal(h.page.data.notice,"Draft");
+ assert.ok(h.page._image);assert.equal(h.page.data.caption,"Draft caption");
 });
-test("picture callback from older selection or save cannot override image",async()=>{
+test("picture callback from older selection or cover write cannot override image",async()=>{
  const reads=[];const h=fixture({},{
  chooseMedia:o=>o.success({tempFiles:[{size:12,tempFilePath:"wxfile://"+reads.length}]}),
  getFileSystemManager:()=>({readFile:o=>reads.push(o)})
  });await h.page.refresh();h.page.choose();h.page.choose();
  reads[1].success({data:"/9j/BBBB"});reads[0].success({data:"/9j/AAAA"});
  assert.equal(h.page._image,"data:image/jpeg;base64,/9j/BBBB");
- h.page.choose();await h.page.saveNotice();reads[2].success({data:"/9j/CCCC"});
+ h.page.choose();await h.page.cover({currentTarget:{dataset:{id:"photo"}}});reads[2].success({data:"/9j/CCCC"});
  assert.equal(h.page._image,"data:image/jpeg;base64,/9j/BBBB");
 });
 test("hiding for image picker and returning validates session without losing draft",async()=>{
- const h=fixture();await h.page.refresh();h.page.setData({notice:"Draft"});h.page.onHide();await h.page.onShow();
- assert.equal(h.page.data.notice,"Draft");assert.equal(h.page.data.loading,false);
+ const h=fixture();await h.page.refresh();image(h.page);h.page.setData({caption:"Draft caption"});h.page.onHide();await h.page.onShow();
+ assert.equal(h.page.data.caption,"Draft caption");assert.equal(h.page.data.loading,false);
  h.page.onHide();h.api.getSession=()=>({...session,token:"B"});await h.page.onShow();
- assert.equal(h.page.data.notice,"");assert.ok(h.page.data.error);
+ assert.equal(h.page.data.caption,"");assert.equal(h.page.data.preview,"");assert.equal(h.page._image,null);assert.ok(h.page.data.error);
 });
 test("cancel explicit discard or remove makes no changes",async()=>{
- const h=fixture({}, {showModal:o=>o.success({confirm:false})});await h.page.refresh();h.page.setData({notice:"Draft"});
+ const h=fixture({}, {showModal:o=>o.success({confirm:false})});await h.page.refresh();image(h.page);h.page.setData({caption:"Draft caption"});
  h.page.reload();h.page.remove({currentTarget:{dataset:{id:"p"}}});
- assert.equal(h.page.data.notice,"Draft");assert.equal(h.posts.length,0);
+ assert.equal(h.page.data.caption,"Draft caption");assert.equal(h.page.data.preview,"wxfile://picked");assert.ok(h.page._image);assert.equal(h.posts.length,0);
 });
 test("late refresh cannot replace private revision",async()=>{
  const h=fixture();let resolve;h.api.request=p=>p.endsWith("/photos")?new Promise(r=>resolve=r):Promise.resolve(matchInfo);
@@ -196,17 +202,18 @@ test("late refresh cannot replace private revision",async()=>{
  h.api.request=async p=>p.endsWith("/photos")?{...listing,revision:9}:matchInfo;
  await h.page.refresh();resolve(listing);await old;assert.equal(h.page.revision,9);
 });
-test("non-admin cannot change notice upload cover or delete",async()=>{
+test("non-admin cannot edit caption, choose, upload, cover, remove or reorder photos",async()=>{
  const h=fixture({ensureSession:async()=>({...session,user:{role:"player"}})});await h.page.refresh();image(h.page);
- h.page.input({currentTarget:{dataset:{field:"notice"}},detail:{value:"No"}});
+ h.page.input({currentTarget:{dataset:{field:"caption"}},detail:{value:"No"}});h.page.choose();
  await h.page.upload();await h.page.cover({currentTarget:{dataset:{id:"p"}}});h.page.remove({currentTarget:{dataset:{id:"p"}}});
- assert.equal(h.posts.length,0);assert.equal(h.page.data.notice,"Saved notice");
+ await h.page.move({currentTarget:{dataset:{id:1,delta:1}}});
+ assert.equal(h.posts.length,0);assert.equal(h.page.data.caption,"Caption");assert.equal(h.events.some(e=>e[0]==='chooseMedia'),false);
 });
-
-test('player image failure is explicit and retry only performs photo GET without losing notice',async()=>{
- let broken=true;const h=fixture({ensureSession:async()=>({...session,user:{role:'player'}})});await h.page.refresh();h.page.setData({photos:[{id:'p',src:'',loading:true,imageError:''}],notice:'Draft'});
+test('player image failure is explicit and retry only performs photo GET without changing metadata',async()=>{
+ let broken=true;const h=fixture({ensureSession:async()=>({...session,user:{role:'player'}})});await h.page.refresh();h.page.setData({photos:[{id:'p',caption:'Saved caption',src:'',loading:true,imageError:''}]});
  const calls=[];h.api.request=async(p,m)=>{calls.push([p,m]);if(broken)throw Error('network');return{dataUrl:'data:image/png;base64,AAAA'};};
- await h.page.loadPictures();assert.equal(h.page.data.photos[0].loading,false);assert.match(h.page.data.photos[0].imageError,/重试/);broken=false;await h.page.retryPhoto({currentTarget:{dataset:{id:'p'}}});assert.ok(h.page.data.photos[0].src);assert.equal(h.page.data.photos[0].imageError,'');assert.equal(h.page.data.notice,'Draft');assert.ok(calls.every(x=>x[1]===undefined));
+ await h.page.loadPictures();assert.equal(h.page.data.photos[0].loading,false);assert.match(h.page.data.photos[0].imageError,/重试/);broken=false;await h.page.retryPhoto({currentTarget:{dataset:{id:'p'}}});
+ assert.ok(h.page.data.photos[0].src);assert.equal(h.page.data.photos[0].imageError,'');assert.equal(h.page.data.photos[0].caption,'Saved caption');assert.ok(calls.every(x=>x[0]==='/matches/1/photos/p'&&x[1]===undefined));
 });
 test('old image errors stop batch after account switch and cannot change UI',async()=>{
  const h=fixture();await h.page.refresh();h.page.setData({photos:[{id:'p',src:'',imageError:''},{id:'q',src:'',imageError:''}]});let reject,calls=0;h.api.request=()=>{calls++;return new Promise((_,r)=>reject=r);};const w=h.page.loadPictures();h.api.getSession=()=>({...session,token:'B'});reject(Error('old'));await w;assert.equal(calls,1);assert.equal(h.page.data.photos[0].imageError,'');assert.equal(h.page.data.actionError,'');
@@ -224,7 +231,7 @@ test('native image decode failure offers retry without changing photo metadata',
 test('current image 401 exposes expiry, but hidden or newer login never receives old redirect',async()=>{for(const mode of ['current','hidden','new']){const h=fixture();await h.page.refresh();h.page.setData({photos:[{id:'p',src:'',loading:true,imageError:''}]});let reject;h.api.request=()=>new Promise((_,r)=>reject=r);const w=h.page.loadPictures();h.api.getSession=()=>null;if(mode==='hidden')h.page.onHide();if(mode==='new')h.api.getSession=()=>({...session,token:'B'});reject(Object.assign(Error('expired'),{status:401}));await w;assert.equal(h.events.some(x=>x[0]==='redirectTo'),mode==='current');if(mode==='current')assert.equal(h.page.data.error,'expired');}});
 
 test('write failure is scoped to original account and visible turn, own expiry still redirects',async()=>{
- for(const mode of ['current','hidden','new','reshow']){const h=fixture();await h.page.refresh();let reject;h.api.request=()=>new Promise((_,r)=>reject=r);const work=h.page.saveNotice();await new Promise(r=>setImmediate(r));h.api.getSession=()=>null;if(mode==='hidden')h.page.onHide();if(mode==='new')h.api.getSession=()=>({...session,token:'B'});if(mode==='reshow'){h.page.onHide();h.page._hidden=false;h.page._showTurn++;}reject(Object.assign(Error('old expired'),{status:401}));await work;assert.equal(h.events.some(x=>x[0]==='redirectTo'),mode==='current');if(mode!=='current')assert.equal(h.page.data.actionError,'');}
+ for(const mode of ['current','hidden','new','reshow']){const h=fixture();await h.page.refresh();let reject;h.api.request=()=>new Promise((_,r)=>reject=r);const work=h.page.cover({currentTarget:{dataset:{id:"photo"}}});await new Promise(r=>setImmediate(r));h.api.getSession=()=>null;if(mode==='hidden')h.page.onHide();if(mode==='new')h.api.getSession=()=>({...session,token:'B'});if(mode==='reshow'){h.page.onHide();h.page._hidden=false;h.page._showTurn++;}reject(Object.assign(Error('old expired'),{status:401}));await work;assert.equal(h.events.some(x=>x[0]==='redirectTo'),mode==='current');if(mode!=='current')assert.equal(h.page.data.actionError,'');}
 });
 test('stale onShow validation failure cannot alter later show or new account',async()=>{
  for(const mode of ['current','hidden','new','refresh']){const h=fixture();await h.page.refresh();let reject;h.api.ensureSession=()=>new Promise((_,r)=>reject=r);const work=h.page.onShow();h.api.getSession=()=>null;if(mode==='hidden')h.page.onHide();if(mode==='new')h.api.getSession=()=>({...session,token:'B'});if(mode==='refresh')h.page._epoch++;reject(Object.assign(Error('old validation'),{status:401}));await work;assert.equal(h.events.some(x=>x[0]==='redirectTo'),mode==='current');if(mode!=='current')assert.equal(h.page.data.error,'');}
@@ -232,7 +239,7 @@ test('stale onShow validation failure cannot alter later show or new account',as
 test('hidden upload success still settles receipt and requests refresh on return',async()=>{
  const h=fixture();await h.page.refresh();image(h.page);let finish;const request=h.api.request;h.api.request=(p,m,d)=>m==='POST'?new Promise(r=>finish=r):request(p,m,d);const work=h.page.upload();await new Promise(r=>setImmediate(r));h.page.onHide();finish({revision:4});await work;assert.equal(h.page.data.uncertain,false);assert.equal(h.page._needsRefresh,true);assert.equal(h.page._image,null);assert.equal(h.page.data.busy,false);
 });
-test('hide during write preflight prevents starting a new request',async()=>{const h=fixture();await h.page.refresh();let finish;h.api.ensureSession=()=>new Promise(r=>finish=r);const work=h.page.saveNotice();h.page.onHide();finish(session);await work;assert.equal(h.posts.length,0);assert.equal(h.page.data.busy,false);});
+test('hide during write preflight prevents starting a new request',async()=>{const h=fixture();await h.page.refresh();let finish;h.api.ensureSession=()=>new Promise(r=>finish=r);const work=h.page.cover({currentTarget:{dataset:{id:"photo"}}});h.page.onHide();finish(session);await work;assert.equal(h.posts.length,0);assert.equal(h.page.data.busy,false);});
 
 test('first and manual refresh discard hidden or switched-account responses before shared error/navigation',async()=>{
  for(const initial of [true,false])for(const mode of ['hidden','new','current'])for(const success of [true,false]){
@@ -250,16 +257,16 @@ test('refresh validation resolving after hide cannot dispatch member reads',asyn
  const h=fixture();let finish,calls=0;h.api.ensureSession=()=>new Promise(r=>finish=r);h.api.request=async()=>{calls++;return listing;};const w=h.page.refresh();h.page.onHide();finish(session);await w;assert.equal(calls,0);assert.equal(h.page._loaded,undefined);
 });
 test('manual refresh under new identity cannot retain another account draft',async()=>{
- const h=fixture();await h.page.refresh();h.page.setData({notice:'Private old draft',preview:'wxfile://old',caption:'Private caption'});h.page._image='old-private-image';h.api.getSession=()=>({...session,token:'B'});await h.page.refresh();assert.equal(h.page.data.notice,'Saved notice');assert.equal(h.page.data.preview,'');assert.equal(h.page.data.caption,'');assert.equal(h.page._image,null);
+ const h=fixture();await h.page.refresh();h.page.setData({preview:'wxfile://old',caption:'Private caption'});h.page._image='old-private-image';h.api.getSession=()=>({...session,token:'B'});await h.page.refresh();assert.equal(Object.hasOwn(h.page.data,'notice'),false);assert.equal(h.page.data.preview,'');assert.equal(h.page.data.caption,'');assert.equal(h.page._image,null);
 });
 
-function sortable(h){h.page._loaded=true;h.page._owner='A';h.page._epoch=1;h.page.revision=8;h.page.setData({loading:false,admin:true,photos:[{id:1,caption:'甲'},{id:2,caption:'乙'},{id:3,caption:'丙'}],coverPhotoId:1,notice:'未保存说明'});h.page.refresh=async()=>{};}
+function sortable(h){h.page._loaded=true;h.page._owner='A';h.page._epoch=1;h.page.revision=8;h.page.setData({loading:false,admin:true,photos:[{id:1,caption:'甲'},{id:2,caption:'乙'},{id:3,caption:'丙'}],coverPhotoId:1,caption:'未保存照片说明',preview:'wxfile://picked'});h.page.refresh=async()=>{};}
 const moveEvent=(id,delta)=>({currentTarget:{dataset:{id,delta}}});
 test('比赛相册排序提交完整置换与旧版本，不乐观改变封面或草稿',async()=>{
  const h=fixture();sortable(h);await h.page.move(moveEvent(2,-1));
  assert.equal(h.posts.length,1);assert.equal(h.posts[0].path,'/matches/1/photos/order');assert.equal(h.posts[0].method,'PUT');
  assert.equal(JSON.stringify(h.posts[0].data),JSON.stringify({revision:8,photoIds:[2,1,3]}));
- assert.equal(h.page.data.coverPhotoId,1);assert.equal(h.page.data.notice,'未保存说明');assert.equal(h.page.data.photos[0].id,1);
+ assert.equal(h.page.data.coverPhotoId,1);assert.equal(h.page.data.caption,'未保存照片说明');assert.equal(h.page.data.preview,'wxfile://picked');assert.equal(h.page.data.photos[0].id,1);
 });
 test('排序首尾、非法方向、普通球员、隐藏和未知上传均不写',async()=>{
  const h=fixture();sortable(h);
@@ -272,22 +279,36 @@ test('排序双击只发送一次，预检隐藏不得发出写请求',async()=>
 });
 for(const status of [409,0,500])test('排序失败 '+status+' 保留原序并锁定至显式重新载入',async()=>{
  const h=fixture({request:async()=>{throw Object.assign(Error('失败'),{status});}});sortable(h);await h.page.move(moveEvent(2,-1));
- assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.busy,false);assert.equal(h.page.data.photos[0].id,1);assert.equal(h.page.data.notice,'未保存说明');
+ assert.equal(h.page.data.conflict,true);assert.equal(h.page.data.busy,false);assert.equal(h.page.data.photos[0].id,1);assert.equal(h.page.data.caption,'未保存照片说明');assert.equal(h.page.data.preview,'wxfile://picked');
  assert.match(h.page.data.actionError,status===409?/重新载入/:/排序结果尚未确认/);
 });
 test('排序旧账号迟到失败不写新账号错误',async()=>{
  let reject,token='A';const h=fixture({getSession:()=>({...session,token}),request:()=>new Promise((r,j)=>reject=j)});sortable(h);const task=h.page.move(moveEvent(2,-1));await new Promise(r=>setImmediate(r));token='B';reject(Object.assign(Error('旧失败'),{status:409}));await task;assert.equal(h.page.data.actionError,'');
 });
 
-test('须知三方比较：未编辑跟随服务器，脏稿冲突取消零写、确认原版本',async()=>{
- let server='Saved notice',revision=3;const writes=[];let confirm=false;
- const h=fixture({request:async(path,method,data)=>{if(method){writes.push(data);server=data.notice;revision++;return {revision};}return path.endsWith('/photos')?{...listing,revision}:{...matchInfo,notice:server,revision};}}, {showModal:()=>Promise.resolve({confirm})});
- await h.page.refresh();server='最新';revision++;await h.page.refresh();assert.equal(h.page.data.notice,'最新');
- h.page.setData({notice:'本地'});server='又一版';revision++;await h.page.refresh();assert.equal(h.page.data.noticeConflict,true);assert.equal(h.page.data.notice,'本地');
- await h.page.saveNotice();assert.equal(writes.length,0);confirm=true;await h.page.saveNotice();assert.equal(writes[0].revision,5);assert.equal(writes[0].notice,'本地');assert.equal(h.page.data.noticeConflict,false);
+// Notice now belongs to the match form, not a second editor in the album.
+// Exercise the real match-edit controller and API payload rather than a source-only promise.
+test('match-edit loads the saved notice and owns its revisioned update',async()=>{
+ const calls=[];const saved={id:1,revision:12,opponent:'对手',competition:'友谊赛',notice:'集合须知',date:'2026-11-19',kickoff:'20:00',location:'球场',analysis:'',format:11,side:'home',status:'published'};
+ const h=setup('match-edit',{getSession:()=>({...session,token:'A',serverOrigin:'https://club.example',user:{...session.user,id:1},team:{...session.team,id:1}}),request:async(p,m,d)=>{calls.push({p,m,d});return m?{id:1,revision:13}:p==='/matches/1'?saved:[];}});
+ h.page.id='1';await h.page.refresh();assert.equal(h.page.data.error,'');assert.equal(h.page.data.form.notice,'集合须知');assert.equal(h.page.data.revision,12);
+ h.page.input({currentTarget:{dataset:{field:'notice'}},detail:{value:'提前半小时集合'}});await h.page.save();
+ const writes=calls.filter(c=>c.m);assert.equal(writes.length,1);assert.equal(writes[0].p,'/matches/1');assert.equal(writes[0].m,'PUT');
+ assert.equal(writes[0].d.notice,'提前半小时集合');assert.equal(writes[0].d.revision,12);assert.equal(writes[0].d.opponent,'对手');
+ const markup=fs.readFileSync(path.join(root,'pages/match-edit/index.wxml'),'utf8');
+ assert.match(markup,/<label[^>]*for="match-notice"/);assert.match(markup,/<textarea id="match-notice"[^>]*value="{{form.notice}}"[^>]*data-field="notice"[^>]*bindinput="input"[^>]*maxlength="10000"/);
 });
-for(const change of ['hide','account','refresh'])test('须知确认期间'+change+'阻止旧保存',async()=>{
- let resolve;const h=fixture({}, {showModal:()=>new Promise(r=>resolve=r)});await h.page.refresh();h.page.setData({notice:'草稿',noticeConflict:true});const task=h.page.saveNotice();
- if(change==='hide')h.page.onHide();else if(change==='account')h.api.getSession=()=>({...session,token:'B'});else await h.page.refresh();
- resolve({confirm:true});await task;assert.equal(h.posts.length,0);
+test('album uses the older metadata revision when match and photo reads disagree',async()=>{
+ for(const [matchRevision,listRevision] of [[4,8],[8,4]]){
+  const h=fixture({request:async p=>p.endsWith('/photos')?{...listing,revision:listRevision}:{...matchInfo,revision:matchRevision}});
+  await h.page.refresh();assert.equal(h.page.revision,4);
+ }
+});
+
+for(const uncertain of [false,true])test('confirmed reload '+(uncertain?'keeps the unknown-upload receipt':'discards an ordinary photo draft')+' without a write',async()=>{
+ const h=fixture();await h.page.refresh();image(h.page);const calls=[],read=h.api.request;
+ h.api.request=async(p,m,d)=>{calls.push({p,m,d});if(m==='POST')throw Error('unknown');return read(p,m,d);};
+ if(uncertain)await h.page.upload();calls.length=0;h.page.reload();await new Promise(r=>setImmediate(r));
+ assert.ok(calls.length>=2);assert.ok(calls.every(c=>!c.m));assert.equal(h.page.data.uncertain,uncertain);
+ assert.equal(h.page.data.caption,uncertain?'Caption':'');assert.equal(!!h.page.data.preview,uncertain);assert.equal(!!h.page._image,uncertain);
 });

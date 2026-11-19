@@ -1,0 +1,17 @@
+{
+  "sha256": "da50a04815f9df0d0a5f0a49a4c8ed746048bd4a66648272a0124923aee320f9",
+  "changes": [
+    {
+      "before": "    next: null,\n    recent: [],",
+      "after": "    next: null,\n    moreUpcoming: [],\n    recent: [],"
+    },
+    {
+      "before": "          : null,\n        recent: matches",
+      "after": "          : null,\n        moreUpcoming: upcoming.slice(1, 3).map((m) => s.matchView(m, session.user.playerId)),\n        recent: matches"
+    },
+    {
+      "before": "  onHide(){ui.abort(this);return s.hide.apply(this,arguments);},",
+      "after": "  onHide(){ui.abort(this);this.setData({moreUpcoming:[]});return s.hide.apply(this,arguments);},"
+    }
+  ]
+}

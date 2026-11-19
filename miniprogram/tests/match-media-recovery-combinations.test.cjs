@@ -124,13 +124,13 @@ test("第九张上传已提交但响应丢失：冻结编辑并跨页同收据�
   return p.endsWith("/photos")?{photos:plain(photos),revision,coverPhotoId:1}:{notice:"服务器须知",revision};
  }});
  h.page.id="1";await h.page.refresh();
- h.page._image="data:image/png;base64,AA==";h.page.setData({preview:"wxfile://chosen",caption:"第九张",notice:"本地草稿"});
+ h.page._image="data:image/png;base64,AA==";h.page.setData({preview:"wxfile://chosen",caption:"第九张"});
  await h.page.upload();assert.equal(h.page.data.uncertain,true);assert.equal(photos.length,9);
- const before=plain(h.page.data);h.page.choose();h.page.input(event("caption","不可替换"));h.page.input(event("notice","不可替换"));
- await h.page.saveNotice();h.page.remove(click(1));await h.page.cover(click(2));await h.page.move(click(2,-1));
- assert.equal(calls.length,1);assert.equal(h.events.some(x=>x[0]==="chooseMedia"),false);assert.equal(h.page.data.caption,before.caption);assert.equal(h.page.data.notice,before.notice);assert.equal(h.page.data.preview,before.preview);
+ const before=plain(h.page.data);h.page.choose();h.page.input(event("caption","不可替换"));
+ h.page.remove(click(1));await h.page.cover(click(2));await h.page.move(click(2,-1));
+ assert.equal(calls.length,1);assert.equal(h.events.some(x=>x[0]==="chooseMedia"),false);assert.equal(h.page.data.caption,before.caption);assert.equal(h.page.data.preview,before.preview);
  h.page.onUnload();const next=h.newPage();next.id="1";await next.refresh();
- assert.equal(next.data.photos.length,9);assert.equal(next.data.uncertain,true);assert.equal(next.data.caption,"第九张");assert.equal(next.data.notice,"本地草稿");
+ assert.equal(next.data.photos.length,9);assert.equal(next.data.uncertain,true);assert.equal(next.data.caption,"第九张");assert.equal(Object.hasOwn(next.data,"notice"),false);
  await next.upload();assert.equal(calls.length,2);assert.deepEqual(calls[1].d,calls[0].d);assert.equal(photos.length,9);assert.equal(revision,9);
  assert.equal(next.data.uncertain,false);assert.equal(next.data.preview,"");assert.equal(next._image,null);
 });

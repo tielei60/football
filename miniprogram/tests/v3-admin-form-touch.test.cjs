@@ -20,15 +20,16 @@ test('管理表单头像、名单统计与赛季操作三档实际级联>=44px',
 });
 test('账号与相册输入保留持久标签、原字段事件和编辑条件',()=>{
  const player=read('pages/manage-player/index.wxml'),media=read('pages/match-media/index.wxml');
- for(const [w,id,label,field,handler] of [[player,'player-account-name','登录账号','username','accountInput'],[player,'player-account-password','新密码','password','accountInput'],[media,'match-notice','集合与装备提醒','notice','input'],[media,'match-photo-caption','照片说明（可选）','caption','input']]){
+ for(const [w,id,label,field,handler] of [[player,'player-account-name','登录账号','username','accountInput'],[player,'player-account-password','新密码','password','accountInput'],[media,'match-photo-caption','照片说明（可选）','caption','input']]){
   assert.ok(w.includes(`for="${id}">${label}</label>`));
   const tag=w.match(new RegExp('<(?:input|textarea) id="'+id+'"[^>]*>'))?.[0];assert.ok(tag,id);
   assert.ok(tag.includes(`data-field="${field}"`));assert.ok(tag.includes(`bindinput="${handler}"`));assert.ok(tag.includes('disabled="{{loading || (busy'));
  }
  assert.match(player,/<input id="player-account-name" wx:if="{{!hasAccount}}"/);
  assert.match(player,/<input id="player-account-password"[^>]* password /);
- assert.match(media,/<textarea id="match-notice" wx:if="{{admin}}"/);
- assert.match(media,/<text wx:else class="prewrap">{{notice\|\|'暂无须知'}}/);
+ assert.doesNotMatch(media,/match-notice|saveNotice|data-field="notice"/);
+ const edit=read('pages/match-edit/index.wxml');assert.match(edit,/<label[^>]*for="match-notice">本场须知（选填）<\/label>/);
+ assert.match(edit,/<textarea id="match-notice"[^>]*value="{{form.notice}}"[^>]*data-field="notice"[^>]*bindinput="input"[^>]*disabled="{{busy}}"/);
 });
 test('候选标签保留候选为空与只读分支，未新增业务操作',()=>{
  const match=read('pages/match-roster/index.wxml'),season=read('pages/season-roster/index.wxml');

@@ -11,6 +11,7 @@ Page({onHide(){a.hide.call(this);},
       seasons: (await a.s.api.request("/seasons")).map((s) => ({
         id: s.id,
         name: s.name,
+        icon:a.s.assetUrl(s.icon),image:a.s.assetUrl(s.image),
         startDate: s.startDate,
         endDate: s.endDate,
       })),

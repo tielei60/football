@@ -1,3 +1,5 @@
+> 当前版本范围：现有 49 个输入模板实例、7 个 textarea。下方 H14/H15/H20 是已替换/迁移控件的历史证据，不计入当前清单；本次新增与迁移控件只完成静态/控制器检查，未做真机聚焦验证。原编号保留，避免改写历史 320/375 证据引用。
+
 # 微信原生输入聚焦复核清单
 
 ## 范围与证据边界
@@ -42,13 +44,13 @@
 | 11 | pages/manage-team/index.wxml | name | text | {{form.name}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有球队名称，Left caret 正常；其余空/有值组合未全测 |
 | 12 | pages/manage-venue/index.wxml | name | text | {{form.name}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有球场名称，Left caret 正常；其余空/有值组合未全测 |
 | 13 | pages/manage-venue/index.wxml | address | text | {{form.address}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有地址，Left caret 正常；其余空/有值组合未全测 |
-| 14 | pages/match-edit/index.wxml | opponent | text | {{form.opponent}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有对手名称，Left caret 正常；其余空/有值组合未全测 |
-| 15 | pages/match-edit/index.wxml | competition | text | {{form.competition}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有赛事名称，Left caret 正常；其余空/有值组合未全测 |
+| H14 | pages/match-edit/index.wxml | opponent | text | {{form.opponent}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有对手名称，Left caret 正常；其余空/有值组合未全测 |
+| H15 | pages/match-edit/index.wxml | competition | text | {{form.competition}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有赛事名称，Left caret 正常；其余空/有值组合未全测 |
 | 16 | pages/match-edit/index.wxml | location | text | {{form.location}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有地点，Left caret 正常；其余空/有值组合未全测 |
 | 17 | pages/match-edit/index.wxml | homeScore | number | {{form.homeScore}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：A/B 空值 caret 可见；12 中间插入 3 得 132，caret 正常；其余空/有值组合未全测 |
 | 18 | pages/match-edit/index.wxml | awayScore | number | {{form.awayScore}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有客队比分 1，Left caret 正常；其余空/有值组合未全测 |
 | 19 | pages/match-edit/index.wxml | analysis | textarea | {{form.analysis}} | input | 页面 WXSS / 全局 textarea | 默认键盘/焦点行为 | 已实际聚焦：A/B 复盘末行换行、粘贴中文，caret 正常；其余空/有值组合未全测 |
-| 20 | pages/match-media/index.wxml | notice | textarea | {{notice}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：空起粘贴两行中文须知，Left caret 正常；其余空/有值组合未全测 |
+| H20 | pages/match-media/index.wxml | notice | textarea | {{notice}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：空起粘贴两行中文须知，Left caret 正常；其余空/有值组合未全测 |
 | 21 | pages/match-media/index.wxml | caption | text | {{caption}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：空起输入虚构照片说明，caret 正常；其余空/有值组合未全测 |
 | 22 | pages/match-roster/index.wxml | goals | number | {{item.goals}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：已有进球 2，实际聚焦 caret 正常；其余空/有值组合未全测 |
 | 23 | pages/match-roster/index.wxml | assists | number | {{item.assists}} | input | app.wxss .input | 默认键盘/焦点行为 | 已实际聚焦：两行助攻 0 / 1，实际聚焦 caret 正常；其余空/有值组合未全测 |
@@ -155,3 +157,18 @@ pages/home/index, pages/schedule/index, pages/statistics/index, pages/match-deta
 | --- | --- | --- | --- |
 | 44 | pages/match-edit/index.wxml | maxParticipants；number，value=form.maxParticipants，bindinput=input，maxlength=5，保留loading/busy禁用条件 | 仅静态与原始模板核对，实际聚焦/键盘待验 |
 | 45 | pages/manage-venue/index.wxml | fieldNumber；text，value=form.fieldNumber，bindinput=input，maxlength=50，保留loading/busy禁用条件 | 仅静态与原始模板核对，实际聚焦/键盘待验 |
+
+
+## 俱乐部资料与比赛须知迁移增量（未实际聚焦验证）
+
+| 编号 | 模板 | 定位 / 字段 | 类型与绑定 | 验证边界 |
+| --- | --- | --- | --- | --- |
+| 46 | pages/match-edit/index.wxml | `data-field="{{item.field}}"`，对手/赛事循环中的手动输入 | input，`{{form[item.field]}}`，input handler | 一个模板实例，可显示对手和赛事两个控件；替代 H14/H15，新增原生键盘与 caret 待验 |
+| 47 | pages/match-edit/index.wxml | match-notice / notice | textarea，`{{form.notice}}`，input handler | 从相册 H20 迁移；模板复制、单场覆盖和草稿行为有控制器回归，真实聚焦待验 |
+| 48 | pages/club-catalog/index.wxml | 搜索 | input，`{{search}}`，search handler | 未实际聚焦验证 |
+| 49 | pages/club-catalog/index.wxml | 名称 / 标题 | input，`{{type==='notice'?form.title:form.name}}`，input handler | 单模板按资料类型分支，未实际聚焦验证 |
+| 50 | pages/club-catalog/index.wxml | introduction | textarea，`{{form.introduction}}`，input handler | 赛事/对手简介，未实际聚焦验证 |
+| 51 | pages/club-catalog/index.wxml | playerSummary | textarea，`{{form.playerSummary}}`，input handler | 对手队员资料，未实际聚焦验证 |
+| 52 | pages/club-catalog/index.wxml | content | textarea，`{{form.content}}`，input handler | 须知模板正文，未实际聚焦验证 |
+
+本次计数变化：45 - 2 个旧手动字段 + 1 个循环字段模板 + 5 个资料模板输入 = 49；须知迁移不改变实例数。textarea 由 4 增至 7，仅增加资料页的三个多行输入。模板枚举不等于运行时控件数量，循环可能展示多份。

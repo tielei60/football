@@ -14,6 +14,7 @@ Page({
     team: {},
     roleLabel: "",
     next: null,
+    moreUpcoming: [],
     recent: [],
     playerCount: 0,
     unconfirmedCount: 0,
@@ -26,7 +27,7 @@ Page({
     this.refresh();
   },
   onUnload(){ui.abort(this);return s.unload.apply(this,arguments);},
-  onHide(){ui.abort(this);return s.hide.apply(this,arguments);},
+  onHide(){ui.abort(this);this.setData({moreUpcoming:[]});return s.hide.apply(this,arguments);},
   imageError: s.imageError,
   openMatch: s.openMatch,
   refresh() {
@@ -44,7 +45,7 @@ Page({
       ].join("-");
       const upcoming = matches
         .filter((m) => m.status === "published" && m.date >= date)
-        .sort((a, b) => (a.date + a.kickoff).localeCompare(b.date + b.kickoff));
+        .sort((a, b) => (b.date + (b.kickoff || "")).localeCompare(a.date + (a.kickoff || "")));
       return {
         team: s.teamView(session.team),
         roleLabel: session.user.role === "admin" ? "管理端" : session.user.role === "player" ? "球员端" : "",
@@ -54,6 +55,7 @@ Page({
         next: upcoming[0]
           ? s.matchView(upcoming[0], session.user.playerId)
           : null,
+        moreUpcoming: upcoming.slice(1, 3).map((m) => s.matchView(m, session.user.playerId)),
         recent: matches
           .filter((m) => m.status === "completed")
           .sort((a, b) => (b.date + (b.kickoff || "")).localeCompare(a.date + (a.kickoff || "")))

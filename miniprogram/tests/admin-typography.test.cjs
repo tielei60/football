@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const baseline = require('./managed-ui-contract-baseline.json');
+const { normalize: normalizeClub } = require('./club-management-projection.cjs');
 const root = path.resolve(__dirname, '..');
 const hash = s => crypto.createHash('sha256').update(s).digest('hex');
 // UI v3 允许展示容器重排；逐元素冻结事件、状态、权限、输入约束和数据定位，基线来自原始提交而非改后结果。
@@ -44,7 +45,7 @@ function normalizeMatchAuth(source) {
  return source;
 }
 test('比赛认证投影拒绝重复篡改且保留其他业务',()=>{
- const source=fs.readFileSync(path.join(root,'pages/match-edit/index.js'),'utf8'),{after}=require('./match-edit-auth-projection.json')[0];
+ const source=normalizeClub('pages/match-edit/index.js',fs.readFileSync(path.join(root,'pages/match-edit/index.js'),'utf8')),{after}=require('./match-edit-auth-projection.json')[0];
  assert.throws(()=>normalizeMatchAuth(source.replace(after,after+after)));
  assert.throws(()=>normalizeMatchAuth(source.replace('error.staleSession !== true','true')));
  assert.equal(normalizeMatchAuth(source+'\nextra'),normalizeMatchAuth(source)+'\nextra');
@@ -242,7 +243,7 @@ function normalizeSeasonRestoredTitle(source){
  return source;
 }
 test('赛季恢复标题投影拒绝篡改重复并保留其他源码',()=>{
- const source=fs.readFileSync(path.join(root,'pages/manage-season/index.js'),'utf8');
+ const source=normalizeClub('pages/manage-season/index.js',fs.readFileSync(path.join(root,'pages/manage-season/index.js'),'utf8'));
  for(const {after} of require('./season-restored-title-projection.json')){
   assert.throws(()=>normalizeSeasonRestoredTitle(source.replace(after,after.replace(/\S/,c=>c==='!'?'?':'!'))));
   assert.throws(()=>normalizeSeasonRestoredTitle(source.replace(after,after+after)));
@@ -277,7 +278,8 @@ test('球员双入口投影拒绝守卫篡改和重复，保留其他模板内�
 });
 for (const [item, expected] of Object.entries(baseline)) {
   test(`${item}: 视觉优化保留全部字段、条件、事件、权限及业务逻辑`, () => {
-    const read = ext => { let source=fs.readFileSync(path.join(root,item,'index.'+ext),'utf8');
+    const read = ext => { let source=normalizeClub(item+'/index.'+ext,fs.readFileSync(path.join(root,item,'index.'+ext),'utf8'));
+      source=require('./signup-self-binding-projection.cjs').normalize(item+'/index.'+ext,source);
       if(item==='pages/manage-player'&&ext==='wxml')source=normalizePlayerServiceCard(source);
       if(item==='pages/manage-players'&&['js','wxml'].includes(ext))source=normalizePlayerListImage(source,ext);
       if(item==='pages/manage-venue'&&ext==='wxml')for(const {before,after} of require('./venue-persistent-guard-wxml-projection.json')){assert.equal(source.split(after).length,2,'球场核对已有按钮必须精确且唯一');source=source.replace(after,before);}
@@ -338,7 +340,13 @@ for (const [item, expected] of Object.entries(baseline)) {
       businessSource=businessSource.slice(0,start)+"  remove() {\n    if (this.data.busy) return;\n    this._imageEpoch = (this._imageEpoch || 0) + 1;\n    this._imageData = null;\n    this.setData({ crest: \"\" });\n  },\n"+businessSource.slice(end);
     }
     assert.equal(hash(businessSource),expected.js,'原业务JS必须保持，新增展示投影由专项控制器测试验证');
-    const css = read('wxss');
+    let css = read('wxss');
+    if(item==='pages/match-edit'){
+      // Only selection summaries may truncate; editable text, notices and errors still wrap.
+      const compactValues='.catalog-choice .picker-value,.date-time-row .picker-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+      assert.equal(css.split(compactValues).length,2,'compact selector summary rule must be exact and unique');
+      css=css.replace(compactValues,'');
+    }
     assert.match(css,/var\(--(?:type-|brand|muted|line)/,'每页接入共同设计令牌');
     assert.doesNotMatch(css,/text-overflow:\s*ellipsis/,'本次不能截断必要信息');
   });

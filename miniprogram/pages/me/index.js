@@ -58,7 +58,10 @@ Page({
     });
   },
   manage(e) {
-    if (this.data.session?.user.role !== "admin") return;
+    if (this._hidden || this._disposed || this.data.loading || this.data.error || this.data.busy || this.data.session?.user.role !== "admin") return;
+    const catalogs = { competitions: "competition", opponents: "opponent", notices: "notice" };
+    const kind = catalogs[e.currentTarget.dataset.page];
+    if (kind) { wx.navigateTo({ url: "/pages/club-catalog/index?type=" + kind }); return; }
     const pages = {
       team: "manage-team",
       players: "manage-players",

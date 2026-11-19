@@ -20,11 +20,11 @@ test('比赛相册升权返回读取后恢复管理',async()=>{
  const h=fixture('player');await h.p.onShow();h.p.onHide();h.setRole('admin');await h.p.onShow();
  assert.equal(h.p.data.admin,true);assert.equal(h.p.editable(),true);assert.equal(h.calls.filter(c=>c.url.endsWith('/photos')).length,2);
 });
-test('同角色系统相册返回保留选图、须知与说明草稿',async()=>{
- const h=fixture();await h.p.onShow();h.p.input({currentTarget:{dataset:{field:'notice'}},detail:{value:'须知草稿'}});
+test('同角色系统相册返回保留选图与说明草稿',async()=>{
+ const h=fixture();await h.p.onShow();
  h.p.input({currentTarget:{dataset:{field:'caption'}},detail:{value:'说明草稿'}});h.p.choose();h.p.onHide();await h.p.onShow();
  h.select().success({tempFiles:[{tempFilePath:'wxfile://picked',size:20}]});
- assert.equal(h.p.data.preview,'wxfile://picked');assert.equal(h.p.data.notice,'须知草稿');assert.equal(h.p.data.caption,'说明草稿');
+ assert.equal(h.p.data.preview,'wxfile://picked');assert.equal(h.p.data.caption,'说明草稿');
  assert.equal(h.calls.filter(c=>c.url.endsWith('/photos')).length,1);
 });
 test('降权后旧选图回调不得写入只读页面',async()=>{
@@ -54,11 +54,11 @@ test('排序旧账号未知响应不得污染新账号状态',async()=>{
  const work=h.p.move({currentTarget:{dataset:{id:1,delta:1}}});await tick();h.setToken('B');d.reject(Error('旧结果'));await work;
  assert.equal(h.p.data.conflict,false);assert.equal(h.p.data.actionError,'');
 });
-test('待确认上传跨角色往返保留原请求编号和须知，不自动重传',async()=>{
- const h=fixture();await h.p.onShow();h.p._image='data:image/png;base64,synthetic';h.p.setData({preview:'wxfile://picked',caption:'说明',notice:'须知草稿'});
+test('待确认上传跨角色往返保留原请求编号和照片说明，不自动重传',async()=>{
+ const h=fixture();await h.p.onShow();h.p._image='data:image/png;base64,synthetic';h.p.setData({preview:'wxfile://picked',caption:'说明'});
  const read=h.api.request,ids=[];h.api.request=async(url,method,payload)=>{if(method==='POST'){ids.push(payload.requestId);if(ids.length===1)throw Error('未知');return{revision:2};}return read(url,method,payload);};
  await h.p.upload();assert.equal(h.p.data.uncertain,true);
  h.p.onHide();h.setRole('player');await h.p.onShow();assert.equal(ids.length,1);assert.equal(h.p.data.admin,false);assert.equal(h.p.data.uncertain,true);
- h.p.onHide();h.setRole('admin');await h.p.onShow();assert.equal(ids.length,1);assert.equal(h.p.data.notice,'须知草稿');
+ h.p.onHide();h.setRole('admin');await h.p.onShow();assert.equal(ids.length,1);assert.equal(h.p.data.caption,'说明');assert.ok(h.p._image);
  await h.p.upload();assert.equal(ids.length,2);assert.equal(ids[0],ids[1]);
 });

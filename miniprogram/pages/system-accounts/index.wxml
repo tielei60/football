@@ -3,6 +3,14 @@
   <view wx:if="{{!loading && error==='仅系统管理员可以管理账号。'}}" class="card access-denied"><view class="access-denied-title">无权访问此功能</view><view class="access-denied-description">当前身份没有系统管理权限，实际权限仍由服务端校验。</view><navigator class="access-denied-return" open-type="switchTab" url="/pages/me/index" hover-class="club-card-pressed">返回我的</navigator></view>
   <page-state wx:else loading="{{loading}}" error="{{error}}" skeleton-type="list" bind:retry="refresh"/>
   <block wx:if="{{!loading&&!error}}">
+    <view wx:if="{{authorized && selfAccount.systemAdmin}}" class="card section self-player-card">
+      <view class="section-title">我的球员身份</view>
+      <view wx:if="{{selfAccount.playerId}}" class="hint">已关联本人球员，可使用当前账号报名比赛。</view>
+      <block wx:else><view class="hint">仅限关联你本人。绑定后不可在此撤销或更换，不影响管理员权限。</view>
+      <button class="ui-button ui-block" size="mini" bindtap="loadSelfCandidates" disabled="{{busy||uncertain}}">选择我本人的球员</button>
+      <block wx:if="{{selfCandidates.length}}"><business-picker title="选择本人球员" bind:pickeropen="openBusinessPicker" range="{{selfCandidates}}" range-key="label" value="{{selfCandidateIndex}}" bindchange="selectSelfCandidate" disabled="{{busy||uncertain}}"><view class="picker"><text class="picker-value">{{selfCandidateIndex>=0?selfCandidates[selfCandidateIndex].label:'请选择本人球员'}}</text></view></business-picker><button class="primary ui-button ui-block" size="mini" bindtap="bindSelfPlayer" disabled="{{busy||uncertain||selfCandidateIndex<0}}">关联本人身份</button></block>
+      </block>
+    </view>
     <view wx:if="{{authorized}}" class="card section">
       <view class="section-title">新增普通管理员</view>
       <text class="field-label">用户名</text><input class="input field" value="{{username}}" data-field="username" bindinput="input" maxlength="80" placeholder="输入用户名" disabled="{{busy||uncertain}}"/>
@@ -21,7 +29,7 @@
         <button wx:if="{{item.playerId}}" size="mini" class="ui-button" data-id="{{item.id}}" data-kind="role" bindtap="update" disabled="{{busy||uncertain}}">{{item.role==='admin'?'撤销管理权限':'设为管理员'}}</button>
         <button size="mini" class="ui-button {{item.enabled?'account-danger':''}}" data-id="{{item.id}}" data-kind="enabled" bindtap="update" disabled="{{busy||uncertain}}">{{item.enabled?'停用账号':'启用账号'}}</button>
       </view>
-      <view wx:elif="{{item.systemAdmin}}" class="hint">系统管理员账号在此只读。</view>
+      <view wx:elif="{{item.systemAdmin}}" class="hint">系统管理员权限在此只读；本人球员身份可在上方关联。</view>
     </view>
     </view>
     <view wx:if="{{!accounts.length&&authorized}}" class="empty">暂无账号</view>

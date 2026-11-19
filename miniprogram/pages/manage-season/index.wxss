@@ -17,3 +17,11 @@
 
 /* V3 原图：日期是表单字段值，使用正文色，不作为品牌强调项。 */
 .card .picker-value { color:var(--ink); }
+
+.season-media .section-title{margin-bottom:20rpx}
+.season-media-row{display:flex;align-items:center;gap:20rpx;padding:16rpx 0;border-top:1rpx solid var(--line)}
+.season-media-copy{flex:1;min-width:0;display:flex;align-items:center;gap:10rpx;flex-wrap:wrap}
+.season-media-copy .field-label{flex-basis:100%}
+.season-media-copy button{margin:0}
+.season-icon-preview,.season-image-preview{width:88rpx;height:88rpx;flex:none;border-radius:16rpx;background:var(--canvas)}
+.season-image-preview{width:126rpx}

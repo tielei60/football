@@ -11,7 +11,7 @@ const photoGroups=['photo-actions-main','photo-actions-secondary'].map(name=>{
 const cases=[
  ['me',`<div class="page"><div class="card"><div class="management-grid">${button('球队资料')}${button('赛季管理')}${button('系统账号')}</div></div><div class="member-shortcuts">${button('我的资料')}${button('球队战术')}</div><div class="card account-menu">${button('球队战术板','account-row')}<div class="account-password"><div class="between account-row account-password-toggle">修改密码</div></div></div>${button('退出 / 切换账号','danger ui-block account-logout')}</div>`],
  ['player-photos',`<div class="page"><div class="card">${photoGroups}${button('重试照片','ui-block')}</div>${button('选择照片','ui-block')}${button('上传照片','primary ui-block')}${button('重新载入','ui-block')}</div>`],
- ['match-media',`<div class="page"><div class="card">${button('保存须知','primary ui-block')}<div class="actions">${button('设为封面')}${button('移除','danger')}</div><div class="photo-order-actions">${button('上移')}${button('下移')}</div>${button('重试照片','ui-block')}</div>${button('选择照片','ui-block')}${button('上传照片','primary ui-block')}</div>`],
+ ['match-media',`<div class="page"><div class="card"><div class="actions">${button('设为封面')}${button('移除','danger')}</div><div class="photo-order-actions">${button('上移')}${button('下移')}</div>${button('重试照片','ui-block')}</div>${button('选择照片','ui-block')}${button('上传照片','primary ui-block')}</div>`],
  ['wechat-invites',`<div class="page"><div class="card">${button('解除绑定','invite-danger ui-block')}${button('生成邀请卡片','primary ui-block')}<div class="invite-actions">${button('核对并批准','primary')}${button('拒绝申请')}</div></div><div class="invite-modal-actions">${button('关闭')}${button('转发卡片','primary')}</div>${button('重新载入','ui-block')}</div>`],
 ];
 test('我的管理及媒体邀请按钮经真实级联后三档均至少44px高',async()=>{

@@ -1,0 +1,167 @@
+{
+  "pages/match-edit/index.js": {
+    "sha256": "695a36ca5ad203e53a9389526fe268b70d0cd88a0788c2309e6068a7a17681cd",
+    "changes": [
+      {
+        "before": "  { label: \"已取消\", value: \"cancelled\" },\n];\nPage({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);this._hidden=true;this._wasShown=true;this._view=(this._view||0)+1;this._epoch=(this._epoch||0)+1;},\n  async onShow(){\n",
+        "after": "  { label: \"已取消\", value: \"cancelled\" },\n];\nconst catalogFields = [\n  {kind:'opponents',label:'对手',field:'opponent',required:true,placeholder:'输入对手名称'},\n  {kind:'competitions',label:'赛事',field:'competition',placeholder:'如：日常友谊赛'},\n];\nconst catalogConfig = {\n  opponents:{path:'/opponents?summary=1',type:'opponent',reference:'opponentId',empty:'手动填写对手'},\n  competitions:{path:'/competitions?summary=1',type:'competition',reference:'competitionId',empty:'手动填写赛事'},\n  notices:{path:'/notice-templates',type:'notice',reference:'noticeTemplateId',empty:'手动填写须知'},\n};\nconst formDefaults={opponent:'',competition:'',notice:'',date:'',kickoff:'',location:'',maxParticipants:'',homeScore:'',awayScore:'',analysis:''};\nfunction catalogOption(kind,item) {\n  return {id:item.id,name:kind==='notices'?item.title:item.name};\n}\nfunction emptyCatalogs() {\n  return Object.fromEntries(Object.entries(catalogConfig).map(([kind,spec])=>[kind,[{id:null,name:spec.empty}]]));\n}\nPage({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){ui.abort(this);this._hidden=true;this._wasShown=true;this._view=(this._view||0)+1;this._epoch=(this._epoch||0)+1;},\n  async onShow(){\n"
+      },
+      {
+        "before": "    if(this._formToken&&this._formToken!==owner){\n      this._saveAttempt=null;\n      this.setData({form:{opponent:'',competition:'',date:'',kickoff:'',location:'',maxParticipants:'',homeScore:'',awayScore:'',analysis:''},savedId:null,busy:false,uncertain:false,conflict:false});\n      return this.refresh();\n    }\n",
+        "after": "    if(this._formToken&&this._formToken!==owner){\n      this._saveAttempt=null;\n      this._noticeContents=null;\n      this._catalogOpen=null;\n      this.setData({form:{...formDefaults},catalogs:emptyCatalogs(),catalogIndices:{opponents:0,competitions:0,notices:0},savedId:null,busy:false,uncertain:false,conflict:false});\n      return this.refresh();\n    }\n"
+      },
+      {
+        "before": "    statusIndex: 0,\n    seasonIndex: 0,\n    form: {\n      opponent: \"\",\n      competition: \"\",\n      maxParticipants: \"\",\n      date: \"\",\n      kickoff: \"\",\n      location: \"\",\n      homeScore: \"\",\n      awayScore: \"\",\n      analysis: \"\",\n    },\n  },\n  onLoad(q) {\n",
+        "after": "    statusIndex: 0,\n    seasonIndex: 0,\n    catalogFields,\n    catalogs:emptyCatalogs(),\n    catalogIndices:{opponents:0,competitions:0,notices:0},\n    form: {...formDefaults},\n  },\n  onLoad(q) {\n"
+      },
+      {
+        "before": "    this._formToken=s.api.getSession()?.token;\n    return s.load(this, async (session) => {\n      if (session.user.role !== \"admin\")\n        throw new Error(\"仅管理员可以编辑比赛\");\n",
+        "after": "    this._formToken=s.api.getSession()?.token;\n    return s.load(this, async (session) => {\n      const refreshEpoch=this._epoch,owner=s.api.getSession()?.token;\n      if (session.user.role !== \"admin\")\n        throw new Error(\"仅管理员可以编辑比赛\");\n"
+      },
+      {
+        "before": "      this._guardKey=matchGuardKey();\n      const guard=!this.id?readMatchGuard(this._guardKey):null;\n      const seasons = [\n        { id: null, name: \"未分配赛季\" },\n        ...(await s.api.request(\"/seasons\")),\n      ];\n      const m = this.id\n        ? await s.api.request(\"/matches/\" + encodeURIComponent(this.id))\n        : null;\n      const venueId=m?.venueId??draft?.venueId??null;\n      const allVenues=await s.api.request('/venues');\n      const label=v=>[v.name,v.fieldNumber].filter(Boolean).join(' · ');\n      const venues=[{id:null,displayName:'不关联球场 / 手填地点'},...allVenues.filter(v=>v.status==='active'||v.id===venueId).map(v=>({...v,displayName:label(v)}))];\n      if(m?.venueId){const index=venues.findIndex(v=>v.id===m.venueId);if(index>0)venues[index]={...venues[index],displayName:label(m.venueSnapshot||venues[index])+'（本场留存）',locationLabel:m.location};}\n      if(venueId && !venues.some(v=>v.id===venueId))venues.push({id:venueId,displayName:label(m?.venueSnapshot||{name:'历史球场'})+'（本场留存）',locationLabel:m?.location});\n      return {\n        venues,\n        venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),\n        draftOwner,\n",
+        "after": "      this._guardKey=matchGuardKey();\n      const guard=!this.id?readMatchGuard(this._guardKey):null;\n      const kinds=Object.keys(catalogConfig);\n      const [allSeasons,m,allVenues,...catalogLists]=await Promise.all([\n        s.api.request('/seasons'),\n        this.id ? s.api.request('/matches/'+encodeURIComponent(this.id)) : null,\n        s.api.request('/venues'),\n        ...kinds.map(kind=>s.api.request(catalogConfig[kind].path)),\n      ]);\n      const seasons=[{id:null,name:'未分配赛季'},...allSeasons.map(({id,name})=>({id,name}))];\n      const catalogs=emptyCatalogs(),catalogIndices={},noticeContents=new Map();\n      kinds.forEach((kind,index)=>{\n        const ref=catalogConfig[kind].reference;\n        const id=m?.[ref]??draft?.[ref]??null;\n        const rows=(Array.isArray(catalogLists[index])?catalogLists[index]:[]).filter(row=>row.status!=='inactive'||row.id===id);\n        for(const row of rows){\n          const option=catalogOption(kind,row);\n          if(kind==='notices')noticeContents.set(row.id,row.content||'');\n          const field=catalogFields.find(entry=>entry.kind===kind)?.field;\n          const saved=field&&(m?.[field]??draft?.form?.[field]);\n          if(row.id===id&&saved&&saved!==row.name)option.name=saved+'（本场留存）';\n          catalogs[kind].push(option);\n        }\n        if(id&&!rows.some(row=>row.id===id)){\n          const field=catalogFields.find(entry=>entry.kind===kind)?.field;\n          catalogs[kind].push({id,name:field?(m?.[field]||draft?.form?.[field]||'历史记录')+'（本场留存）':'历史须知（本场留存）'});\n        }\n        catalogIndices[kind]=Math.max(0,catalogs[kind].findIndex(row=>row.id===id));\n      });\n      const venueId=m?.venueId??draft?.venueId??null;\n      const label=v=>[v.name,v.fieldNumber].filter(Boolean).join(' · ');\n      const venues=[{id:null,displayName:'不关联球场 / 手填地点'},...allVenues.filter(v=>v.status==='active'||v.id===venueId).map(v=>({...v,displayName:label(v)}))];\n      if(m?.venueId){const index=venues.findIndex(v=>v.id===m.venueId);if(index>0)venues[index]={...venues[index],displayName:label(m.venueSnapshot||venues[index])+'（本场留存）',locationLabel:m.location};}\n      if(venueId && !venues.some(v=>v.id===venueId))venues.push({id:venueId,displayName:label(m?.venueSnapshot||{name:'历史球场'})+'（本场留存）',locationLabel:m?.location});\n      if(this._epoch===refreshEpoch&&s.api.getSession()?.token===owner)this._noticeContents=noticeContents;\n      return {\n        venues,catalogs,catalogIndices,\n        venueIndex:Math.max(0,venues.findIndex(v=>v.id===venueId)),\n        draftOwner,\n"
+      },
+      {
+        "before": "              opponent: m.opponent,\n              competition: m.competition,\n              maxParticipants: m.maxParticipants == null ? \"\" : String(m.maxParticipants),\n              date: m.date,\n",
+        "after": "              opponent: m.opponent,\n              competition: m.competition,\n              notice: m.notice || \"\",\n              maxParticipants: m.maxParticipants == null ? \"\" : String(m.maxParticipants),\n              date: m.date,\n"
+      },
+      {
+        "before": "    if (this.data.busy) return;\n    const key = e.currentTarget.dataset.field;\n    this.setData({ [\"form.\" + key]: e.detail.value });\n  },\n  pick(e) {\n",
+        "after": "    if (this.data.busy) return;\n    const key = e.currentTarget.dataset.field;\n    if(Object.prototype.hasOwnProperty.call(formDefaults,key))this.setData({ [\"form.\" + key]: e.detail.value });\n  },\n  pick(e) {\n"
+      },
+      {
+        "before": "    this.setData({ [key]: index });\n    if(key==='venueIndex'&&this.data.venues[index]?.id){const v=this.data.venues[index];this.setData({'form.location':v.locationLabel??[v.name,v.fieldNumber,v.address].filter(Boolean).join(' · ').slice(0,500)});}\n  },\n  date(e) {\n",
+        "after": "    this.setData({ [key]: index });\n    if(key==='venueIndex'&&this.data.venues[index]?.id){const v=this.data.venues[index];this.setData({'form.location':v.locationLabel??[v.name,v.fieldNumber,v.address].filter(Boolean).join(' · ').slice(0,500)});}\n  },\n  changeStatus(e) {\n    const index=statuses.findIndex(item=>item.value===e.detail.value);\n    if(!this.data.busy&&index>=0)this.setData({statusIndex:index});\n  },\n  applyCatalog(kind,index) {\n    const chosen=this.data.catalogs[kind]?.[index];\n    if(!Object.prototype.hasOwnProperty.call(catalogConfig,kind)||!chosen||this.data.busy)return;\n    if(index===this.data.catalogIndices[kind])return;\n    const data={['catalogIndices.'+kind]:index};\n    if(chosen.id){\n      if(kind==='notices'&&this._noticeContents?.has(chosen.id))data['form.notice']=this._noticeContents.get(chosen.id);\n      else if(kind!=='notices')data['form.'+catalogFields.find(item=>item.kind===kind).field]=chosen.name.replace(/（本场留存）$/,'');\n    }\n    this.setData(data);\n  },\n  pickCatalog(e) {\n    this.applyCatalog(e.currentTarget.dataset.kind,Number(e.detail.value));\n  },\n  createCatalog(e) {\n    const kind=e.currentTarget.dataset.kind;\n    if(this.data.busy||this.data.loading||this.data.error||!Object.prototype.hasOwnProperty.call(catalogConfig,kind))return;\n    const owner=s.api.getSession()?.token;\n    if(!owner)return;\n    wx.navigateTo({\n      url:'/pages/club-catalog/index?type='+catalogConfig[kind].type+'&mode=create',\n      events:{saved:item=>{\n        if(this._disposed||s.api.getSession()?.token!==owner||!Number.isSafeInteger(item?.id)||item.id<1||item.status===\"inactive\")return;\n        const option=catalogOption(kind,item);\n        if(!option.name)return;\n        const list=this.data.catalogs[kind].filter(row=>row.id!==item.id);\n        list.push(option);\n        if(kind==='notices')(this._noticeContents||=new Map()).set(item.id,item.content||'');\n        const index=list.length-1;\n        const field=kind==='notices'?'notice':catalogFields.find(entry=>entry.kind===kind).field;\n        this.setData({['catalogs.'+kind]:list,['catalogIndices.'+kind]:index,['form.'+field]:kind==='notices'?item.content||'':option.name});\n      }},\n      fail:()=>{if(!this._disposed&&!this._hidden&&s.api.getSession()?.token===owner)this.setData({actionError:'未能打开新建页面，请重试。'});},\n    });\n  },\n  date(e) {\n"
+      },
+      {
+        "before": "      venueId: this.data.venues[this.data.venueIndex]?.id??null,\n    };\n    if (this.id) payload.revision = this.data.revision;\n    const submissionToken = s.api.getSession()?.token;\n",
+        "after": "      venueId: this.data.venues[this.data.venueIndex]?.id??null,\n    };\n    for(const [kind,spec] of Object.entries(catalogConfig)){\n      payload[spec.reference]=this.data.catalogs[kind]?.[this.data.catalogIndices[kind]]?.id??null;\n    }\n    if (this.id) payload.revision = this.data.revision;\n    const submissionToken = s.api.getSession()?.token;\n"
+      },
+      {
+        "before": "      seasonId: payload.seasonId,\n      venueId: payload.venueId,\n      inFlight: true,\n      operation,\n",
+        "after": "      seasonId: payload.seasonId,\n      venueId: payload.venueId,\n      opponentId:payload.opponentId,competitionId:payload.competitionId,noticeTemplateId:payload.noticeTemplateId,\n      inFlight: true,\n      operation,\n"
+      }
+    ]
+  },
+  "pages/match-edit/index.wxml": {
+    "sha256": "d06d69d54deadeb3b2e95ed1ba124589f9be9704ef9cf585f52a659347e119c9",
+    "changes": [
+      {
+        "before": "</view\n    ><view class=\"card section\"\n      ><view class=\"field\"\n        ><text class=\"field-label\">对手 *</text\n        ><input\n          class=\"input\"\n          value=\"{{form.opponent}}\"\n          data-field=\"opponent\"\n          bindinput=\"input\"\n          maxlength=\"200\"\n          placeholder=\"对手名称\"\n          disabled=\"{{loading || (busy)}}\" /></view\n      ><view class=\"field\"\n        ><text class=\"field-label\">赛事</text\n        ><input\n          class=\"input\"\n          value=\"{{form.competition}}\"\n          data-field=\"competition\"\n          bindinput=\"input\"\n          maxlength=\"200\"\n          placeholder=\"如：周末友谊赛\"\n          disabled=\"{{loading || (busy)}}\" /></view\n      ><view class=\"filter-row date-time-row\"\n        >",
+        "after": "</view\n    ><view class=\"card section\"\n      ><view class=\"field\" wx:for=\"{{catalogFields}}\" wx:key=\"kind\">\n        <text class=\"field-label\">{{item.label}}{{item.required ? ' *' : ''}}</text>\n        <view class=\"catalog-choice\">\n          <business-picker title=\"{{item.label}}\" bind:pickeropen=\"openBusinessPicker\" range=\"{{catalogs[item.kind]}}\" range-key=\"name\" value=\"{{catalogIndices[item.kind]}}\" data-kind=\"{{item.kind}}\" bindchange=\"pickCatalog\" disabled=\"{{busy}}\">\n            <view class=\"picker\"><text class=\"picker-value\">{{catalogs[item.kind][catalogIndices[item.kind]].name}}</text></view>\n          </business-picker>\n          <button size=\"mini\" class=\"ui-button catalog-new\" data-kind=\"{{item.kind}}\" bindtap=\"createCatalog\" disabled=\"{{busy}}\">新建</button>\n        </view>\n        <input wx:if=\"{{!catalogIndices[item.kind]}}\" class=\"input catalog-manual\" value=\"{{form[item.field]}}\" data-field=\"{{item.field}}\" bindinput=\"input\" maxlength=\"200\" placeholder=\"{{item.placeholder}}\" disabled=\"{{busy}}\"/>\n      </view\n      ><view class=\"filter-row date-time-row\"\n        >"
+      },
+      {
+        "before": "</view><text class=\"field-label\">比赛状态</text\n        ><business-picker title=\"比赛状态\" bind:pickeropen=\"openBusinessPicker\"\n          range=\"{{statuses}}\"\n          range-key=\"label\"\n          value=\"{{statusIndex}}\"\n          data-field=\"statusIndex\"\n          bindchange=\"pick\"\n          disabled=\"{{loading || (busy)}}\"\n          ><view class=\"picker\"><text class=\"picker-value\">{{statuses[statusIndex].label}}</text></view></business-picker\n        ></view\n      ></view\n    ><view class=\"card\"\n      >",
+        "after": "</view><text class=\"field-label\">比赛状态</text>\n        <radio-group class=\"status-options\" bindchange=\"changeStatus\">\n          <label wx:for=\"{{statuses}}\" wx:key=\"value\" class=\"status-option {{statusIndex===index?'is-current':''}}\">\n            <radio value=\"{{item.value}}\" checked=\"{{statusIndex===index}}\" disabled=\"{{busy}}\" color=\"#742286\"/>\n            <text>{{item.label}}</text>\n          </label>\n        </radio-group>\n      </view\n      ></view\n    ><view class=\"card notice-section\">\n      <view class=\"section-title\">比赛须知</view>\n      <view class=\"catalog-choice\">\n        <business-picker title=\"选择比赛须知模板\" bind:pickeropen=\"openBusinessPicker\" range=\"{{catalogs.notices}}\" range-key=\"name\" value=\"{{catalogIndices.notices}}\" data-kind=\"notices\" bindchange=\"pickCatalog\" disabled=\"{{busy}}\">\n          <view class=\"picker\"><text class=\"picker-value\">{{catalogs.notices[catalogIndices.notices].name}}</text></view>\n        </business-picker>\n        <button size=\"mini\" class=\"ui-button catalog-new\" data-kind=\"notices\" bindtap=\"createCatalog\" disabled=\"{{busy}}\">新建模板</button>\n      </view>\n      <label class=\"field-label notice-label\" for=\"match-notice\">本场须知（选填）</label>\n      <textarea id=\"match-notice\" value=\"{{form.notice}}\" data-field=\"notice\" bindinput=\"input\" maxlength=\"10000\" placeholder=\"集合时间、装备要求和比赛注意事项\" disabled=\"{{busy}}\"/>\n      <view class=\"hint\">报名时可查看。选用模板后仍可调整，只影响本场比赛。</view>\n    </view\n    ><view class=\"card\"\n      >"
+      },
+      {
+        "before": "<button wx:if=\"{{savedId}}\" disabled=\"{{loading||busy}}\" class=\"primary ui-button ui-block\" size=\"mini\" bindtap=\"openSaved\">进入已保存比赛</button><button\n      class=\"primary ui-button ui-block\"\n      style=\"margin-top: 20rpx\"\n      disabled=\"{{loading || (busy || conflict || uncertain || savedId)}}\"\n      loading=\"{{busy}}\"\n      bindtap=\"save\"\n     size=\"mini\">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button></block\n  ></view\n>\n\n",
+        "after": "<button wx:if=\"{{savedId}}\" disabled=\"{{loading||busy}}\" class=\"primary ui-button ui-block\" size=\"mini\" bindtap=\"openSaved\">进入已保存比赛</button><view class=\"bottom-space match-save-spacer\"/><view class=\"fixed-actions match-save-bar\"><button\n      class=\"primary ui-button ui-block\"\n      disabled=\"{{loading || (busy || conflict || uncertain || savedId)}}\"\n      loading=\"{{busy}}\"\n      bindtap=\"save\"\n     size=\"mini\">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button></view></block\n  ></view\n>\n\n"
+      }
+    ]
+  },
+  "pages/manage-season/index.js": {
+    "sha256": "8a5498c5c7e90f254f5beb97ae14ca4f2504f3f1c9a535f868d3fa5f336f6dcd",
+    "changes": [
+      {
+        "before": "const ui=require('../../utils/ui');\nconst a = require(\"../manage-team/admin\");\nPage({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){a.hide.call(this);},\n",
+        "after": "const ui=require('../../utils/ui');\nconst {imageSource}=require('../../utils/media');\nconst a = require(\"../manage-team/admin\");\nPage({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){a.hide.call(this);},\n"
+      },
+      {
+        "before": "    actionError: \"\",\n    id: \"\",\n    revision: null,\n    form: { name: \"\", startDate: \"\", endDate: \"\" },\n",
+        "after": "    actionError: \"\",\n    id: \"\",\n    iconPreview:\"\",imagePreview:\"\",\n    revision: null,\n    form: { name: \"\", startDate: \"\", endDate: \"\" },\n"
+      },
+      {
+        "before": "    const view = this._adminView || 0;\n    const loading = a.load(this, async () => {\n      const season = this.id\n        ? (await a.s.api.request(\"/seasons\")).find(\n",
+        "after": "    const view = this._adminView || 0;\n    const loading = a.load(this, async () => {\n      this._mediaChanges={};\n      const season = this.id\n        ? (await a.s.api.request(\"/seasons\")).find(\n"
+      },
+      {
+        "before": "        id: this.id || \"\",\n        revision: season?.revision || null,\n        form: season\n          ? {\n",
+        "after": "        id: this.id || \"\",\n        revision: season?.revision || null,\n        iconPreview:imageSource(season?.icon),imagePreview:imageSource(season?.image),\n        form: season\n          ? {\n"
+      },
+      {
+        "before": "      });\n  },\n  reload() {\n    a.reload(this);\n",
+        "after": "      });\n  },\n  chooseAsset(e){\n    const key=e.currentTarget.dataset.asset;\n    if(!['icon','image'].includes(key)||!this.data.authorized||this.data.uncertain||this.data.conflict)return;\n    a.choosePicture(this,key+'Preview',url=>{(this._mediaChanges||={})[key]=url;});\n  },\n  clearAsset(e){\n    const key=e.currentTarget.dataset.asset;\n    if(!['icon','image'].includes(key)||this.data.busy||!this.data.authorized||this.data.uncertain||this.data.conflict)return;\n    this._imageEpoch=(this._imageEpoch||0)+1;\n    (this._mediaChanges||={})[key]=null;\n    this.setData({[key+'Preview']:''});\n  },\n  reload() {\n    a.reload(this);\n"
+      },
+      {
+        "before": "      return;\n    }\n    const payload = { ...f, name: f.name.trim() };\n    if (this.id) payload.revision = this.data.revision;\n    return a.act(\n",
+        "after": "      return;\n    }\n    const payload = { ...f, name: f.name.trim(), ...this._mediaChanges };\n    if (this.id) payload.revision = this.data.revision;\n    return a.act(\n"
+      },
+      {
+        "before": "      (s) => {\n        this.id = s.id;\n        this.setData({ id: s.id, revision: s.revision });\n        wx.setNavigationBarTitle?.({ title: \"编辑赛季\" });\n",
+        "after": "      (s) => {\n        this.id = s.id;\n        this._mediaChanges={};\n        this.setData({ id: s.id, revision: s.revision });\n        wx.setNavigationBarTitle?.({ title: \"编辑赛季\" });\n"
+      }
+    ]
+  },
+  "pages/manage-season/index.wxml": {
+    "sha256": "b7ebe27a929dfadb578fcd10529dcc1c1e5df15d4c8548df405d0ec3b8a736b1",
+    "changes": [
+      {
+        "before": "</view></view><view wx:if=\"{{actionError}}\" class=\"error\">{{actionError}}</view>",
+        "after": "</view></view><view class=\"card season-media\"><view class=\"section-title\">赛季图像（选填）</view>\n<view class=\"season-media-row\"><image wx:if=\"{{iconPreview}}\" class=\"season-icon-preview\" src=\"{{iconPreview}}\" mode=\"aspectFit\"/><view class=\"season-media-copy\"><text class=\"field-label\">赛季图标</text><button class=\"ui-button\" size=\"mini\" data-asset=\"icon\" bindtap=\"chooseAsset\" disabled=\"{{busy||conflict||uncertain}}\">{{iconPreview?'替换图标':'选择图标'}}</button><button wx:if=\"{{iconPreview}}\" class=\"ghost ui-button\" size=\"mini\" data-asset=\"icon\" bindtap=\"clearAsset\" disabled=\"{{busy||conflict||uncertain}}\">移除</button></view></view>\n<view class=\"season-media-row\"><image wx:if=\"{{imagePreview}}\" class=\"season-image-preview\" src=\"{{imagePreview}}\" mode=\"aspectFill\"/><view class=\"season-media-copy\"><text class=\"field-label\">赛季图片</text><button class=\"ui-button\" size=\"mini\" data-asset=\"image\" bindtap=\"chooseAsset\" disabled=\"{{busy||conflict||uncertain}}\">{{imagePreview?'替换图片':'选择图片'}}</button><button wx:if=\"{{imagePreview}}\" class=\"ghost ui-button\" size=\"mini\" data-asset=\"image\" bindtap=\"clearAsset\" disabled=\"{{busy||conflict||uncertain}}\">移除</button></view></view>\n<view class=\"hint\">PNG 或 JPG，每张最多 2 MB；也可以全部留空。</view></view><view wx:if=\"{{actionError}}\" class=\"error\">{{actionError}}</view>"
+      }
+    ]
+  },
+  "pages/manage-seasons/index.js": {
+    "sha256": "d4552737b47f117edac857a610aa0ab524fbcbe8c7fe58b53f9edbfc255bb7e3",
+    "changes": [
+      {
+        "before": "        id: s.id,\n        name: s.name,\n        startDate: s.startDate,\n        endDate: s.endDate,\n",
+        "after": "        id: s.id,\n        name: s.name,\n        icon:a.s.assetUrl(s.icon),image:a.s.assetUrl(s.image),\n        startDate: s.startDate,\n        endDate: s.endDate,\n"
+      }
+    ]
+  },
+  "pages/manage-seasons/index.wxml": {
+    "sha256": "7526217185fa674b8c9bebbbc03da69a1ad7ae38e8760640d355522fdaecc19e",
+    "changes": [
+      {
+        "before": "</view><view aria-role=\"button\" wx:for=\"{{seasons}}\" wx:key=\"id\" class=\"card season-card\" data-id=\"{{item.id}}\" bindtap=\"edit\" hover-class=\"club-card-pressed\"><view class=\"season-copy\"><view class=\"bold\">{{item.name}}",
+        "after": "</view><view aria-role=\"button\" wx:for=\"{{seasons}}\" wx:key=\"id\" class=\"card season-card\" data-id=\"{{item.id}}\" bindtap=\"edit\" hover-class=\"club-card-pressed\"><image wx:if=\"{{item.icon||item.image}}\" class=\"season-list-icon\" src=\"{{item.icon||item.image}}\" mode=\"{{item.icon?'aspectFit':'aspectFill'}}\"/><view class=\"season-copy\"><view class=\"bold\">{{item.name}}"
+      }
+    ]
+  },
+  "pages/manage-team/admin.js": {
+    "sha256": "e9b05bebd4796403207b9c62bebcf8964cdd62e94fbcb0076478ab4992608c6d",
+    "changes": [
+      {
+        "before": "  }\n}\nfunction choosePicture(page, field) {\n  if (page.data.busy) return;\n  const imageEpoch = page._imageEpoch = (page._imageEpoch || 0) + 1;\n",
+        "after": "  }\n}\nfunction choosePicture(page, field, onPicture) {\n  if (page.data.busy) return;\n  const imageEpoch = page._imageEpoch = (page._imageEpoch || 0) + 1;\n"
+      },
+      {
+        "before": "            return;\n          }\n          page._imageData = \"data:image/\" + mime + \";base64,\" + bytes;\n          page.setData({ [field]: file.tempFilePath, actionError: \"\" });\n        },\n",
+        "after": "            return;\n          }\n          const dataUrl = \"data:image/\" + mime + \";base64,\" + bytes;\n          if (onPicture) onPicture(dataUrl);\n          else page._imageData = dataUrl;\n          page.setData({ [field]: file.tempFilePath, actionError: \"\" });\n        },\n"
+      },
+      {
+        "before": "    page.id = entry.result.id;\n    page._imageData = undefined;\n    ledger().delete(page.createKind);\n    return { ...JSON.parse(JSON.stringify(entry.view)), id: entry.result.id,\n",
+        "after": "    page.id = entry.result.id;\n    page._imageData = undefined;\n    if(page.createKind===\"season\")page._mediaChanges={};\n    ledger().delete(page.createKind);\n    return { ...JSON.parse(JSON.stringify(entry.view)), id: entry.result.id,\n"
+      },
+      {
+        "before": "  }\n  page._imageData = entry.image;\n  return { ...JSON.parse(JSON.stringify(entry.view)), uncertain: true,\n    actionError: \"创建结果待核对，请先查看列表；确认未创建后才能重新提交。\" };\n",
+        "after": "  }\n  page._imageData = entry.image;\n  if(page.createKind===\"season\")page._mediaChanges={...entry.media};\n  return { ...JSON.parse(JSON.stringify(entry.view)), uncertain: true,\n    actionError: \"创建结果待核对，请先查看列表；确认未创建后才能重新提交。\" };\n"
+      },
+      {
+        "before": "      feet: page.data.feet, footIndex: page.data.footIndex });\n  }\n  entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };\n    entry.guardKey=createGuardKey(page.createKind);\n    if(readCreateGuard(entry.guardKey))throw Object.assign(new Error('上次创建结果待核对，请先到列表检查。'),{status:503,createGuardPending:true});\n",
+        "after": "      feet: page.data.feet, footIndex: page.data.footIndex });\n  }\n  if(page.createKind===\"season\"){\n    view.iconPreview=page.data.iconPreview||\"\";\n    view.imagePreview=page.data.imagePreview||\"\";\n  }\n  entry = { view: JSON.parse(JSON.stringify(view)), image: page._imageData, inFlight: true };\n  if(page.createKind===\"season\")entry.media={...page._mediaChanges};\n    entry.guardKey=createGuardKey(page.createKind);\n    if(readCreateGuard(entry.guardKey))throw Object.assign(new Error('上次创建结果待核对，请先到列表检查。'),{status:503,createGuardPending:true});\n"
+      }
+    ]
+  },
+  "pages/me/index.js": {
+    "sha256": "af51e5928e334d3832106c465b4810a26f650770f28c3b5923304f66b476e581",
+    "changes": [
+      {
+        "before": "  },\n  manage(e) {\n    if (this.data.session?.user.role !== \"admin\") return;\n    const pages = {\n      team: \"manage-team\",\n",
+        "after": "  },\n  manage(e) {\n    if (this._hidden || this._disposed || this.data.loading || this.data.error || this.data.busy || this.data.session?.user.role !== \"admin\") return;\n    const catalogs = { competitions: \"competition\", opponents: \"opponent\", notices: \"notice\" };\n    const kind = catalogs[e.currentTarget.dataset.page];\n    if (kind) { wx.navigateTo({ url: \"/pages/club-catalog/index?type=\" + kind }); return; }\n    const pages = {\n      team: \"manage-team\",\n"
+      }
+    ]
+  },
+  "pages/me/index.wxml": {
+    "sha256": "544386a5a62974f6918e1b5321b373b0ef54480b027241715789961e4e1f03fb",
+    "changes": [
+      {
+        "before": "<image class=\"management-icon\" src=\"/assets/ui-v3-pin.png\" mode=\"aspectFit\" aria-hidden=\"true\"/><text>球场管理</text></button>",
+        "after": "<image class=\"management-icon\" src=\"/assets/ui-v3-pin.png\" mode=\"aspectFit\" aria-hidden=\"true\"/><text>球场管理</text></button><button disabled=\"{{loading}}\" data-page=\"competitions\" bindtap=\"manage\" class=\"ui-button\" size=\"mini\"><image class=\"management-icon\" src=\"/assets/ui-v3-trophy.png\" mode=\"aspectFit\" aria-hidden=\"true\"/><text>赛事管理</text></button><button disabled=\"{{loading}}\" data-page=\"opponents\" bindtap=\"manage\" class=\"ui-button\" size=\"mini\"><image class=\"management-icon\" src=\"/assets/ui-v3-shield.png\" mode=\"aspectFit\" aria-hidden=\"true\"/><text>对手管理</text></button><button disabled=\"{{loading}}\" data-page=\"notices\" bindtap=\"manage\" class=\"ui-button\" size=\"mini\"><image class=\"management-icon\" src=\"/assets/ui-v3-calendar.png\" mode=\"aspectFit\" aria-hidden=\"true\"/><text>比赛须知</text></button>"
+      }
+    ]
+  }
+}

@@ -447,6 +447,11 @@ export function createFootballServer({
         error.code = "PASSWORD_CHANGE_REQUIRED";
         throw error;
       }
+      if (pathname === "/api/system/accounts/self-player" && method === "POST") {
+        const result = club.bindOwnPlayer(user, body());
+        if (!nativeRequest) response.setHeader("Set-Cookie", cookie("", true));
+        return send(response, 200, result);
+      }
       if (pathname === "/api/system/accounts") {
         if (method === "GET")
           return send(response, 200, club.listSystemAccounts(user));

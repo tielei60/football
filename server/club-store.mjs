@@ -496,6 +496,17 @@ export function createClubStore(
     )
       .all(teamId)
       .map((r) => getPlayer(teamId, r.id));
+  function assertPlayerArchivable(teamId, playerId) {
+    if (
+      q(
+        "SELECT 1 FROM club_users WHERE team_id=? AND player_id=? AND is_system_admin=1 AND account_enabled=1",
+      ).get(teamId, playerId)
+    )
+      fail(
+        409,
+        "该球员关联可用的系统管理员，不能归档或从战术名单移除。当前没有自助解绑入口，请保留此身份以免失去系统管理权限。",
+      );
+  }
   function savePlayer(teamId, id, input) {
     object(input);
     const old = id
@@ -530,6 +541,7 @@ export function createClubStore(
     id ||= randomUUID();
     return tx(() => {
       if (updating) checkRevision(input, getPlayer(teamId, id));
+      if (p.status === "inactive") assertPlayerArchivable(teamId, id);
       q(`INSERT INTO club_players(id,team_id,name,number,positions,preferred_foot,status,note,avatar) VALUES (?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET name=excluded.name,number=excluded.number,positions=excluded.positions,preferred_foot=excluded.preferred_foot,status=excluded.status,note=excluded.note,avatar=excluded.avatar,revision=club_players.revision+1`).run(
         id,
@@ -856,6 +868,29 @@ export function createClubStore(
       return accountView(
         q("SELECT * FROM club_users WHERE id=?").get(result.lastInsertRowid),
       );
+    });
+  }
+  function bindOwnPlayer(actor, input) {
+    object(input);
+    if (Object.keys(input).some(k => !['playerId', 'revision'].includes(k)) || typeof input.playerId !== 'string' || !input.playerId)
+      fail(400, '请选择本人的球员身份。');
+    return tx(() => {
+      const a = systemActor(actor);
+      if (!Number.isSafeInteger(input.revision) || input.revision !== a.account_revision)
+        fail(409, '账户已变更，请重新登录后核对。');
+      if (a.player_id) {
+        if (a.player_id !== input.playerId) fail(409, '已有球员身份，不可更换。');
+        return accountView(a);
+      }
+      const player = q('SELECT * FROM club_players WHERE id=? AND team_id=?').get(input.playerId, a.team_id);
+      if (!player || player.status !== 'active' || player.membership_confirmed !== 1)
+        fail(400, '只能关联本队已确认的在册球员。');
+      if (q('SELECT id FROM club_users WHERE player_id=?').get(player.id))
+        fail(409, '该球员已关联其他账户。');
+      q('UPDATE club_users SET player_id=?,account_revision=account_revision+1 WHERE id=?').run(player.id,a.id);
+      q('DELETE FROM club_sessions WHERE user_id=?').run(a.id);
+      q('UPDATE club_wechat_epoch SET revision=revision+1 WHERE id=1').run();
+      return accountView(q('SELECT * FROM club_users WHERE id=?').get(a.id));
     });
   }
   function updateSystemAccount(actor, id, input) {
@@ -1580,6 +1615,7 @@ export function createClubStore(
         const supplied = new Set(request.desk.players.map((p) => p.playerId));
         for (const id of previousIds) {
           if (supplied.has(id)) continue;
+          assertPlayerArchivable(1, id);
           q(
             "UPDATE club_players SET status='inactive',revision=revision+1 WHERE id=? AND team_id=1 AND status!='inactive'",
           ).run(id);
@@ -1658,6 +1694,7 @@ export function createClubStore(
     listSystemAccounts,
     createSystemAccount,
     updateSystemAccount,
+    bindOwnPlayer,
     createAccount,
     resetPassword,
     listPlayers,

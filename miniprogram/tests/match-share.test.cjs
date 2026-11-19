@@ -10,8 +10,9 @@ function loadPage(file, shared, wx = {}) {
   return page;
 }
 test('published match shares its own detail path; drafts do not leak details', () => {
-  const page = loadPage('pages/match-detail/index.js', {});
-  page.id = '42';
+  const page = loadPage('pages/match-detail/index.js', {api:{getSession:()=>({token:'owner'})}});
+  page._replyOwner='owner';
+  page.id = '42'; page.setData = patch => Object.assign(page.data,patch);
   page.data = { team: { name: '球队' }, match: { status: 'published', dateLabel: '11月18日 周三', kickoff: '20:00', opponent: '对手' } };
   const share = page.onShareAppMessage();
   assert.equal(share.path, '/pages/match-detail/index?id=42');

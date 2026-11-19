@@ -92,16 +92,36 @@ export function createWechatIdentityStore(
       throw e;
     }
   };
-  const admin = (actor, playerId, active = true) => {
+  const admin = (actor, playerId, active = true, manage = false) => {
     const u = authenticate(actor?.token, actor?.transport);
     if (u.role !== "admin") fail(403, "此操作需要管理员权限。");
     const p = getPlayer(u.team_id, playerId);
+    if (
+      manage && u.is_system_admin !== 1 &&
+      q("SELECT 1 FROM club_users WHERE team_id=? AND player_id=? AND is_system_admin=1").get(u.team_id, playerId)
+    )
+      fail(403, "普通管理员不能管理系统管理员的微信身份或邀请。");
     if (active && p.status !== "active") fail(409, "该球员已归档。");
     return u;
   };
   const verified = (identity) => {
     if (!provider.isVerifiedIdentity(identity) || identity.appId !== appId)
       fail(401, "微信身份验证未通过。");
+  };
+  const bindingView = (teamId, playerId) => {
+    const row = q(
+      "SELECT w.* FROM club_wechat_identities w JOIN club_users u ON u.id=w.user_id WHERE w.app_id=? AND u.team_id=? AND u.player_id=? ORDER BY (w.revoked_at IS NULL) DESC,w.revision DESC,w.id DESC LIMIT 1",
+    ).get(appId, teamId, playerId);
+    const account = q(
+      "SELECT password_enabled FROM club_users WHERE team_id=? AND player_id=?",
+    ).get(teamId, playerId);
+    return {
+      accountExists: !!account,
+      passwordEnabled: account?.password_enabled === 1,
+      bound: !!row && row.revoked_at === null,
+      revision: row?.revision ?? 0,
+      ...(row ? { createdAt: row.created_at } : {}),
+    };
   };
   const invites = enabled
     ? createWechatInviteStore(db, {
@@ -181,7 +201,7 @@ export function createWechatIdentityStore(
     checkEpoch,
     create(actor, playerId, input) {
       guard();
-      const u = admin(actor, playerId);
+      const u = admin(actor, playerId, true, true);
       const replay =
         typeof input.requestId === "string" &&
         q(
@@ -213,7 +233,7 @@ export function createWechatIdentityStore(
     },
     verifyCredential(actor, playerId, id, credential) {
       guard();
-      const u = admin(actor, playerId);
+      const u = admin(actor, playerId, true, true);
       const target = invites.verifyCredential(actor, id, credential);
       if (target.playerId !== playerId || target.teamId !== u.team_id || target.appId !== appId)
         fail(404, "邀请不存在。");
@@ -221,7 +241,7 @@ export function createWechatIdentityStore(
     },
     decide(actor, playerId, id, input, action) {
       guard();
-      const u = admin(actor, playerId);
+      const u = admin(actor, playerId, true, true);
       const target = invites.inspect(actor, id);
       if (
         target.playerId !== playerId ||
@@ -270,24 +290,12 @@ export function createWechatIdentityStore(
     binding(actor, playerId) {
       guard();
       const u = admin(actor, playerId, false);
-      const row = q(
-        "SELECT w.* FROM club_wechat_identities w JOIN club_users u ON u.id=w.user_id WHERE w.app_id=? AND u.team_id=? AND u.player_id=? ORDER BY (w.revoked_at IS NULL) DESC,w.revision DESC,w.id DESC LIMIT 1",
-      ).get(appId, u.team_id, playerId);
-      const account = q(
-        "SELECT password_enabled FROM club_users WHERE team_id=? AND player_id=?",
-      ).get(u.team_id, playerId);
-      return {
-        accountExists: !!account,
-        passwordEnabled: account?.password_enabled === 1,
-        bound: !!row && row.revoked_at === null,
-        revision: row?.revision ?? 0,
-        ...(row ? { createdAt: row.created_at } : {}),
-      };
+      return bindingView(u.team_id, playerId);
     },
     unbind(actor, playerId, input) {
       guard();
       return tx(() => {
-        const u = admin(actor, playerId, false),
+        const u = admin(actor, playerId, false, true),
           current = this.binding(actor, playerId);
         if (
           !Number.isSafeInteger(input.revision) ||
@@ -295,7 +303,10 @@ export function createWechatIdentityStore(
         )
           fail(409, "绑定已变化，请刷新核对。");
         revokeWechatPlayer(db, u.team_id, playerId);
-        return this.binding(actor, playerId);
+        // Authorization was rechecked inside this synchronous transaction.
+        // Self-unbind deliberately revoked the actor's session, so do not try
+        // authenticating it again merely to construct the committed response.
+        return bindingView(u.team_id, playerId);
       });
     },
   };

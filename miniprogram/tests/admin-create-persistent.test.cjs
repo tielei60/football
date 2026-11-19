@@ -45,9 +45,13 @@ test('在途与旧确认换号不能解除',async()=>{const store=new Map();let 
 // 精确逆投影阶段40修改后仍固定旧共享业务摘要，不允许顺带改变其他逻辑。
 test('共享admin创建恢复仅允许审定变更',()=>{
  const crypto=require('node:crypto'),changes=require('./admin-create-persistent-projection.json')['pages/manage-team/admin.js'];
- const normalize=value=>{for(const {before,after}of changes){assert.equal(value.split(after).length,2);value=value.replace(after,before);}return value;};
+ const clubNormalize=value=>require('./club-management-projection.cjs').normalize('pages/manage-team/admin.js',value);
+ const persistentNormalize=value=>{for(const {before,after}of changes){assert.equal(value.split(after).length,2);value=value.replace(after,before);}return value;};
+ const normalize=value=>persistentNormalize(clubNormalize(value));
  assert.equal(crypto.createHash('sha256').update(normalize(source)).digest('hex'),'13ccc8d44228f2e6d3b3cf27391e8e11ef7bc7a28cb0cfd94a5c8480a77cfe58');
  assert.throws(()=>normalize(source+source));
- for(const {after}of changes)assert.throws(()=>normalize(source.replace(after,after.replace(/\S/,'!'))));
+ // 逐层验证精确片段：新增 season 媒体恢复覆盖旧片段时，旧契约仍在逆投影后做变异检查。
+ const previous=clubNormalize(source);
+ for(const {after}of changes){assert.equal(previous.split(after).length,2);assert.throws(()=>persistentNormalize(previous.replace(after,after.replace(/\S/,'!'))));}
  assert.equal(normalize(source+'\n//extra'),normalize(source)+'\n//extra');
 });

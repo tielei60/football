@@ -129,3 +129,13 @@
 @media(max-width:350px){.roster-row{grid-template-columns:38px minmax(0,1fr) minmax(0,82px);column-gap:8px}.roster-snapshot-avatar{width:38px;height:38px}.roster-snapshot-avatar .roster-snapshot-number{max-width:38px}}
 
 .roster-stats .roster-stat{display:block;white-space:nowrap}
+
+/* 报名成功沿用业务弹层视觉，分享必须由原生分享按钮的用户点击触发。 */
+.signup-share-layer{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:40rpx;box-sizing:border-box}
+.signup-share-shade{position:absolute;inset:0;background:rgba(25,16,34,.42)}
+.signup-share-dialog{position:relative;width:100%;max-width:600rpx;box-sizing:border-box;padding:36rpx;border:1px solid var(--line);border-radius:28rpx;background:var(--surface);box-shadow:0 24rpx 72rpx rgba(32,14,44,.2)}
+.signup-share-title{font-size:34rpx;font-weight:650;color:var(--ink)}
+.signup-share-copy{margin:22rpx 0 30rpx;font-size:28rpx;line-height:1.6;color:var(--muted)}
+.signup-share-actions{display:flex;gap:16rpx}
+.signup-share-actions button.ui-button[size="mini"]{flex:1;min-width:0;width:0;min-height:44px;margin:0;padding:20rpx 8rpx;font-size:28rpx;white-space:normal}
+.signup-share-later{background:var(--canvas);color:var(--muted)}

@@ -9,14 +9,17 @@ test('球员档案表现标题在卡片外，报名保留四项完整字段',()=
  assert.match(css,/\.registration-section \.registration-value\{font-size:56rpx;color:var\(--brand-ink\)/);
  assert.match(w,/“—”表示未记录/);
 });
-test('比赛日期时间统一双行容量，草稿说明移到状态区域且保留清除条件',()=>{
+test('比赛日期时间与单行字段等高且至少44px，保留发布说明和清除条件',()=>{
  const w=read('match-edit'),css=read('match-edit','wxss');
  assert.match(w,/class="filter-row date-time-row"/);
- assert.match(css,/\.date-time-row \.picker\{min-height:112rpx;min-height:max\(56px,112rpx\)/);
+ assert.match(css,/\.page \.date-time-row \.picker\{box-sizing:border-box;height:var\(--field-control-height,88rpx\);min-height:44px\}/);
  const note='草稿仅管理员可见，选择“发布报名”后球员才能报名';assert.equal(w.split(note).length,2);
  assert.ok(w.indexOf(note)>w.indexOf('所属赛季'));
  assert.ok(w.indexOf(note)<w.indexOf('比赛状态'));
  assert.equal((w.match(/class="card(?: section)?"/g)||[]).length,2);
+ assert.equal((w.match(/class="card notice-section"/g)||[]).length,1);
+ assert.match(w,/<radio-group class="status-options" bindchange="changeStatus">/);
+ assert.match(w,/<radio value="{{item.value}}" checked="{{statusIndex===index}}" disabled="{{busy}}"/);
  assert.doesNotMatch(w,/归属与状态/);
  assert.match(w,/wx:if="{{form.kickoff}}"[\s\S]*?bindtap="clearTime"[\s\S]*?disabled="{{loading \|\| \(busy\)}}"/);
  assert.match(css,/clear-kickoff\[size="mini"\]\{display:flex;justify-content:flex-start/);

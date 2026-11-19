@@ -31,7 +31,8 @@
     "pages/player-ai/index",
     "pages/tactic-create/index",
     "pages/force-password/index",
-    "pages/system-accounts/index"
+    "pages/system-accounts/index",
+    "pages/club-catalog/index"
   ],
   "window": {
     "navigationBarTitleText": "足球俱乐部",
@@ -41,6 +42,8 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
+    "position": "bottom",
+    "custom": false,
     "color": "#82758F",
     "selectedColor": "#760B88",
     "backgroundColor": "#FFFFFF",

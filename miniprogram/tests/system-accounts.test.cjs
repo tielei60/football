@@ -184,3 +184,22 @@ test("改密迟到成功不能清新账号，隐藏清空密码", async () => {
   assert.equal(h.routes.length, 0);
   assert.equal(h.page.data.currentPassword, "");
 });
+
+async function selfFixture(){
+ const h=fixture();const self={id:1,revision:3,systemAdmin:true,playerId:null};
+ h.api.request=async(p,m,d)=>{h.calls.push({p,m,d});if(p==='/system/accounts')return [self,{...row,playerId:'occupied'}];if(p==='/players')return [{id:'own',name:'匿名本人',status:'active',membershipConfirmed:true},{id:'occupied',name:'占用',status:'active',membershipConfirmed:true},{id:'inactive',status:'inactive',membershipConfirmed:true},{id:'pending',status:'active',membershipConfirmed:false}];return {};};
+ await h.page.onShow();await h.page.loadSelfCandidates();return h;
+}
+test('自绑定候选过滤，取消不写，确认成功重新登录',async()=>{
+ const h=await selfFixture();assert.deepEqual(Array.from(h.page.data.selfCandidates,x=>x.id),['own']);
+ assert.equal(h.page.data.selfCandidateIndex,-1);await h.page.bindSelfPlayer();assert.equal(h.calls.filter(x=>x.m==='POST').length,0);h.page.selectSelfCandidate({detail:{value:0}});
+ h.answer(false);await h.page.bindSelfPlayer();assert.equal(h.calls.filter(x=>x.m==='POST').length,0);
+ h.answer(true);await h.page.bindSelfPlayer();const writes=h.calls.filter(x=>x.m==='POST');assert.equal(writes.length,1);assert.equal(writes[0].p,'/system/accounts/self-player');assert.equal(writes[0].d.revision,3);assert.equal(writes[0].d.playerId,'own');assert.equal(h.api.getSession(),null);assert.equal(h.routes.at(-1),'/pages/login/index');
+});
+test('自绑定未知回执强制核对登录，明确冲突保留提示',async()=>{
+ for(const status of [0,409]){const h=await selfFixture();h.page.selectSelfCandidate({detail:{value:0}});h.api.request=async()=>{throw Object.assign(new Error('绑定冲突'),{status});};await h.page.bindSelfPlayer();if(status===0){assert.equal(h.api.getSession(),null);assert.equal(h.routes.at(-1),'/pages/login/index');}else{assert.equal(h.api.getSession().token,'A');assert.equal(h.page.data.actionError,'绑定冲突');}}
+});
+test('自绑定迟到成功不退出新账号，普通管理员和已绑定不执行',async()=>{
+ const h=await selfFixture();h.page.selectSelfCandidate({detail:{value:0}});let resolve;h.api.request=()=>new Promise(r=>resolve=r);const pending=h.page.bindSelfPlayer();await new Promise(r=>setImmediate(r));h.token('B');resolve({});await pending;assert.equal(h.api.getSession().token,'B');assert.equal(h.routes.length,0);
+ for(const row of [{systemAdmin:false},{systemAdmin:true,playerId:'already'}]){const h=await selfFixture();h.page.data.selfAccount=row;await h.page.bindSelfPlayer();assert.equal(h.calls.filter(x=>x.m==='POST').length,0);}
+});

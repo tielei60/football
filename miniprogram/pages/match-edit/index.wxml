@@ -6,26 +6,16 @@
   /><block wx:if="{{!loading && !error}}"
     ><view class="club-page-banner"><view class="club-eyebrow">BERLIN FC</view><view class="club-banner-title">{{editing ? '编辑比赛' : '安排一场比赛'}}</view><view class="club-banner-subtitle">球队管理</view><image class="club-banner-mark" src="/assets/team-badge.png" mode="aspectFit" aria-hidden="true"/></view
     ><view class="card section"
-      ><view class="field"
-        ><text class="field-label">对手 *</text
-        ><input
-          class="input"
-          value="{{form.opponent}}"
-          data-field="opponent"
-          bindinput="input"
-          maxlength="200"
-          placeholder="对手名称"
-          disabled="{{loading || (busy)}}" /></view
-      ><view class="field"
-        ><text class="field-label">赛事</text
-        ><input
-          class="input"
-          value="{{form.competition}}"
-          data-field="competition"
-          bindinput="input"
-          maxlength="200"
-          placeholder="如：周末友谊赛"
-          disabled="{{loading || (busy)}}" /></view
+      ><view class="field" wx:for="{{catalogFields}}" wx:key="kind">
+        <text class="field-label">{{item.label}}{{item.required ? ' *' : ''}}</text>
+        <view class="catalog-choice">
+          <business-picker title="{{item.label}}" bind:pickeropen="openBusinessPicker" range="{{catalogs[item.kind]}}" range-key="name" value="{{catalogIndices[item.kind]}}" data-kind="{{item.kind}}" bindchange="pickCatalog" disabled="{{busy}}">
+            <view class="picker"><text class="picker-value">{{catalogs[item.kind][catalogIndices[item.kind]].name}}</text></view>
+          </business-picker>
+          <button size="mini" class="ui-button catalog-new" data-kind="{{item.kind}}" bindtap="createCatalog" disabled="{{busy}}">新建</button>
+        </view>
+        <input wx:if="{{!catalogIndices[item.kind]}}" class="input catalog-manual" value="{{form[item.field]}}" data-field="{{item.field}}" bindinput="input" maxlength="200" placeholder="{{item.placeholder}}" disabled="{{busy}}"/>
+      </view
       ><view class="filter-row date-time-row"
         ><view class="grow"
           ><text class="field-label">日期 *</text
@@ -99,17 +89,27 @@
           ><view class="picker"><text class="picker-value">{{seasons[seasonIndex].name}}</text></view></business-picker
         ></view
       ><view class="field"
-        ><view class="subtitle publication-note">草稿仅管理员可见，选择“发布报名”后球员才能报名</view><text class="field-label">比赛状态</text
-        ><business-picker title="比赛状态" bind:pickeropen="openBusinessPicker"
-          range="{{statuses}}"
-          range-key="label"
-          value="{{statusIndex}}"
-          data-field="statusIndex"
-          bindchange="pick"
-          disabled="{{loading || (busy)}}"
-          ><view class="picker"><text class="picker-value">{{statuses[statusIndex].label}}</text></view></business-picker
-        ></view
+        ><view class="subtitle publication-note">草稿仅管理员可见，选择“发布报名”后球员才能报名</view><text class="field-label">比赛状态</text>
+        <radio-group class="status-options" bindchange="changeStatus">
+          <label wx:for="{{statuses}}" wx:key="value" class="status-option {{statusIndex===index?'is-current':''}}">
+            <radio value="{{item.value}}" checked="{{statusIndex===index}}" disabled="{{busy}}" color="#742286"/>
+            <text>{{item.label}}</text>
+          </label>
+        </radio-group>
+      </view
       ></view
+    ><view class="card notice-section">
+      <view class="section-title">比赛须知</view>
+      <view class="catalog-choice">
+        <business-picker title="选择比赛须知模板" bind:pickeropen="openBusinessPicker" range="{{catalogs.notices}}" range-key="name" value="{{catalogIndices.notices}}" data-kind="notices" bindchange="pickCatalog" disabled="{{busy}}">
+          <view class="picker"><text class="picker-value">{{catalogs.notices[catalogIndices.notices].name}}</text></view>
+        </business-picker>
+        <button size="mini" class="ui-button catalog-new" data-kind="notices" bindtap="createCatalog" disabled="{{busy}}">新建模板</button>
+      </view>
+      <label class="field-label notice-label" for="match-notice">本场须知（选填）</label>
+      <textarea id="match-notice" value="{{form.notice}}" data-field="notice" bindinput="input" maxlength="10000" placeholder="集合时间、装备要求和比赛注意事项" disabled="{{busy}}"/>
+      <view class="hint">报名时可查看。选用模板后仍可调整，只影响本场比赛。</view>
+    </view
     ><view class="card"
       ><view class="section-title">比分与复盘</view
       ><view class="filter-row"
@@ -153,13 +153,12 @@
       <button disabled="{{loading}}" wx:if="{{uncertain}}" class="ghost ui-button ui-block recovery-continue" bindtap="confirmAbsent" size="mini">已核对，继续编辑</button>
       <button disabled="{{loading}}" wx:if="{{conflict}}" bindtap="reload" class="ui-button ui-block recovery-check" size="mini">重新载入最新版本</button>
     </view>
-    <button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button><button
+    <button wx:if="{{savedId}}" disabled="{{loading||busy}}" class="primary ui-button ui-block" size="mini" bindtap="openSaved">进入已保存比赛</button><view class="bottom-space match-save-spacer"/><view class="fixed-actions match-save-bar"><button
       class="primary ui-button ui-block"
-      style="margin-top: 20rpx"
       disabled="{{loading || (busy || conflict || uncertain || savedId)}}"
       loading="{{busy}}"
       bindtap="save"
-     size="mini">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button></block
+     size="mini">{{editing ? '保存修改' : statusIndex===0 ? '保存草稿' : statusIndex===1 ? '发布比赛' : '保存比赛'}}</button></view></block
   ></view
 >
 

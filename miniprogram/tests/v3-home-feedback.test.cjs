@@ -6,7 +6,7 @@ const css=fs.readFileSync(path.join(root,'pages/home/index.wxss'),'utf8');
 test('下一场保留真实字段、整卡入口和未知状态，图标仅作装饰',()=>{
  for(const key of ['next.id','next.competition','next.format','team.crest','team.name','next.side','next.opponent','next.dateLabel','next.kickoff','next.location','next.signupCountLabel','next.maybeCount','next.noCount','next.responseLabel'])assert.ok(w.includes(key),key);
  for(const text of ['主客场待定','地点待定','时间待定','赛制待定'])assert.ok(w.includes(text));
- assert.equal((w.match(/bindtap="openMatch"/g)||[]).length,2);
+ assert.equal((w.match(/bindtap="openMatch"/g)||[]).length,3);
  assert.equal((w.match(/bindtap="schedule"/g)||[]).length,2);
  for(const icon of ['calendar','pin','people'])assert.match(w,new RegExp('ui-v3-'+icon+'\\.png" mode="aspectFit" aria-hidden="true"'));
  assert.match(css,/\.page\{padding-top:28rpx\}/);
@@ -36,7 +36,7 @@ test('下一场三宽真实长文本不截断、不溢出，CTA不低于44px',as
 });
 
 test('标题装饰在独立非负背景层，文字层始终在其上方',()=>{
- assert.match(w, /class="fixture-heading-title"><text class="fixture-heading-label">下一场比赛<\/text><\/text>/);
+ assert.match(w, /class="fixture-heading-title"><text class="fixture-heading-label">焦点赛事<\/text><\/text>/);
  assert.match(css,/\.fixture-heading-title\{position:relative;z-index:0;/);
  assert.match(css,/\.fixture-heading-label\{position:relative;z-index:1\}/);
  const decoration=css.match(/\.fixture-heading-title::after\{([^}]+)\}/)[1];

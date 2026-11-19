@@ -451,3 +451,15 @@ input.input{min-height:44px}
 /* V3 字段层级统一：紫色标签与轻微染色控件，保留可辨识边框和输入几何。 */
 .page .field-label{color:var(--field-label);font-weight:600}
 .page input.input,.page textarea,.page .picker{background:var(--control-surface)}
+
+/* V3 同级表单控件共用高度。紧凑工具、多行文本及页面卡片仍保留各自几何。 */
+page{--field-control-height:88rpx}
+.page input.input{height:var(--field-control-height);min-height:44px;padding:0 24rpx;line-height:42rpx}
+.page .picker,.page .filter-row .picker{min-height:var(--field-control-height);padding:20rpx 24rpx;font-size:28rpx;line-height:42rpx;align-items:center}
+button.ui-button:not(.ui-compact)[size="mini"]{min-height:var(--field-control-height)}
+.page .filter-row{align-items:stretch}
+.page .filter-row>.grow{display:flex;flex-direction:column;min-width:0}
+.page .filter-row>.grow>.field-label{flex:1}
+.page .filter-row>.grow>business-picker{flex:none}
+@media(max-width:375px){.page .picker,.page .filter-row .picker,button.ui-button:not(.ui-compact)[size="mini"]{min-height:44px}}
+/* 原生 tabBar 固定在窗口底部并由微信预留高度；不另加假底栏或重复扣减 100vh。 */

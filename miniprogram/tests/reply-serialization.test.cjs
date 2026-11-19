@@ -28,3 +28,37 @@ test('报名人员按状态分组，保留头像、姓名和缺失头像的首�
  assert.equal(groups[0].players[0].avatar,'/avatar.png');assert.equal(groups[0].players[0].name,'张铁磊');
  assert.equal(groups[1].players[0].avatar,'');assert.equal(groups[1].players[0].initial,'小');assert.equal(groups[2].players[0].name,'历史成员');
 });
+
+// 成功提示只针对本次已确认参加，不从核对、失败或迟到结果推断成功。
+test('参加成功显示用户主动分享弹层，重复点击和刷新不再提示',async()=>{
+ const f=fixture('admin','p'),p=f.page();await p.refresh();const work=p.reply(event('yes'));f.puts[0].resolve();await work;
+ assert.equal(p.data.signupShareOpen,true);p.dismissSignupShare();await p.reply(event('yes'));
+ assert.equal(f.puts.length,1);assert.equal(p.data.signupShareOpen,false);await p.refresh();assert.equal(p.data.signupShareOpen,false);
+});
+for(const response of ['maybe','no'])test(response+'更新不触发报名分享邀请',async()=>{
+ const f=fixture(),p=f.page();await p.refresh();const work=p.reply(event(response));f.puts[0].resolve();await work;assert.equal(p.data.signupShareOpen,false);
+});
+for(const mode of ['hidden','account','failed','unknown','read-failed'])test('分享提示不受无效回执触发：'+mode,async()=>{
+ const f=fixture(),p=f.page();await p.refresh();const work=p.reply(event('yes'));
+ if(mode==='hidden')p.onHide();if(mode==='account')f.token('b');if(mode==='read-failed')f.readError(Error('读取失败'));
+ if(mode==='failed'||mode==='unknown')f.puts[0].reject(Object.assign(Error('未确认'),{status:mode==='failed'?409:0}));else f.puts[0].resolve();
+ await work;assert.equal(p.data.signupShareOpen,false);
+});
+test('未关联管理员得到正规账号路径提示，不按姓名或唯一球员猜测',async()=>{
+ const f=fixture('admin',null,[{id:'only',name:'管理员'}]),p=f.page();await p.refresh();
+ assert.equal(p.data.canReply,false);assert.match(p.data.replyUnavailable,/系统账号/);await p.reply(event('yes'));assert.equal(f.puts.length,0);
+});
+test('分享弹层采用原生用户分享按钮，不自动调用外部分享',()=>{
+ const w=fs.readFileSync(path.join(__dirname,'../pages/match-detail/index.wxml'),'utf8');
+ assert.match(w,/wx:if="{{signupShareOpen}}"/);assert.match(w,/signup-share-confirm" open-type="share"/);assert.match(w,/暂不分享/);
+});
+
+test('分享时已换账号不沿用旧比赛上下文，弹层关闭',async()=>{const f=fixture(),p=f.page();await p.refresh();p.setData({signupShareOpen:true});f.token('b');assert.equal(p.onShareAppMessage().path,'/pages/home/index');assert.equal(p.data.signupShareOpen,false);});
+
+for(const mode of ['refresh','hidden','disposed','loading','error'])test('无效页面不分享旧比赛：'+mode,async()=>{const f=fixture(),p=f.page();await p.refresh();if(mode==='refresh')p._replyOwner=null;if(mode==='hidden')p._hidden=true;if(mode==='disposed')p._disposed=true;if(mode==='loading')p.data.loading=true;if(mode==='error')p.data.error='读取失败';assert.equal(p.onShareAppMessage().path,'/pages/home/index');});
+
+test('详情对方队徽经本地素材转换并保留坏图回退',()=>{
+ const source=require('node:fs').readFileSync(require('node:path').join(__dirname,'../pages/match-detail/index.js'),'utf8');
+ const markup=require('node:fs').readFileSync(require('node:path').join(__dirname,'../pages/match-detail/index.wxml'),'utf8');
+ assert.match(source,/opponentCrest: s\.assetUrl\(raw\.opponentSnapshot\?\.logo\)/);assert.match(markup,/wx:if="\{\{match\.opponentCrest\}\}"/);assert.match(markup,/binderror="opponentImageError"/);
+});

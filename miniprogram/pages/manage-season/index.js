@@ -1,4 +1,5 @@
 const ui=require('../../utils/ui');
+const {imageSource}=require('../../utils/media');
 const a = require("../manage-team/admin");
 Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge').open(this,e);},onHide(){a.hide.call(this);},
   createKind: "season",
@@ -13,6 +14,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     uncertain: false,
     actionError: "",
     id: "",
+    iconPreview:"",imagePreview:"",
     revision: null,
     form: { name: "", startDate: "", endDate: "" },
   },
@@ -28,6 +30,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
     const owner = a.s.api.getSession()?.token;
     const view = this._adminView || 0;
     const loading = a.load(this, async () => {
+      this._mediaChanges={};
       const season = this.id
         ? (await a.s.api.request("/seasons")).find(
             (s) => String(s.id) === String(this.id),
@@ -37,6 +40,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       return {
         id: this.id || "",
         revision: season?.revision || null,
+        iconPreview:imageSource(season?.icon),imagePreview:imageSource(season?.image),
         form: season
           ? {
               name: season.name,
@@ -66,6 +70,18 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         ["form." + e.currentTarget.dataset.field]: e.detail.value,
       });
   },
+  chooseAsset(e){
+    const key=e.currentTarget.dataset.asset;
+    if(!['icon','image'].includes(key)||!this.data.authorized||this.data.uncertain||this.data.conflict)return;
+    a.choosePicture(this,key+'Preview',url=>{(this._mediaChanges||={})[key]=url;});
+  },
+  clearAsset(e){
+    const key=e.currentTarget.dataset.asset;
+    if(!['icon','image'].includes(key)||this.data.busy||!this.data.authorized||this.data.uncertain||this.data.conflict)return;
+    this._imageEpoch=(this._imageEpoch||0)+1;
+    (this._mediaChanges||={})[key]=null;
+    this.setData({[key+'Preview']:''});
+  },
   reload() {
     a.reload(this);
   },
@@ -79,7 +95,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
       this.setData({ actionError: "结束日期不能早于开始日期" });
       return;
     }
-    const payload = { ...f, name: f.name.trim() };
+    const payload = { ...f, name: f.name.trim(), ...this._mediaChanges };
     if (this.id) payload.revision = this.data.revision;
     return a.act(
       this,
@@ -91,6 +107,7 @@ Page({openBusinessPicker(e){return require('../../utils/business-picker-bridge')
         ),
       (s) => {
         this.id = s.id;
+        this._mediaChanges={};
         this.setData({ id: s.id, revision: s.revision });
         wx.setNavigationBarTitle?.({ title: "编辑赛季" });
         ui.showToast(this,{ title: "赛季已保存" });

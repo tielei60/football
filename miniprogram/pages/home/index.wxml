@@ -10,7 +10,7 @@
         class="card next"
         data-id="{{next.id}}"
         bindtap="openMatch"
-         hover-class="club-card-pressed"><view class="fixture-heading"><text class="fixture-heading-title"><text class="fixture-heading-label">下一场比赛</text></text><view class="fixture-heading-meta"><text>{{next.competition || '球队比赛'}}</text><text>{{next.format ? next.format + '人制' : '赛制待定'}}</text></view></view
+         hover-class="club-card-pressed"><view class="fixture-heading"><text class="fixture-heading-title"><text class="fixture-heading-label">焦点赛事</text></text><view class="fixture-heading-meta"><text>{{next.competition || '球队比赛'}}</text><text>{{next.format ? next.format + '人制' : '赛制待定'}}</text></view></view
         ><view class="fixture-teams"><view class="fixture-team"><image wx:if="{{team.crest}}" src="{{team.crest}}" mode="aspectFit" data-target="team" binderror="imageError"/><text wx:else class="fixture-symbol">足</text><text>{{team.name}}</text></view><view class="fixture-versus">VS<text>{{next.side==='home'?'主场':next.side==='away'?'客场':next.side==='neutral'?'中立场':'主客场待定'}}</text></view><view class="fixture-team"><view class="fixture-symbol opponent" aria-hidden="true"><view class="opponent-ball"/></view><text class="match-title">{{next.opponent}}</text></view></view
         ><view class="match-time fixture-info"><image src="/assets/ui-v3-calendar.png" mode="aspectFit" aria-hidden="true"/><text>{{next.dateLabel}} · {{next.kickoff || '时间待定'}}</text></view
         ><view class="muted match-place fixture-info"><image src="/assets/ui-v3-pin.png" mode="aspectFit" aria-hidden="true"/><text>{{next.location || '地点待定'}}</text></view
@@ -20,7 +20,13 @@
           ><text class="tag">我：{{next.responseLabel}}</text></view
         ></view
       ><view wx:else class="card home-no-next"><view class="home-no-next-title">下一场，还在安排。</view><view class="home-no-next-description">比赛发布后，会显示在这里。</view><button class="ui-button home-records-link" size="mini" bindtap="schedule">查看比赛记录 <text aria-hidden="true">›</text></button></view></view
-    ><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
+    ><view wx:if="{{moreUpcoming.length}}" class="home-upcoming-list">
+      <view wx:for="{{moreUpcoming}}" wx:key="id" class="home-upcoming-row" aria-role="button" aria-label="{{item.opponent}}，{{item.dateLabel}}，{{item.kickoff || '时间待定'}}，查看比赛和报名" data-id="{{item.id}}" bindtap="openMatch" hover-class="club-card-pressed">
+        <view class="home-upcoming-heading"><text class="home-upcoming-opponent">{{item.opponent}}</text><text class="home-upcoming-status">报名中 <text aria-hidden="true">›</text></text></view>
+        <view class="home-upcoming-time">{{item.dateLabel}} · {{item.kickoff || '时间待定'}}</view>
+        <view class="home-upcoming-summary"><text>参加 {{item.signupCountLabel}}</text><text>我：{{item.responseLabel}}</text></view>
+      </view>
+    </view><view class="club-quick"><button wx:for="{{shortcuts}}" wx:key="page" data-page="{{item.page}}" bindtap="shortcut" class="ui-button" size="mini"><image src="{{item.icon}}" mode="aspectFit"/><text>{{item.label}}</text></button></view><view class="section"
       ><view class="between"><view class="section-title">最近赛果</view><button class="ui-button home-schedule-link" size="mini" bindtap="schedule">全部赛程 ›</button></view
       ><scroll-view wx:if="{{recent.length}}" class="result-strip" scroll-x="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}"><view class="result-tickets"><view aria-role="button" wx:for="{{recent}}" wx:key="id" class="result-ticket" data-id="{{item.id}}" bindtap="openMatch" hover-class="club-card-pressed"><view class="result-ticket-heading"><text class="result-outcome {{item.resultTone}}">{{item.resultLabel}}</text><text class="result-date">{{item.dateLabel}}</text></view><text class="result-score">{{item.scoreLabel}}</text><text class="result-opponent">{{item.opponent}}</text></view></view></scroll-view
       ><view wx:if="{{!recent.length}}" class="card empty"

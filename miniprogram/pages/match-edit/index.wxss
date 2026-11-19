@@ -16,9 +16,8 @@
 /* 紧凑入口保留原视觉，显式覆盖全局 compact 的 rpx 最小触控尺寸。 */
 
 
-/* 日期和时间保留完整信息，统一两行容量；清除仍为44px弱操作。 */
+/* 日期和时间与其他单行字段等高；清除仍为44px弱操作。 */
 .date-time-row{align-items:stretch}
-.date-time-row .picker{min-height:112rpx;min-height:max(56px,112rpx)}
 .page button.ui-button.ui-compact.clear-kickoff[size="mini"]{min-height:44px;min-width:44px;box-sizing:border-box}
 .page .card button.ui-button.ui-compact.clear-kickoff[size="mini"]{display:flex;justify-content:flex-start;width:auto;max-width:100%;margin:0 0 20rpx;padding:0 20rpx;background:transparent;border-color:transparent;box-shadow:none;color:var(--muted);font-weight:500;text-align:left}
 .publication-note{margin:-12rpx 0 24rpx;line-height:1.65}
@@ -32,3 +31,19 @@
 .page .recovery-notice button.recovery-check[size="mini"]{background:var(--surface);border:1rpx solid var(--control-border);color:var(--brand-ink);box-shadow:none;min-height:44px;margin-top:16rpx}
 .page .recovery-notice button.recovery-continue[size="mini"]{background:transparent;border-color:transparent;box-shadow:none;min-height:44px;margin-top:12rpx}
 .page .recovery-notice button.ui-button[size="mini"][disabled]{background:var(--canvas);border-color:var(--line);color:var(--muted);opacity:.6;box-shadow:none}
+
+.catalog-choice{display:flex;align-items:stretch;gap:12rpx}
+.catalog-choice business-picker{display:block;flex:1;min-width:0}
+.page .catalog-choice .picker,
+.page .catalog-choice button.catalog-new[size="mini"],
+.page .catalog-manual,
+.page .date-time-row .picker{box-sizing:border-box;height:var(--field-control-height,88rpx);min-height:44px}
+.page .catalog-choice .picker,.page .date-time-row .picker{align-items:center;white-space:nowrap}
+.catalog-choice .picker-value,.date-time-row .picker-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.page .catalog-choice button.catalog-new[size="mini"]{display:flex;flex:none;align-items:center;justify-content:center;margin:0;padding:0 20rpx;white-space:nowrap}
+.catalog-manual,.notice-label{margin-top:16rpx}
+.status-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12rpx}
+.status-option{display:flex;align-items:center;gap:10rpx;min-height:44px;padding:0 12rpx;border:1rpx solid var(--control-border);border-radius:16rpx;color:var(--muted);font-size:26rpx}
+.status-option.is-current{background:var(--surface-tint);border-color:var(--brand);color:var(--brand-ink);font-weight:600}
+.status-option radio{flex:none;transform:scale(.8)}
+.match-save-spacer{height:calc(144rpx + env(safe-area-inset-bottom))}
