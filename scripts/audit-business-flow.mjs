@@ -489,7 +489,7 @@ try {
   ).body;
   eq(
     signed.rsvps,
-    [{ playerId: p.id, response: "yes" }],
+    [{ playerId: p.id, response: "yes", membershipKind: "member" }],
     "cannot RSVP as supplied other player ID",
   );
   eq(
