@@ -1,7 +1,7 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
 const root=path.join(__dirname,'..'),credential='a'.repeat(64),token='native_'+'b'.repeat(64);
 function apiHarness(handler,wxExtra={}){let requests=[];const config={apiBaseUrl:'https://example.com'};const wx={login:o=>o.success({code:'mock-code'}),request:o=>{requests.push(o);handler(o);},...wxExtra};const context={require:()=>config,module:{exports:{}},wx,Date,Promise,Error};vm.runInNewContext(fs.readFileSync(path.join(root,'utils/match-guest-api.js'),'utf8'),context);return {api:context.module.exports,requests,config};}
-function pageHarness(api={},member=null){let page;const requests=[];const shared={api:{getSession:()=>member,request:async(...a)=>{requests.push(a);return match;}},assetUrl:()=>'',dateLabel:()=> '周日',replies:{yes:'参加',no:'请假',maybe:'待定'}};vm.runInNewContext(fs.readFileSync(path.join(root,'pages/match-guest/index.js'),'utf8'),{Page:x=>page=x,require:n=>n.includes('match-guest-api')?{identityKey:(_,token)=>'test-'+(token||'guest'),validInvite:()=>true,session:()=>null,request:async()=>match,...api}:shared,Date,Math,Number,String,encodeURIComponent,wx:{navigateTo(){}}});page.data=JSON.parse(JSON.stringify(page.data));page.setData=x=>Object.assign(page.data,x);page.onLoad({shareToken:credential});return {page,requests};}
+function pageHarness(api={},member=null){let page;const requests=[];const shared={api:{getSession:()=>member,request:async(...a)=>{requests.push(a);return match;}},assetUrl:()=>'',dateLabel:()=> '周日',replies:{yes:'参加',no:'请假',maybe:'待定'}};vm.runInNewContext(fs.readFileSync(path.join(root,'pages/match-guest/index.js'),'utf8'),{Page:x=>page=x,require:n=>n.includes('match-guest-api')?{pendingRegistration:()=>null,identityKey:(_,token)=>'test-'+(token||'guest'),validInvite:()=>true,session:()=>null,request:async()=>match,...api}:shared,Date,Math,Number,String,encodeURIComponent,wx:{navigateTo(){}}});page.data=JSON.parse(JSON.stringify(page.data));page.setData=x=>Object.assign(page.data,x);page.onLoad({shareToken:credential});return {page,requests};}
 const match={id:4,team:{name:'测试队'},opponent:'测试对手',status:'published',canRegister:true,canReply:true,myResponse:null,date:'2026-12-20'};
 test('public request never sends member token; guest session is scoped to invitation and origin',async()=>{const h=apiHarness(o=>o.success({statusCode:200,data:o.url.endsWith('match-entry')?{token,expiresAt:Date.now()+50000,match}:match}));await h.api.request(credential);assert.equal(h.requests[0].header.Authorization,undefined);await h.api.login(credential);await h.api.request(credential);assert.equal(h.requests.at(-1).header.Authorization,'Bearer '+token);await h.api.request('c'.repeat(64));assert.equal(h.requests.at(-1).header.Authorization,undefined);h.config.apiBaseUrl='https://other.example.com';assert.equal(h.api.session(credential),null);});
 test('first entry needs profile without making a normal session',async()=>{const h=apiHarness(o=>o.success({statusCode:200,data:{needsProfile:true,registrationToken:'temporary',expiresAt:Date.now()+50000,match}}));assert.equal((await h.api.login(credential)).needsProfile,true);assert.equal(h.api.session(credential),null);});
@@ -19,3 +19,95 @@ test('new registration token resets request id from an earlier attempt',async()=
 test('hide and return waits for previous write before GET and prevents conflicting RSVP',async()=>{let release,writes=0,reads=0;const {page}=pageHarness({session:()=>({token}),request:async(_,suffix)=>{if(suffix){writes++;return new Promise(r=>release=r);}reads++;return {...match,myResponse:reads>1?'yes':null};}});await page.onShow();const pending=page.reply({currentTarget:{dataset:{response:'yes'}}});page.onHide();const reload=page.onShow();assert.equal(page.data.replyPending,true);await page.reply({currentTarget:{dataset:{response:'no'}}});assert.equal(writes,1);assert.equal(reads,1);release({...match,myResponse:'yes'});await pending;await reload;assert.equal(reads,2);assert.equal(page.data.replyPending,false);assert.equal(page.data.response,'yes');assert.equal(page.data.busy,false);});
 test('guest ledger identity separates origins, sessions and match invitations',async()=>{const h=apiHarness(o=>o.success({statusCode:200,data:{token,expiresAt:Date.now()+50000,match}}));await h.api.login(credential);const key=h.api.identityKey(credential);assert.notEqual(key,h.api.identityKey('c'.repeat(64)));assert.notEqual(key,h.api.identityKey(credential,'native_'+'d'.repeat(64)));h.config.apiBaseUrl='https://other.example.com';assert.notEqual(key,h.api.identityKey(credential));});
 test('closed join boundary blocks yes but retains no/maybe actions when permitted',async()=>{let writes=0;const {page}=pageHarness({session:()=>({token}),request:async(_,suffix)=>{if(suffix)writes++;return {...match,canJoin:false,myResponse:null};}});await page.onShow();await page.reply({currentTarget:{dataset:{response:'yes'}}});assert.equal(writes,0);await page.reply({currentTarget:{dataset:{response:'no'}}});assert.equal(writes,1);});
+
+test('pending guest registration is isolated by invitation and origin and includes abandoned session cleanup', async () => {
+  const second = 'd'.repeat(64);
+  const logoutStarted = Promise.withResolvers();
+  let finishSignup, finishLogout, loginCalls = 0;
+  const h = apiHarness((o) => {
+    if (o.url.endsWith('match-register')) {
+      finishSignup = () => o.success({statusCode:200,data:{token,expiresAt:Date.now()+50000,match}});
+    } else if (o.url.endsWith('/auth/logout')) {
+      finishLogout = () => o.success({statusCode:200,data:{}});
+      logoutStarted.resolve();
+    } else if (o.url.endsWith('match-entry')) {
+      o.success({statusCode:200,data:{needsProfile:true,registrationToken:'new',expiresAt:Date.now()+50000,match}});
+    }
+  }, {login:o=>{loginCalls++;o.success({code:'fresh'});}});
+  let active = true;
+  const first = h.api.register(credential, {}, () => active);
+  const failed = assert.rejects(first);
+  assert.ok(h.api.pendingRegistration(credential));
+  assert.equal(h.api.pendingRegistration(second), null);
+  h.config.apiBaseUrl = 'https://other.example.com';
+  assert.equal(h.api.pendingRegistration(credential), null);
+  h.config.apiBaseUrl = 'https://example.com';
+  await assert.rejects(h.api.register(credential, {}));
+  const recovery = h.api.login(credential);
+  active = false;
+  finishSignup();
+  await logoutStarted.promise;
+  assert.equal(loginCalls, 0);
+  assert.equal(h.api.session(credential), null);
+  finishLogout();
+  await failed;
+  assert.equal((await recovery).needsProfile, true);
+  assert.equal(loginCalls, 1);
+  assert.equal(h.api.pendingRegistration(credential), null);
+  assert.equal(h.requests.filter((o)=>o.url.endsWith('match-register')).length, 1);
+});
+
+test('draft survives a harmless hide but is cleared when the same invitation becomes authenticated', async () => {
+  let session, writes = 0;
+  const {page} = pageHarness({
+    session:()=>session,
+    request:async()=>({...match,myResponse:session?'yes':null}),
+    register:async()=>{writes++;return {match};},
+  });
+  await page.onShow();
+  page._registration='unused';
+  page._registrationExpires=Date.now()+50000;
+  page._avatar='data:image/png;base64,x';
+  page.setData({profileRequired:true,realName:'本人',nickname:'昵称',avatarPath:'wxfile://draft'});
+  page.onHide();
+  await page.onShow();
+  assert.equal(page.data.profileRequired,true);
+  assert.equal(page.data.realName,'本人');
+  page.onHide();
+  session={token};
+  await page.onShow();
+  assert.equal(page.data.authenticated,true);
+  assert.equal(page.data.response,'yes');
+  assert.equal(page.data.profileRequired,false);
+  assert.equal(page.data.realName,'');
+  assert.equal(page.data.avatarPath,'');
+  assert.equal(page._registration,null);
+  await page.register();
+  assert.equal(writes,0);
+});
+
+test('an expired ticket cannot carry profile fields into a freshly verified identity', async () => {
+  let writes = 0;
+  const {page} = pageHarness({
+    login:async()=>({needsProfile:true,registrationToken:'fresh-ticket',expiresAt:Date.now()+50000}),
+    register:async()=>{writes++;return {match};},
+  });
+  await page.onShow();
+  page._registration='expired';
+  page._registrationExpires=Date.now()-1;
+  page._requestId='old-request';
+  page._avatar='data:image/png;base64,old';
+  page.setData({profileRequired:true,realName:'旧姓名',nickname:'旧昵称',avatarPath:'wxfile://old'});
+  await page.register();
+  assert.equal(page.data.profileRequired,false);
+  assert.match(page.data.actionError,/过期/);
+  await page.login();
+  assert.equal(page.data.profileRequired,true);
+  assert.equal(page._registration,'fresh-ticket');
+  assert.equal(page.data.realName,'');
+  assert.equal(page.data.nickname,'');
+  assert.equal(page.data.avatarPath,'');
+  assert.equal(page._avatar,'');
+  await page.register();
+  assert.equal(writes,0);
+});

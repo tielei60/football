@@ -1,20 +1,36 @@
 const guest = require('../../utils/match-guest-api');
 const s = require('../shared');
+const registrationRecovery='上次报名结果尚未核对，请重新微信登录确认。';
 // 只保留本进程未核对写入；以签发源、会话、比赛隔离，不落盘私人凭据。
 const pendingWrites=new Map();
 Page({
   data:{loading:true,error:'',busy:false,match:null,profileRequired:false,realName:'',nickname:'',avatarPath:'',actionError:'',response:'',responseLabel:'未回应',authenticated:false,member:false,replyPending:false},
   onLoad(q){this._credential=guest.validInvite(q.shareToken)?q.shareToken:'';},
   onShow(){this._hidden=false;return this.refresh();},
-  onHide(){this._replyAttempt=null;this._hidden=true;this._epoch=(this._epoch||0)+1;this.setData({busy:false});},
-  onUnload(){this.onHide();this._disposed=true;this._registration=null;this._avatar='';},
+  onHide(){
+    this._replyAttempt=null;this._hidden=true;this._epoch=(this._epoch||0)+1;
+    if(this._enrolling)this.resetRegistration(registrationRecovery);
+    this.setData({busy:false});
+  },
+  onUnload(){this.onHide();this._disposed=true;this._registration=null;this._requestId=null;this._avatar='';},
   active(epoch){return !this._hidden&&!this._disposed&&epoch===this._epoch;},
+  resetRegistration(actionError=''){
+    this._registration=null;this._registrationExpires=0;this._requestId=null;this._avatar='';this._avatarTurn=(this._avatarTurn||0)+1;
+    this.setData({profileRequired:false,realName:'',nickname:'',avatarPath:'',actionError});
+  },
   async refresh(){
     const epoch=this._epoch=(this._epoch||0)+1;
     this.setData({loading:true,error:''});
     try {
       if(!this._credential)throw new Error('比赛邀请无效，请重新打开分享卡片');
       const member=s.api.getSession();
+      const registration=!member&&guest.pendingRegistration(this._credential);
+      if(registration){
+        this.resetRegistration(registrationRecovery);
+        this.setData({busy:false});
+        await registration;
+        if(!this.active(epoch))return;
+      }
       const key=guest.identityKey(this._credential,member?.token), pending=pendingWrites.get(key);
       this.setData({replyPending:!!pending});
       if(pending)await pending.done;
@@ -22,7 +38,13 @@ Page({
       if(s.api.getSession()?.token!==member?.token)throw new Error('登录身份已变化，请刷新比赛');
       const result=member?await s.api.request('/guest-matches/'+this._credential):await guest.request(this._credential);
       if(this.active(epoch)&&s.api.getSession()?.token!==member?.token)throw new Error('登录身份已变化，请刷新比赛');
-      if(this.active(epoch)){if(pending&&pendingWrites.get(key)===pending)pendingWrites.delete(key);this.setData({replyPending:false});this._memberOwner=member?.token||null;this.applyMatch(result,!!member||!!guest.session(this._credential));}
+      if(this.active(epoch)){
+        if(pending&&pendingWrites.get(key)===pending)pendingWrites.delete(key);
+        this.setData({replyPending:false});this._memberOwner=member?.token||null;
+        const authenticated=!!member||!!guest.session(this._credential);
+        if(authenticated&&(registration||this.data.profileRequired))this.resetRegistration();
+        this.applyMatch(result,authenticated);
+      }
     } catch(e){if(this.active(epoch))this.setData({error:e.message||'无法读取比赛，请重试'});}
     finally{if(this.active(epoch))this.setData({loading:false});}
   },
@@ -42,33 +64,45 @@ Page({
   avatarError(){this._avatar='';this.setData({avatarPath:''});},
   crestError(e){const key=e.currentTarget.dataset.key;if(['teamCrest','opponentCrest'].includes(key))this.setData({['match.'+key]:''});},
   async login(){
-    if(this.data.busy||this.data.loading||this.data.error||!this.data.match)return;
+    if(this._hidden||this._disposed||this.data.busy||this.data.loading||this.data.error||!this.data.match)return;
     if(s.api.getSession()){this.setData({actionError:'登录身份已变化，请刷新比赛'});return;}
     const epoch=this._epoch;
     this.setData({busy:true,actionError:''});
     try{
       const result=await guest.login(this._credential,()=>this.active(epoch)&&!s.api.getSession());
       if(!this.active(epoch))return;
-      if(result.needsProfile){this._requestId=null;this._registration=result.registrationToken;this._registrationExpires=result.expiresAt;this.setData({profileRequired:true});}
-      else {this._registration=null;this.setData({profileRequired:false,realName:'',nickname:'',avatarPath:''});this.applyMatch(result.match,true);}
+      if(result.needsProfile){
+        this.resetRegistration();
+        this._registration=result.registrationToken;this._registrationExpires=result.expiresAt;
+        this.setData({profileRequired:true});
+      }
+      else {this.resetRegistration();this.applyMatch(result.match,true);}
     }catch(e){if(this.active(epoch))this.setData({actionError:e.message||'微信登录未完成'});}
     finally{if(this.active(epoch))this.setData({busy:false});}
   },
-  restartLogin(){if(this.data.busy)return;this._registration=null;this._requestId=null;this._avatar='';this.setData({profileRequired:false,realName:'',nickname:'',avatarPath:''});return this.login();},
+  restartLogin(){if(this._hidden||this._disposed||this.data.busy||this.data.loading)return;this.resetRegistration();return this.login();},
   async register(){
-    if(this.data.busy||!this.data.profileRequired)return;
+    if(this._hidden||this._disposed||this.data.busy||this.data.loading||this.data.error||this.data.authenticated||!this.data.profileRequired)return;
     if(s.api.getSession()){this.setData({actionError:'登录身份已变化，请刷新比赛'});return;}
-    if(!this._registration||this._registrationExpires<=Date.now()){this._registration=null;this.setData({profileRequired:false,actionError:'登记已过期，请重新微信登录'});return;}
+    if(guest.session(this._credential)){this.resetRegistration();return this.refresh();}
+    if(!this._registration||this._registrationExpires<=Date.now()){this.resetRegistration('登记已过期，请重新微信登录');return;}
     const realName=this.data.realName.trim(),nickname=this.data.nickname.trim();
     if(!realName||!nickname||!this._avatar){this.setData({actionError:'请填写真实姓名、微信昵称并选择头像'});return;}
     const epoch=this._epoch;
     this._requestId=this._requestId||'guest-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    const attempt={};this._enrolling=attempt;
     this.setData({busy:true,actionError:''});
-    try{const result=await guest.register(this._credential,{registrationToken:this._registration,requestId:this._requestId,realName,nickname,avatar:this._avatar},()=>this.active(epoch)&&!s.api.getSession());
+    try{
+      if(guest.pendingRegistration(this._credential)){this.resetRegistration(registrationRecovery);return;}
+      const result=await guest.register(this._credential,{registrationToken:this._registration,requestId:this._requestId,realName,nickname,avatar:this._avatar},()=>this.active(epoch)&&!s.api.getSession());
       if(!this.active(epoch))return;
-      this._registration=null;this._avatar='';this.setData({profileRequired:false,realName:'',nickname:'',avatarPath:''});this.applyMatch(result.match,true);
-    }catch(e){if(this.active(epoch))this.setData({actionError:e.status?e.message:'结果尚未确认，可重新微信登录恢复身份；请勿反复登记。'});}
-    finally{if(this.active(epoch))this.setData({busy:false});}
+      this.resetRegistration();this.applyMatch(result.match,true);
+    }catch(e){if(this.active(epoch)){
+      if(!e.status||e.status>=500)this.resetRegistration(registrationRecovery);
+      else if(e.status===401)this.resetRegistration(e.message);
+      else this.setData({actionError:e.message});
+    }}
+    finally{if(this._enrolling===attempt){this._enrolling=null;if(this.active(epoch))this.setData({busy:false});}}
   },
   async reply(e){
     const response=e.currentTarget.dataset.response;
